@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11p  Abendstimmung
+- Pause-Menü «Tageszeit»: Abend mit Sonnenuntergangshimmel, tiefer orangefarbener Sonne, warm leuchtenden Fenstern (zufällig an/aus) und Laternen; Einstellung bleibt gespeichert
+- Quellcode jetzt auf GitHub: github.com/cyclingsimon/gta
+
 2026-11-11o  Schneller laden
 - Kartenschattierung in 3×3-Blöcken (Kartenzeichnen deutlich schneller), Boden-Kacheln mit Typed Arrays statt Millionen Einzelobjekten
 - Bau-Zeiten je Schritt in der Konsole ([bau])
