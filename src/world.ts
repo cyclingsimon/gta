@@ -28,6 +28,7 @@ export function toon(color: THREE.ColorRepresentation, extra: Partial<THREE.Mesh
 const FACADES = ['#F3E3C3', '#EBC98A', '#E9AE8F', '#C8D3B0', '#CBD8DF', '#F4EFE6', '#F2DA94', '#E7C3A8', '#DCCFE0'];
 // Plätze mit bemalten Fassaden (Referenzfotos Weinmarkt, Hirschenplatz, Kornmarkt): x, z, Radius
 export const ERKER: number[][] = [];
+const MUSEGG: [number, number][] = [[-245, -293], [-160, -335], [-342, -256], [-20, -386], [-522, -199], [-91, -366], [-421, -239], [-619, -168], [92, -368]];
 const PAINTED_SQUARES: [number, number, number][] = [[-224, -33, 38], [-265, -51, 34], [-174, -7, 30], [-61, -24, 22], [-413, -69, 30]];
 const ROOFS = ['#B5553C', '#A04A36', '#8A5A44', '#C0674A'];
 const FLAT_ROOF = '#8E8A86';
@@ -1019,6 +1020,43 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
+  // Zytturm (Museggmauer, swisstopo-Gebäude 190660948): Zifferblätter auf Stadt- und Seeseite, älteste Uhr Luzerns
+  if (X0 < -243) {
+    const face = canvasTex(128, 128, (g) => {
+      g.fillStyle = '#1E2A44'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill();
+      g.strokeStyle = '#E8C04A'; g.lineWidth = 6; g.beginPath(); g.arc(64, 64, 56, 0, 7); g.stroke();
+      g.fillStyle = '#E8C04A'; for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.fillRect(64 + Math.sin(a) * 46 - 3, 64 - Math.cos(a) * 46 - 3, 6, 6); }
+      g.strokeStyle = '#E8C04A'; g.lineCap = 'round'; g.lineWidth = 7; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 26, 64 - 10); g.stroke(); g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 - 6, 64 - 40); g.stroke();
+    });
+    const cm = new THREE.MeshBasicMaterial({ map: face, transparent: true, alphaTest: 0.3 });
+    for (const [x, z, nx, nz] of [[-241.95, -293.2, 0.345, 0.939], [-244.5, -299.9, -0.345, -0.939]]) {
+      const c = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), cm); c.position.set(x + nx * 0.2, 64, z + nz * 0.2); c.rotation.y = Math.atan2(nx, nz); c.name = 'zytturm-uhr'; group.add(c);
+    }
+    landmarks.push({ name: 'Museggmauer', x: -245, z: -293 });
+    // Museggmauer (OSM barrier=city_wall): Natursteinmauer mit Zinnen, Lücken wo Strassen durchführen
+    const lines = [[[162, -422], [140, -404], [125, -393], [104, -373], [89, -364], [70, -356], [-16, -381], [-26, -384], [-72, -368], [-94, -361], [-120, -348], [-150, -334], [-162, -329], [-218, -302], [-243, -290]],
+      [[-243, -290], [-248, -288], [-290, -271], [-296, -269], [-336, -254], [-346, -250], [-347, -254], [-391, -243], [-416, -237], [-424, -234], [-460, -219], [-516, -198], [-525, -195], [-609, -168], [-612, -167]]];
+    const pieces: number[][] = [];
+    const carRd = d.roads.filter((r) => !['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c) && r.p.some(([x, z]) => x > -650 && x < 200 && z > -460 && z < -130));
+    const onCarRoad = (x: number, z: number) => carRd.some((r) => { for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz || 1; const u = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2)); if (Math.hypot(x - ax - u * vx, z - az - u * vz) < r.w / 2 + 1.2) return true; } return false; });
+    for (const L of lines) for (let i = 1; i < L.length; i++) {
+      const [x1, z1] = L[i - 1], [x2, z2] = L[i]; const len = Math.hypot(x2 - x1, z2 - z1); const n = Math.max(1, Math.round(len / 2));
+      for (let k = 0; k < n; k++) { const x = x1 + (x2 - x1) * (k + 0.5) / n, z = z1 + (z2 - z1) * (k + 0.5) / n; if (onCarRoad(x, z)) continue; if (MUSEGG.some(([mx, mz]) => Math.hypot(mx - x, mz - z) < 5)) continue; pieces.push([x, z, len / n, Math.atan2(x2 - x1, z2 - z1)]); }
+    }
+    if (pieces.length) {
+      const wall = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 1, 1), toon('#BFAE8E'), pieces.length), mer = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.9, 0.9), toon('#B3A283'), pieces.length);
+      const o = new THREE.Object3D();
+      pieces.forEach(([x, z, l, a], i) => {
+        const g = terrain.height(x, z), top = g + 8;
+        o.position.set(x, (g - 1 + top) / 2, z); o.rotation.set(0, a, 0); o.scale.set(1, top - g + 1, l + 0.05); o.updateMatrix(); wall.setMatrixAt(i, o.matrix);
+        o.position.set(x, top + 0.45, z); o.scale.set(1, 1, 1); o.updateMatrix(); mer.setMatrixAt(i, o.matrix);
+        const mi = Math.floor((x - mask.x0) / MASK_RES), mj = Math.floor((z - mask.z0) / MASK_RES);
+        if (mi > 0 && mj > 0 && mi < mask.w && mj < mask.h) mask.data[mj * mask.w + mi] = 2;
+      });
+      wall.computeBoundingSphere(); mer.computeBoundingSphere(); wall.name = mer.name = 'museggmauer'; group.add(wall, mer);
+    }
+  }
+
   // Nadelwehr in der Reuss (OSM-Weg 27549263): Holznadeln dicht an dicht unter einem schmalen Steg
   if (X0 < -340) {
     const line = [[-342, 79], [-338, 60], [-337, 56]];
@@ -1419,6 +1457,8 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       else if (zone === 'neustadt') { style = 'gruenderzeit'; facade = new THREE.Color(['#DCCFB4', '#D3C6AA', '#E4D9C3', '#CFC0A3', '#E8DCC6'][Math.floor(r * 5)]); slateRoof = hash(cx + 7, cz) < 0.45; }
       else if (zone === 'quai') { style = 'hotel'; facade = new THREE.Color(['#F3F0E8', '#F1E9D8', '#EEE7DA'][Math.floor(r * 3)]); slateRoof = hash(cx + 7, cz) < 0.6; }
     }
+    // Museggtürme (OSM-Lage): Naturstein statt Wohnhaus-Fassade
+    if (MUSEGG.some(([mx, mz]) => Math.hypot(cx - mx, cz - mz) < 9)) { style = 'stone'; facade = new THREE.Color('#CDBB9C'); roofTile = new THREE.Color('#8B4A36'); }
     if (slateRoof) roofTile = new THREE.Color(['#6F767E', '#7C8188', '#646B73'][Math.floor(hash(cz, cx + 1) * 3)]);
     // Erker: ein Teil der Altstadthäuser bekommt einen Erker an der grössten Fassade (1.–3. Obergeschoss)
     if ((style === 'altstadt' || style === 'painted') && h > 11 && hash(cx + 7, cz - 3) < 0.4) {

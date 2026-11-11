@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11s  Museggmauer
+- Museggmauer nach OpenStreetMap (barrier=city_wall) mit Zinnen, Lücken bei den Strassendurchfahrten; die Mauer ist ein Hindernis
+- Museggtürme in Naturstein statt Wohnhaus-Fassade; Zytturm mit Zifferblättern (Stadt- und Seeseite)
+- Grosse Karte: Ortsnamen und Schilder am Rand werden nicht mehr abgeschnitten
+
 2026-11-11r  Schneller zeichnen
 - See auf Seespiegel als flache Fläche statt fein aufs Gelände gelegt (bis 400'000 Dreiecke weniger); Uferlinie entsteht dort, wo das swisstopo-Gelände über den Seespiegel steigt. Reuss unterhalb des Nadelwehrs folgt weiter dem Gelände
 - Laternen, Bänke, Haltestellen, Geländer, Terrassen in 500-m-Zellen: nur sichtbare Zellen werden gezeichnet

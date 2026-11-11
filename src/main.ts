@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-11r';
+export const VERSION = '2026-11-11s';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -473,12 +473,12 @@ function drawBigMap() {
   const label = (x: number, z: number, text: string, col: string) => {
     const [a, b] = t(x, z); g.fillStyle = col; g.strokeStyle = '#3b302b'; g.lineWidth = 3;
     g.beginPath(); g.arc(a, b, 9 * K, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.font = `bold ${20 * K}px system-ui`; g.lineWidth = 5 * K; g.strokeStyle = '#fff'; g.strokeText(text, a + 13 * K, b + 7 * K); g.fillStyle = '#3b302b'; g.fillText(text, a + 13 * K, b + 7 * K);
+    g.font = `bold ${20 * K}px system-ui`; g.lineWidth = 5 * K; g.strokeStyle = '#fff'; const tw = g.measureText(text).width, tx = a + 13 * K + tw > g.canvas.width - 4 ? a - 13 * K - tw : a + 13 * K; g.strokeText(text, tx, b + 7 * K); g.fillStyle = '#3b302b'; g.fillText(text, tx, b + 7 * K);
   };
   // Ortsnamen gross (Orientierung für Kinder)
   g.textAlign = 'center';
   for (const [x, z, n] of [[-900, -750, 'LUZERN'], [-2150, 2150, 'KRIENS'], [150, 3950, 'HORW'], [-3200, 150, 'LITTAU'], [-500, 1700, 'Allmend'], [700, 1500, 'Tribschen'], [2250, -480, 'Würzenbach'], [2100, 4300, 'St. Niklausen'], [2450, 5500, 'Kastanienbaum'], [1600, -700, 'Halde']] as [number, number, string][]) {
-    const [a, b] = t(x, z); g.font = n === n.toUpperCase() ? `bold ${64 * K}px system-ui` : `bold ${36 * K}px system-ui`; g.lineWidth = 8 * K; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(n, a, b); g.fillStyle = 'rgba(59,48,43,.75)'; g.fillText(n, a, b);
+    let [a, b] = t(x, z); g.font = n === n.toUpperCase() ? `bold ${64 * K}px system-ui` : `bold ${36 * K}px system-ui`; const hw = g.measureText(n).width / 2 + 6; a = Math.max(hw, Math.min(g.canvas.width - hw, a)); g.lineWidth = 8 * K; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(n, a, b); g.fillStyle = 'rgba(59,48,43,.75)'; g.fillText(n, a, b);
   }
   g.textAlign = 'left';
   for (const l of world.landmarks) label(l.x, l.z, l.name.replace(/ \(.*\)/, ''), '#FFF6DE');
