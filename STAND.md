@@ -1,38 +1,31 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 10.11.2026 20:35, Version **2026-11-10g** (Kachel-Culling), ZIP an Simon gesendet und entpackt unter `Downloads\luksi-rescue\web-g`. Online ist weiterhin Version d: Upload per FileZilla blockiert, solange das CCleaner-Werbefenster (läuft vermutlich als Admin) offen ist – Simon muss es schliessen.
-Live: https://gta.simon-infanger.ch/ (Hostpoint `/www/luksi-rescue`). Quellen: `Luksi Rescue 2026-11-10g Quelle.tar.gz` (Outputs). Ein GitHub-Repo gibt es noch nicht.
-Realismus-Aufgaben und Testkit: siehe `claude/REALISMUS-KIT.md` (R1–R14, Tests G1–G11, P1).
+Stand: 11.11.2026 ca. 17:00, Version **2026-11-11s** – live auf https://gta.simon-infanger.ch/ (geprüft: ausgeliefertes JS enthält Version s). Heute live gegangen: q (13:50), r (15:00), s (16:50).
+Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo.
+Realismus-Aufgaben und Testkit: `docs/REALISMUS-KIT.md` (Projekt-Version ist aktueller).
 
-## Daten
-- Gelände: swissALTI3D 2 m via api3.geo.admin.ch/profile, exakte LV95-Umrechnung pro Punkt, Strassen offline quer eben, Bodennetz vereinfacht → `ground.bin`, `terrain.bin`.
-- Horizont: swissALTI3D 200 m, 42 × 42 km → `horizon.bin` (Int16 dm). Eigene Fernszene (Kamera bis 45 km), Spielfeldrand weich ins Umland überblendet.
-- Gebäude: swissBUILDINGS3D 3.0 → `b3d.bin`/`b3d.json`. Dachfarbe je Gebäude aus SWISSIMAGE-WMS → `roofcolors.json`.
-- OSM: Strassen, Einbahn, Wasser, Parks; neu `props.json` (Stege, Laternen, Bäume, Ampeln, Brunnen, Haltestellen; Pipeline `tools/geo/build_props.py`).
-- Transferweg: Browser der Claude-App holt die Daten; grosse Rückgaben landen als Datei in `/tmp/claude-tool-results`.
+## Spielfeld und Daten
+- Feld x −3800..2700, z −1100..6300 (seit q: Haldenstrasse, Verkehrshaus, Lido, Tribschen-Ost, Schönbühl, Horwer Halbinsel mit St. Niklausen/Kastanienbaum).
+- Geodaten werden über einen Browser geholt und gepackt (`window.PK`), Rückgabe in Base64-Stücken à 225 kB; `tools/geo/collect.py PREFIX N OUTDIR` setzt zusammen. Overpass nur overpass-api.de (CORS), grosse Abfragen in Bändern.
+- Gelände: swissALTI3D-GeoTIFF 2 m → `tools/geo/alti_extend.py`. Gebäude: 1652 b3dm-Kacheln → 14'289 Gebäude. Luftbild `data/swissimage_2m_x2700.jpg`.
+- OSM komplett neu (`data/osm_big.json`, `osm_props.json`, `osm_bus.json`, `beach.json`); alte Stände `*_x1150.json`.
+- city.json: Seefläche (östlich des Nadelwehrs, x > −345) mit `f:1` = flach gezeichnet.
 
-## Spiel
-- Laden: `tools/dist.sh` baut dist/ und legt grosse Daten als *.gz ab (20 → 8 MB); Browser entpackt mit DecompressionStream. Stufe A = OSM-Häuser + Raster-Boden (sofort spielbar), Stufe B = swisstopo-3D-Häuser + feiner Boden, im Hintergrund gebaut (`buildWorld` ist async mit Pausen) und per `swapWorld` getauscht. `window.__luksiReady` = Stufe B fertig (Tests warten darauf).
-- Grafikstufe `save.quality` echt/leicht (Touch-Geräte: leicht; URL `?q=leicht|echt`). Leicht: keine 3D-Häuser, weniger Bäume/Verkehr, Pixelratio 1.
-- Touch (`src/touch.ts`): Daumen-Lenkfeld, Gas/Bremse, Knopfleiste; Vollbild + Querformat beim Start; Manifest + App-Symbole.
-- Mehrspieler: `players[]` (max. 4), Spieler 1 = Tastatur/Touch/Pad 1, Spieler k = Pad k; Beitritt A/Start; Split Screen per Viewport/Scissor; gemeinsame Einsätze (wer zuerst ankommt). Verkehr reagiert auf alle Ambulanzen.
-- Häuser (b3d) und Boden in 400-m-Kacheln (Frustum Culling): Testbild 1.82 Mio. Dreiecke, ~450 Draw Calls.
-- Ampeln schalten (24-s-Zyklus), Autos halten bei Gelb/Rot. Erdgeschoss mit Schaufenstern per Shader (Textur-v < 1).
-- Verkehr (`src/traffic.ts`): 36 Autos, rechts, Einbahn, Blaulicht → rechts ran; Rempler harmlos. 60 Passanten auf Fusswegen, hüpfen aus dem Weg. `?notraffic` schaltet ab.
+## Spiel (Module)
+- `main.ts`: 18 Einsätze, Pedalos (`Boats`), 3 Kursschiff-Routen, Schilder Löwendenkmal/Verkehrshaus/Kastanienbaum, Test G3b.
+- `world.ts`: `withRows` (Altstadt-Pastellzeilen), Kapellbrücke mit Geranien und Laternen, Seebrücke-Fahnen, Terrassen, Verkehrshaus-Flugzeug und Lok, Spielplätze, Nadelwehr, Löwendenkmal, Museggmauer, Museggtürme in Stein, Zytturm-Uhr, Bänke, Strände; `chunkInstanced` (500-m-Zellen); See flach (`water-lake`).
 
-## Tests (10.11. abends)
-- Version f: qa.py G1–G11 + P1 grün (Startknopf nach 17 s Software statt 21 s; voll geladen 88 s Software). missions.py 12 Sterne. multi.py: 4 simulierte Controller treten bei, fahren, Split Screen ok. mobile.py: Android-Emulation, Touch-Gas beschleunigt, Startknopf nach 9 s (Leicht).
-- `tests/qa.py`: G1–G11 und P1 grün (2.14 Mio. Dreiecke, 163 Draw Calls, Ladezeit Software 21 s).
-- `tests/missions.py`: 4 Einsätze mit Verkehr, 12 Sterne, Spielstand nach Neuladen erhalten.
-- `tests/refcmp.py`: 11 Fotovergleiche (Wikimedia Commons/Mapillary) → `shots/ref/`.
-- Echte fps auf der GTX 1080: Version e nicht gemessen.
+## Tests (Version s, Software-Rendering)
+- qa.py G1–G13, G3b, P1 grün: P1 1.85 Mio. Dreiecke / 937 Draw Calls (Start), Schwanenplatz 2.32 Mio.
+- missions.py: alle 18 Einsätze (Version q, 54 Sterne) und 3 Einsätze (Version s) ok, Spielstand bleibt. fun.py ok.
+- Speicher «Echt»: Spitze 2.3 GB, nach Start 1.6 GB; «Leicht» 412 MB.
+- Echte fps auf der GTX 1080 nicht gemessen.
 
 ## Bekannte Grenzen
-- Striche in den Himmel (Konturlinien): nur im Software-Rendering; Daten geprüft. Auf echter GPU prüfen.
-- Fassaden nach Regeln, Erker fehlen.
-- Street View per URL liefert nur Nutzer-Fotosphären; deshalb Commons-Fotos als Referenz.
+- Echte fps/Handy ungemessen. Draw Calls gestiegen (937).
+- Neue Buslinien: Linienführung aus OSM-Teilstücken (Annahme).
 
 ## Nächste Pakete
-1. Version g hochladen (Ordner `web-g`); fps (F3), Handy-Test und Sichtprüfung auf echter GPU
-2. Altstadt: Ladengeschoss und Erker, bemalte Fassaden an bekannten Häusern (Weinmarkt, Hirschenplatz)
-3. Bus-Linien
+1. Simon: spielen (Verkehrshaus, Kastanienbaum, Löwendenkmal, Museggmauer), F3 fps, Rückmeldung in Todoist
+2. Leistung: Speicherspitze senken, Draw Calls bündeln
+3. Weitere Stadt-Details; Etappe 2 (Emmenbrücke, Ebikon) nur mit Kachel-Streaming
