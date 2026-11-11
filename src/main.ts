@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-11p';
+export const VERSION = '2026-11-11q';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -214,6 +214,8 @@ function setupMissions() {
   const stop = (n: string, fb: [number, number]) => { const s = propsData?.stops?.find((q: any) => q[2] === n); return snap(s ? [s[0], s[1]] : fb); };
   const krZentrum = stop('Zentrum Pilatus', [-2130, 2001]), horw = stop('Horw Zentrum', [216, 3668]), pilBahn = stop('Pilatus-Bahnen', [-2304, 2338]), allmend = stop('Allmend/Messe', [-371, 1840]);
   const badi = stop('Badi', [409, 6257]), schappe = stop('Schappe-Center', [-2600, 1950]), gasshof = stop('Gasshof', [-3544, 288]), horwBhf = stop('Horw Bahnhof', [-6, 3690]);
+  // Osterweiterung (Version q): Verkehrshaus, Seeburg, Tribschen/Wartegg, Schönbühl, Kastanienbaum
+  const vhs = stop('Verkehrshaus/Lido', [2050, -120]), seeburg = stop('Hotel Seeburg', [2500, -60]), wartegg = stop('Wartegg', [1300, 1500]), schoenbuehl = stop('Schönbühl', [1400, 1000]), kastanien = stop('Kastanienbaum Schiffstation', [2600, 5300]);
   missions = [
     { id: 'm1', title: 'Bauchweh vom Glace', radio: 'Ein Kind am Schwanenplatz hat Bauchweh vom vielen Glace!', place: 'Schwanenplatz', at: schwanen, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee und Wärmeflasche geht es schon besser. Danke!' },
     { id: 'm2', title: 'Velo-Sturz', radio: 'Velo-Sturz auf der Seebrücke – ein Knie ist aufgeschürft.', place: 'Seebrücke', at: see, game: plasterGame, transport: true, prop: propBike, thanks: 'Das Knie ist sauber verarztet. Super gefahren!' },
@@ -226,6 +228,12 @@ function setupMissions() {
     { id: 'm10', title: 'Gestolpert im Schappe-Center', radio: 'Im Schappe-Center in Kriens ist ein Kind auf der Treppe gestolpert. Ein Pflaster bitte!', place: 'Schappe-Center', at: schappe, game: plasterGame, transport: false, prop: propKid, thanks: 'Pflaster drauf – und weiter geht\'s. Danke!' },
     { id: 'm11', title: 'Kätzchen in Littau', radio: 'Beim Gasshof in Littau miaut ein Kätzchen hoch oben im Baum.', place: 'Littau, Gasshof', at: gasshof, game: catGame, transport: false, prop: propCat, thanks: 'Das Kätzchen ist wieder bei seiner Familie!' },
     { id: 'm12', title: 'Bauchweh im Zug', radio: 'Am Bahnhof Horw hat ein Kind nach der Zugfahrt Bauchweh.', place: 'Horw Bahnhof', at: horwBhf, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es wieder. Gute Reise!' },
+    { id: 'm13', title: 'Beule im Verkehrshaus', radio: 'Im Verkehrshaus hat sich ein Kind beim Flugzeug den Kopf angeschlagen – eine kleine Beule.', place: 'Verkehrshaus', at: vhs, game: plasterGame, transport: true, prop: propKid, thanks: 'Kühlbeutel drauf – und gleich zurück zu den Lokomotiven. Danke!' },
+    { id: 'm14', title: 'Wespenstich am See', radio: 'Bei der Seeburg ist ein Kind beim Picknick von einer Wespe gestochen worden.', place: 'Seeburg', at: seeburg, game: waterGame, transport: false, prop: propKid, thanks: 'Kühlen hilft – der Stich tut schon fast nicht mehr weh. Merci!' },
+    { id: 'm15', title: 'Velo-Sturz in Tribschen', radio: 'Beim Schlössli Wartegg ist jemand mit dem Velo gestürzt. Der Ellbogen ist aufgeschürft.', place: 'Wartegg', at: wartegg, game: plasterGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt!' },
+    { id: 'm16', title: 'Bauchweh im Schönbühl', radio: 'Im Shopping-Center Schönbühl hat ein Kind zu viele Gummibärchen gegessen.', place: 'Schönbühl', at: schoenbuehl, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es wieder. Nächstes Mal ein paar weniger!' },
+    { id: 'm17', title: 'Katze in Kastanienbaum', radio: 'Bei der Schiffstation Kastanienbaum sitzt eine Katze im Baum und traut sich nicht runter.', place: 'Kastanienbaum', at: kastanien, game: catGame, transport: false, prop: propCat, thanks: 'Die Katze ist unten und schnurrt. Danke, Luksi!' },
+    { id: 'm18', title: 'Müde beim Löwen', radio: 'Beim Löwendenkmal ist eine Touristin vom vielen Treppensteigen ganz schwindlig.', place: 'Löwendenkmal', at: snap([205, -735]), game: waterGame, transport: true, prop: propTourist, thanks: 'Ein Schluck Wasser, und der Löwe schläft weiter. Merci!' },
     { id: 'm8', title: 'Zu viele Würstchen', radio: 'Auf der Allmend hat ein Fussballfan zu viele Würstchen gegessen und hat Bauchweh.', place: 'Allmend', at: allmend, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Kamillentee geht es schon besser. Hopp Luzern!' },
   ];
 }
@@ -861,10 +869,14 @@ async function boot() {
   sign.position.set(world.hospital.x, gy(world.hospital.x, world.hospital.z) + 42, world.hospital.z); sign.scale.set(16, 4.2, 1);
   scene.add(sign);
   // Orientierung: schwebende Ortsschilder an bekannten Orten in Kriens, Horw und auf der Allmend (an echten Haltestellen)
-  for (const [name, txt] of [['Pilatus-Bahnen', 'Pilatus-Bahnen 🚡'], ['Allmend/Messe', 'Swissporarena ⚽'], ['Horw Zentrum', 'Horw'], ['Zentrum Pilatus', 'Kriens'], ['Badi', 'Badi Horw 🏊']] as [string, string][]) {
+  for (const [name, txt] of [['Pilatus-Bahnen', 'Pilatus-Bahnen 🚡'], ['Allmend/Messe', 'Swissporarena ⚽'], ['Horw Zentrum', 'Horw'], ['Zentrum Pilatus', 'Kriens'], ['Badi', 'Badi Horw 🏊'], ['Kastanienbaum Schiffstation', 'Kastanienbaum ⛵']] as [string, string][]) {
     const st = propsData?.stops?.find((q: any) => q[2] === name); if (!st) continue;
     const sp = textSprite(txt, '#FFF6DE', '#3b302b', 420, 110, 'bold 50px system-ui, sans-serif');
     sp.position.set(st[0], gy(st[0], st[1]) + 26, st[1]); sp.scale.set(15, 3.9, 1); scene.add(sp);
+  }
+  for (const l of world.landmarks.filter((q) => q.name === 'Löwendenkmal' || q.name === 'Verkehrshaus')) {
+    const sp = textSprite(l.name === 'Löwendenkmal' ? 'Löwendenkmal 🦁' : 'Verkehrshaus 🚂', '#FFF6DE', '#3b302b', 420, 110, 'bold 50px system-ui, sans-serif');
+    sp.position.set(l.x, gy(l.x, l.z) + (l.name === 'Löwendenkmal' ? 30 : 34), l.z); sp.scale.set(15, 3.9, 1); scene.add(sp);
   }
   // Luksi mit Kissen wartet am Kinderspital
   const lkTex = new THREE.TextureLoader().load('img/luksi-kissen.png'); lkTex.colorSpace = THREE.SRGBColorSpace;

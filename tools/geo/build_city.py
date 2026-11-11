@@ -14,7 +14,7 @@ src, dst = sys.argv[1], sys.argv[2]
 d = json.load(open(src))
 
 # Spielfeld (lokale Meter). Etwas kleiner als der Download-Ausschnitt.
-X0, X1, Z0, Z1 = [float(v) for v in (sys.argv[3] if len(sys.argv) > 3 else '-3800,1150,-1100,6300').split(',')]
+X0, X1, Z0, Z1 = [float(v) for v in (sys.argv[3] if len(sys.argv) > 3 else '-3800,2700,-1100,6300').split(',')]
 CLIP = box(X0, Z0, X1, Z1)
 
 def r(v):

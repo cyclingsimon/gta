@@ -450,6 +450,14 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   await onProgress('Karte wird gezeichnet …');
   let tq = performance.now(); const lap = (n: string) => { const t = performance.now(); console.log(`[bau]   ${n} ${(t - tq).toFixed(0)} ms`); tq = t; };
   const { mask, minimap } = rasterize(d, b3d); lap('Maske');
+  {
+    // keine Bäume vor dem Löwen: Felsbereich in der Maske sperren
+    for (let dz = -16; dz <= 16; dz += 1) for (let dx = -16; dx <= 16; dx += 1) {
+      if (dx * dx + dz * dz > 256) continue;
+      const i = Math.floor((240.5 + dx - mask.x0) / MASK_RES), j = Math.floor((-758 + dz - mask.z0) / MASK_RES);
+      if (i > 0 && j > 0 && i < mask.w && j < mask.h && mask.data[j * mask.w + i] === 0 && !mask.road[j * mask.w + i]) mask.data[j * mask.w + i] = 2;
+    }
+  }
   hillshade(minimap, terrain, X0, Z0); lap('Schummerung');
   // ---- Boden ----
   const groundTex = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 900, 0.1); noise(g, 128, 128, 300, 0.25, false); });
@@ -700,6 +708,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (style === 'modern' && !kind) facade = new THREE.Color(['#E6E2DA', '#D7DCE0', '#EADFC9', '#CFD6CC', '#E3D3C3'][Math.floor(r * 5)]);
       if (style === 'block' && !kind) facade = new THREE.Color(['#F1ECE2', '#EDE3CF', '#E6E8E3', '#F2E6D6', '#E9DFD0', '#DDE3E6', '#F0E2C8'][Math.floor(r * 7)]);
       if (kind && kind !== 'kispi') landmarks.push({ name: b.n, x: cx, z: cz });
+      if (b.n === 'Luftfahrt / Raumfahrt') landmarks.push({ name: 'Verkehrshaus', x: cx, z: cz });
       if (b3d) { styles.push({ p: b.p, facade, roofC, style, flat, kind }); continue; }
       const gys = b.p.map(([x, z]) => terrain.ground(x, z));
       const gMin = Math.min(...gys), gMax = Math.max(...gys);
@@ -774,8 +783,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       flatRoof: toon('#ffffff', { vertexColors: true, map: tex.gravel }),
       tiles: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
       slate: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
-      altstadt: withShop(toon('#ffffff', { vertexColors: true, map: tex.altstadt }), tex.shopAlt),
-      painted: withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt),
+      altstadt: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.altstadt }), tex.shopAlt), 0.85),
+      painted: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.5),
       gruenderzeit: withShop(toon('#ffffff', { vertexColors: true, map: tex.gruenderzeit }), tex.shopNeu),
       hotel: withShop(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
     };
@@ -867,11 +876,101 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // Holzbrücken
   for (const name of ['Kapellbrücke', 'Spreuerbrücke']) {
     const parts = roadsByName.get(name) || [];
-    for (const p of parts) group.add(mergeGroup(coveredBridge(p, name === 'Kapellbrücke' ? 4.6 : 4.2, terrain)));
+    for (const p of parts) group.add(mergeGroup(coveredBridge(p, name === 'Kapellbrücke' ? 4.6 : 4.2, terrain, name === 'Kapellbrücke')));
     if (parts.length) {
       const mid = parts[0][Math.floor(parts[0].length / 2)];
       landmarks.push({ name, x: mid[0], z: mid[1] });
     }
+  }
+
+  // Fahnen auf der Seebrücke (abwechselnd Schweiz und Kanton Luzern: blau über weiss)
+  {
+    const parts = d.roads.filter((r) => r.n === 'Seebrücke' && r.b).map((r) => r.p);
+    const distTo = (x: number, z: number, q: number[][]) => { let m = 1e9; for (let i = 1; i < q.length; i++) { const [ax, az] = q[i - 1], [bx, bz] = q[i]; const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz || 1; const u = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2)); m = Math.min(m, Math.hypot(x - ax - u * vx, z - az - u * vz)); } return m; };
+    const flagTex = (draw: (g: CanvasRenderingContext2D) => void) => { const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')!); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+    const ch = flagTex((g) => { g.fillStyle = '#D52B1E'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#fff'; g.fillRect(26, 12, 12, 40); g.fillRect(12, 26, 40, 12); });
+    const lu = flagTex((g) => { g.fillStyle = '#2F6FB5'; g.fillRect(0, 0, 64, 32); g.fillStyle = '#fff'; g.fillRect(0, 32, 64, 32); });
+    const fg = new THREE.PlaneGeometry(1.6, 1.6, 4, 1); const fp = fg.getAttribute('position');
+    for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setX(i, x + 0.8); fp.setZ(i, Math.sin((x + 0.8) * 2.6) * 0.12); }
+    fg.computeVertexNormals();
+    const mCH = new THREE.MeshBasicMaterial({ map: ch, side: THREE.DoubleSide }), mLU = new THREE.MeshBasicMaterial({ map: lu, side: THREE.DoubleSide }), poleM = toon('#E9E6E0');
+    const poles: THREE.Matrix4[] = []; let n = 0; const fl = new THREE.Group(); fl.name = 'flags';
+    for (const p of parts) {
+      let acc = 0;
+      for (let i = 1; i < p.length; i++) {
+        const [x1, z1] = p[i - 1], [x2, z2] = p[i]; const L = Math.hypot(x2 - x1, z2 - z1); if (L < 0.1) continue;
+        const ux = (x2 - x1) / L, uz = (z2 - z1) / L;
+        for (let t = (22 - acc) % 22; t < L; t += 22) {
+          for (const sd of [-1, 1]) {
+            const x = x1 + ux * t - uz * sd * 7.6, z = z1 + uz * t + ux * sd * 7.6, y = terrain.height(x1 + ux * t, z1 + uz * t);
+            if (parts.some((q) => q !== p && distTo(x, z, q) < 7.4)) continue;
+            poles.push(new THREE.Matrix4().makeTranslation(x, y + 3.5, z));
+            const f = new THREE.Mesh(fg, n++ % 2 ? mLU : mCH); f.position.set(x, y + 5.9, z); f.rotation.y = Math.atan2(-ux, -uz) + Math.PI / 2 + sd * 0.25; fl.add(f);
+          }
+        }
+        acc = (acc + L) % 22;
+      }
+    }
+    if (poles.length) {
+      const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 7, 6), poleM, poles.length);
+      poles.forEach((m, i) => pm.setMatrixAt(i, m)); pm.computeBoundingSphere(); fl.add(pm); group.add(fl);
+    }
+  }
+
+  // Restaurant-Terrassen mit Sonnenschirmen an den Altstadt-Quais (Rathausquai, Unter der Egg) und am Schwanenplatz
+  {
+    const spots: [number, number][] = [];
+    for (const name of ['Rathausquai', 'Unter der Egg', 'Kornmarkt', 'Kapellplatz', 'Nationalquai', 'Schwanenplatz']) {
+      for (const r of d.roads) {
+        if (r.n !== name) continue;
+        for (let i = 1; i < r.p.length; i++) {
+          const [x1, z1] = r.p[i - 1], [x2, z2] = r.p[i]; const L = Math.hypot(x2 - x1, z2 - z1); if (L < 1) continue;
+          const ux = (x2 - x1) / L, uz = (z2 - z1) / L;
+          for (let t = 2; t < L; t += 4.2) for (const sd of [-1, 1]) for (const off of [r.w / 2 + 1.6, r.w / 2 + 3.2]) {
+            const x = x1 + ux * t - uz * sd * off, z = z1 + uz * t + ux * sd * off;
+            if (mask.at(x, z) !== 0 || mask.isRoad(x, z) || mask.isRoad(x - uz * sd * 1.2, z + ux * sd * 1.2)) continue;
+            if (mask.at(x - uz * sd * 1.4, z + ux * sd * 1.4) === 2) continue;
+            if (spots.some(([a, c]) => Math.hypot(a - x, c - z) < 3.6)) continue;
+            spots.push([x, z]); break;
+          }
+        }
+      }
+    }
+    if (spots.length) {
+      const n = spots.length, m4 = new THREE.Matrix4(), col = new THREE.Color();
+      const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 5), toon('#EFEFEF'), n);
+      const top = new THREE.InstancedMesh(new THREE.ConeGeometry(1.5, 0.55, 8), toon('#ffffff'), n);
+      const table = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.45, 0.45, 0.06, 10), toon('#F4F1EA'), n);
+      const cols = ['#FFFFFF', '#D23B2E', '#F3E6C4', '#2F6E4E', '#F2F2F2', '#B23A48'];
+      spots.forEach(([x, z], i) => {
+        const y = terrain.height(x, z);
+        pole.setMatrixAt(i, m4.makeTranslation(x, y + 1.2, z)); top.setMatrixAt(i, m4.makeTranslation(x, y + 2.45, z));
+        table.setMatrixAt(i, m4.makeTranslation(x, y + 0.74, z)); top.setColorAt(i, col.set(cols[Math.floor(hash(x, z) * cols.length)]));
+      });
+      const tg = new THREE.Group(); tg.name = 'terraces';
+      for (const im of [pole, top, table]) { im.computeBoundingSphere(); tg.add(im); }
+      group.add(tg);
+    }
+  }
+
+  // Löwendenkmal (in den Fels gehauener Löwe über dem Teich, Denkmalstrasse). Kinderfreundlich: der Löwe schläft.
+  if (X0 < 236 && X1 > 236 && Z0 < -757 && Z1 > -757) {
+    const L = new THREE.Group(); L.name = 'loewendenkmal';
+    const stoneM = toon('#D9C89E'), maneM = toon('#C4AE7E'), nicheM = toon('#8F7D5C');
+    const cx = 240.5, cz = -758, ny = 5.4 + 7.5; // Felswand verläuft von (238,-780) nach (252,-738)
+    const dirX = 0.316, dirZ = 0.949, nX = -0.949, nZ = 0.316; // Wandrichtung, Normale zum Teich
+    const niche = new THREE.Mesh(new THREE.BoxGeometry(14, 7, 1.2), nicheM); niche.position.set(cx - nX * 0.4, ny + 0.5, cz - nZ * 0.4); niche.rotation.y = Math.atan2(dirX, dirZ) + Math.PI / 2; L.add(niche);
+    const lion = new THREE.Group(); lion.position.set(cx + nX * 1.6, ny - 2.2, cz + nZ * 1.6); lion.rotation.y = Math.atan2(nX, nZ);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), stoneM); body.scale.set(2.3, 1.5, 4.6); body.position.set(0, 1.4, -0.6); lion.add(body);
+    const mane = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 1), maneM); mane.position.set(0.9, 2.0, 3.1); lion.add(mane);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.35, 10, 8), stoneM); head.position.set(1.6, 1.4, 3.9); head.scale.set(1, 0.85, 1); lion.add(head);
+    for (const e of [-0.5, 0.5]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 5), maneM); ear.position.set(1.0 + e * 0.6, 2.6, 3.9 + e * 0.9); lion.add(ear); }
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 5), nicheM); nose.position.set(2.85, 1.2, 4.1); lion.add(nose);
+    for (const k of [-1, 1]) { const paw = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 2.6), stoneM); paw.position.set(1.6, 0.3, 4.6 + k * 0.2 - 0.6); paw.rotation.y = k * 0.15; lion.add(paw); }
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 4.2, 6), stoneM); tail.position.set(1.2, 0.5, -4.6); tail.rotation.x = Math.PI / 2; lion.add(tail);
+    L.add(lion);
+    group.add(mergeGroup(L));
+    landmarks.push({ name: 'Löwendenkmal', x: cx, z: cz });
   }
 
   await onProgress('Bäume …');
@@ -1013,8 +1112,8 @@ function buildForest(polys: number[][][], terrain: Terrain, mask: Mask, step: nu
   return out;
 }
 
-/** UV ins Luftbild: lokale Meter → WGS84 → LV95 (swisstopo-Näherungsformeln), Bildausschnitt E 2662190–2667280, N 1205150–1212690 */
-export const AERIAL = { E0: 2662190, E1: 2667280, N0: 1205150, N1: 1212690 };
+/** UV ins Luftbild: lokale Meter → WGS84 → LV95 (swisstopo-Näherungsformeln), Bildausschnitt E 2662190–2668910, N 1205150–1212690 */
+export const AERIAL = { E0: 2662190, E1: 2668910, N0: 1205150, N1: 1212690 };
 export function lv95(x: number, z: number): [number, number] {
   const LAT0 = 47.0517, LON0 = 8.3077, KX = Math.cos(LAT0 * Math.PI / 180) * 111320, KZ = 110574;
   const lon = LON0 + x / KX, lat = LAT0 - z / KZ, p = (lat * 3600 - 169028.66) / 10000, l = (lon * 3600 - 26782.5) / 10000;
@@ -1100,9 +1199,10 @@ export function outline(m: THREE.Mesh) {
 }
 
 /** Gedeckte Holzbrücke entlang einer Linie (Kapellbrücke, Spreuerbrücke) */
-function coveredBridge(p: number[][], width: number, terrain: Terrain) {
+function coveredBridge(p: number[][], width: number, terrain: Terrain, flowers = false) {
   const g = new THREE.Group();
-  const wood = toon('#A87445'), roofM = toon('#8B3A2B'), deckM = toon('#9C6B43');
+  const wood = toon('#A87445'), roofM = toon('#8B3A2B'), deckM = toon('#9C6B43'), leafM = toon('#3F8A3A'), bloomM = toon('#E8322E');
+  leafM.userData.noEdges = bloomM.userData.noEdges = true;
   const hw = width / 2;
   for (let i = 0; i < p.length - 1; i++) {
     const [x1, z1] = p[i], [x2, z2] = p[i + 1];
@@ -1116,6 +1216,12 @@ function coveredBridge(p: number[][], width: number, terrain: Terrain) {
     for (const s of [-1, 1]) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.1, len + 0.3), wood); rail.position.set(s * (hw + 0.1), 0.55, 0);
       seg.add(rail);
+      if (flowers) { // Blumenkisten mit roten Geranien aussen am Geländer (Wahrzeichen der Kapellbrücke)
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, len + 0.2), wood); box.position.set(s * (hw + 0.45), 1.0, 0); seg.add(box);
+        const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, len + 0.1), leafM); leaf.position.set(s * (hw + 0.5), 1.28, 0); seg.add(leaf);
+        const nB = Math.max(1, Math.round(len / 0.9));
+        for (let k = 0; k < nB; k++) { const bl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), bloomM); bl.position.set(s * (hw + 0.55 + (k % 2) * 0.08), 1.48, -len / 2 + (k + 0.5) * len / nB); seg.add(bl); }
+      }
       const nPosts = Math.max(1, Math.round(len / 3));
       for (let k = 0; k <= nPosts; k++) {
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.4, 0.25), wood);
@@ -1381,6 +1487,7 @@ function mergeGroup(g: THREE.Group) {
     if (!merged) continue;
     const mesh = new THREE.Mesh(merged, mat);
     out.add(mesh);
+    if (mat.userData.noEdges) continue;
     const el = new THREE.LineSegments(new THREE.EdgesGeometry(merged, 30), new THREE.LineBasicMaterial({ color: '#3b302b', transparent: true, opacity: 0.5 })); el.name = 'edges-bridge'; out.add(el);
   }
   return out;
@@ -1618,6 +1725,31 @@ export function withNight(m: THREE.MeshToonMaterial) {
       #endif`);
   };
   m.customProgramCacheKey = () => 'night' + (prevKey ? prevKey() : '');
+  return m;
+}
+
+/** Altstadt-Häuserzeilen: lange Fassaden (ein swisstopo-Objekt = ganze Zeile) alle ~8.5 m in einer anderen
+ *  Pastellfarbe einfärben, wie die bunten Häuser am Rathausquai, Kornmarkt und Weinmarkt. */
+function withRows(m: THREE.MeshToonMaterial, amount: number) {
+  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m);
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r);
+    sh.vertexShader = 'varying vec3 vRowP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vRowP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'varying vec3 vRowP;\n' + sh.fragmentShader.replace('#include <color_fragment>', `
+      #ifdef USE_MAP
+      {
+        vec2 hc = vec2(floor(vMapUv.x / 2.6), floor((vRowP.x + vRowP.z) / 350.0));
+        float hr = fract(sin(dot(hc, vec2(12.9898, 78.233))) * 43758.5453);
+        vec3 tint = hr < 0.125 ? vec3(0.96, 0.84, 0.62) : hr < 0.25 ? vec3(0.93, 0.72, 0.64) : hr < 0.375 ? vec3(0.80, 0.89, 0.80)
+          : hr < 0.5 ? vec3(0.97, 0.93, 0.85) : hr < 0.625 ? vec3(0.78, 0.85, 0.93) : hr < 0.75 ? vec3(0.95, 0.80, 0.52)
+          : hr < 0.875 ? vec3(0.90, 0.66, 0.58) : vec3(0.86, 0.90, 0.72);
+        diffuseColor.rgb *= mix(vColor, tint, ${amount.toFixed(2)});
+      }
+      #else
+      #include <color_fragment>
+      #endif`);
+  };
+  m.customProgramCacheKey = () => 'rows' + amount + (prevKey ? prevKey() : '');
   return m;
 }
 

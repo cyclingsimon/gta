@@ -2,7 +2,7 @@
 import fs from 'fs';
 import { MeshoptSimplifier } from 'meshoptimizer';
 await MeshoptSimplifier.ready;
-const SEA = 433.6, X0 = -3800, Z0 = -1100, S = 2, NX = 2476, NZ = 3701;
+const SEA = 433.6, X0 = -3800, Z0 = -1100, S = 2, NX = 3251, NZ = 3701;
 const raw = new Int16Array(fs.readFileSync('data/terrain_2m_big.i16').buffer.slice(0));
 const h = new Float32Array(raw.length); for (let i = 0; i < raw.length; i++) h[i] = raw[i] / 10 + 400 - SEA;
 const city = JSON.parse(fs.readFileSync('public/data/city.json'));

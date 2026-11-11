@@ -89,7 +89,7 @@ for (const b of raw0.buildings) {
 }
 const raw = { buildings: [...merged.values()] };
 console.log('Teile', raw0.buildings.length, '→ Gebäude', raw.buildings.length);
-const SEA = 433.6, [X0, Z0, X1, Z1] = (process.argv[3] || '-3800,-1100,1150,6300').split(',').map(Number);
+const SEA = 433.6, [X0, Z0, X1, Z1] = (process.argv[3] || '-3800,-1100,2700,6300').split(',').map(Number);
 const meta = []; const posChunks = []; const idxChunks = []; const edgeChunks = []; let vOff = 0, iOff = 0, eOff = 0, triIn = 0, triOut = 0;
 for (const b of raw.buildings) {
   const v = b.v, n = v.length / 3;

@@ -26,7 +26,7 @@ def route(a, b):
     while path[-1] != s: path.append(prev[path[-1]])
     return [[round(pos[k][0], 1), round(pos[k][1], 1)] for k in reversed(path)], dist[t]
 R = [('S-Bahn Littau', 'sbb', (190, 240), (-3801, -245)),
-     ('S-Bahn Küssnacht', 'sbb', (205, 240), (1149, -630)),
+     ('S-Bahn Küssnacht', 'sbb', (205, 240), (2699, 133)),
      ('IR Richtung Zürich', 'sbb', (175, 240), (-1137, -1101)),
      ('S-Bahn Emmenbrücke', 'sbb', (160, 240), (-1640, -1101)),
      ('Zentralbahn Horw', 'zb', (-126, 3453), (-72, 4539))]

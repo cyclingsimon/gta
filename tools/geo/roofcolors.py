@@ -4,7 +4,7 @@ from PIL import Image
 meta = json.load(open('public/data/b3d.json')); raw = open('public/data/b3d.bin', 'rb').read()
 P = np.frombuffer(raw, dtype=np.int16, count=meta['posBytes'] // 2).reshape(-1, 3).astype(np.float64) / 10
 I = np.frombuffer(raw, dtype=np.uint16, offset=meta['posBytes'] + meta['pad'], count=meta['idxCount'])
-img = np.asarray(Image.open('data/swissimage_2m.jpg').convert('RGB')).astype(np.int32)
+img = np.asarray(Image.open('data/swissimage_2m_x2700.jpg').convert('RGB')).astype(np.int32)
 E0, N1, R = 2662190, 1212690, 2  # aus dem Browser-Export
 LAT0, LON0 = 47.0517, 8.3077; KX = math.cos(math.radians(LAT0)) * 111320; KZ = 110574
 def lv(x, z):

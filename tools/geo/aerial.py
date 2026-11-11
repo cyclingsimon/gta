@@ -1,9 +1,9 @@
-"""Luftbild für den Boden + Waldmaske aus data/swissimage_2m.jpg (SWISSIMAGE 2 m, E 2662190–2667280, N 1205150–1212690).
+"""Luftbild für den Boden + Waldmaske aus data/swissimage_2m.jpg (SWISSIMAGE 2 m, E 2662190–2668910, N 1205150–1212690).
 → public/data/aerial.jpg, aerial_s.jpg (Handy), forest.png (4-m-Raster des Spielfelds, 1 = Wald)."""
 import math, numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
-SRC = 'data/swissimage_2m.jpg'
+SRC = 'data/swissimage_2m_x2700.jpg'
 im = Image.open(SRC).convert('RGB')
 # --- Bodentextur: leicht weichzeichnen, Schatten aufhellen, Wiesen grüner (Comic-Look) ---
 hsv = np.array(im.filter(ImageFilter.GaussianBlur(0.7)).convert('HSV')).astype(np.float32)
@@ -25,7 +25,7 @@ F = (vmax < 105) & (g > b * 1.08) & (r < g * 0.97) & (std > 9)
 f = Image.fromarray((F * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(7)).filter(ImageFilter.MaxFilter(5))
 F = np.array(f) > 127
 LAT0, LON0 = 47.0517, 8.3077; KX = math.cos(math.radians(LAT0)) * 111320; KZ = 110574
-X0, Z0, X1, Z1, S = -3800, -1100, 1150, 6300, 4
+X0, Z0, X1, Z1, S = -3800, -1100, 2700, 6300, 4
 X, Z = np.meshgrid(np.arange(X0, X1, S) + S / 2, np.arange(Z0, Z1, S) + S / 2)
 lon = LON0 + X / KX; lat = LAT0 - Z / KZ; p = (lat * 3600 - 169028.66) / 10000; l = (lon * 3600 - 26782.5) / 10000
 E = 2600072.37 + 211455.93 * l - 10938.51 * l * p - 0.36 * l * p * p - 44.54 * l ** 3

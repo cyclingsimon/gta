@@ -3,7 +3,7 @@ import json, math, sys
 d = json.load(open(sys.argv[1] if len(sys.argv) > 1 else 'data/osm_props.json'))
 LAT0, LON0 = 47.0517, 8.3077
 KX, KZ = math.cos(math.radians(LAT0)) * 111320, 110574
-X0, X1, Z0, Z1 = -3800, 1150, -1100, 6300
+X0, X1, Z0, Z1 = -3800, 2700, -1100, 6300
 def L(lat, lon): return [round((lon - LON0) * KX, 1), round(-(lat - LAT0) * KZ, 1)]
 def ok(p): return X0 < p[0] < X1 and Z0 < p[1] < Z1
 out = {'piers': [], 'lamps': [], 'trees': [], 'signals': [], 'stops': [], 'fountains': []}
