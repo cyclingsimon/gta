@@ -1,7 +1,7 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 10.11.2026 20:58, Version **2026-11-10i** (Buslinien, Fahrleitung, Haltestellenschilder), ZIP an Simon gesendet und entpackt unter `Downloads\luksi-rescue\web-i`. Online ist weiterhin Version d; Simon lädt selbst hoch (FileZilla durch Claude blockiert, solange das CCleaner-Werbefenster offen ist).
-Live: https://gta.simon-infanger.ch/ (Hostpoint `/www/luksi-rescue`). Quellen: `Luksi Rescue 2026-11-10i Quelle.tar.gz` (Outputs). Ein GitHub-Repo gibt es noch nicht.
+Stand: 10.11.2026 20:35, Version **2026-11-10g** (Kachel-Culling), ZIP an Simon gesendet und entpackt unter `Downloads\luksi-rescue\web-g`. Online ist weiterhin Version d: Upload per FileZilla blockiert, solange das CCleaner-Werbefenster (läuft vermutlich als Admin) offen ist – Simon muss es schliessen.
+Live: https://gta.simon-infanger.ch/ (Hostpoint `/www/luksi-rescue`). Quellen: `Luksi Rescue 2026-11-10g Quelle.tar.gz` (Outputs). Ein GitHub-Repo gibt es noch nicht.
 Realismus-Aufgaben und Testkit: siehe `claude/REALISMUS-KIT.md` (R1–R14, Tests G1–G11, P1).
 
 ## Daten
@@ -16,8 +16,6 @@ Realismus-Aufgaben und Testkit: siehe `claude/REALISMUS-KIT.md` (R1–R14, Tests
 - Grafikstufe `save.quality` echt/leicht (Touch-Geräte: leicht; URL `?q=leicht|echt`). Leicht: keine 3D-Häuser, weniger Bäume/Verkehr, Pixelratio 1.
 - Touch (`src/touch.ts`): Daumen-Lenkfeld, Gas/Bremse, Knopfleiste; Vollbild + Querformat beim Start; Manifest + App-Symbole.
 - Mehrspieler: `players[]` (max. 4), Spieler 1 = Tastatur/Touch/Pad 1, Spieler k = Pad k; Beitritt A/Start; Split Screen per Viewport/Scissor; gemeinsame Einsätze (wer zuerst ankommt). Verkehr reagiert auf alle Ambulanzen.
-- Fahrleitung über Trolleybus-Strecken + Haltestellenschilder (Pool von 6 Schildern bei den nächsten Haltestellen).
-- Busse (`src/bus.ts`, `public/data/bus.json`, Pipeline `tools/geo/build_bus.py` aus OSM-Routenrelationen `data/osm_bus.json`): 49 Linienwege VBL 1–30 und PostAuto 71–73, max. 14 Busse gleichzeitig nahe den Spielern, Halt an echten Haltestellen (8 s), Ampel- und Ambulanz-Rücksicht. Fahrzeugtyp-Zuordnung (lighTram 1/2/8, Gelenkbus 4–7/12/21/24/30) ist eine Annahme aus Wikipedia/Hess-Angaben, nicht pro Kurs geprüft.
 - Häuser (b3d) und Boden in 400-m-Kacheln (Frustum Culling): Testbild 1.82 Mio. Dreiecke, ~450 Draw Calls.
 - Ampeln schalten (24-s-Zyklus), Autos halten bei Gelb/Rot. Erdgeschoss mit Schaufenstern per Shader (Textur-v < 1).
 - Verkehr (`src/traffic.ts`): 36 Autos, rechts, Einbahn, Blaulicht → rechts ran; Rempler harmlos. 60 Passanten auf Fusswegen, hüpfen aus dem Weg. `?notraffic` schaltet ab.
@@ -35,6 +33,6 @@ Realismus-Aufgaben und Testkit: siehe `claude/REALISMUS-KIT.md` (R1–R14, Tests
 - Street View per URL liefert nur Nutzer-Fotosphären; deshalb Commons-Fotos als Referenz.
 
 ## Nächste Pakete
-1. Version h hochladen (Ordner `web-i`); fps (F3), Handy-Test und Sichtprüfung auf echter GPU
+1. Version g hochladen (Ordner `web-g`); fps (F3), Handy-Test und Sichtprüfung auf echter GPU
 2. Altstadt: Ladengeschoss und Erker, bemalte Fassaden an bekannten Häusern (Weinmarkt, Hirschenplatz)
-3. Option Agglomeration (Kriens, Horw, Emmenbrücke, Ebikon, Adligenswil): ~90 km² statt 6 km², braucht Kachel-Streaming; Schätzung 3–4 Arbeitstage, Etappe 1 Kriens+Horw
+3. Bus-Linien
