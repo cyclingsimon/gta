@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-11s';
+export const VERSION = '2026-11-11t';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1067,7 +1067,7 @@ if (location.search.includes('test')) {
     styles: () => STYLE_COUNT,
     erkerCam: (k = 0) => { const e = ERKER[k]; if (!e) return ERKER.length; const [x, z, y, , rot] = e; (window as any).__cam = [x + Math.sin(rot) * 18 + Math.cos(rot) * 6, y + 1, z + Math.cos(rot) * 18 - Math.sin(rot) * 6, x, y + 2, z]; return [ERKER.length, Math.round(x), Math.round(z)]; },
     qa: () => qaReport(),
-    perf: () => { const o: Record<string, number> = {}; const meas = () => { renderer.info.autoReset = false; renderer.info.reset(); renderAll(); renderer.info.autoReset = true; return renderer.info.render.triangles; };
+    perf: (calls = false) => { const o: Record<string, number> = {}; const meas = () => { renderer.info.autoReset = false; renderer.info.reset(); renderAll(); renderer.info.autoReset = true; return calls ? renderer.info.render.calls * 1000 : renderer.info.render.triangles; };
       const all = meas(); const groups = new Map<string, THREE.Object3D[]>();
       for (const sc of [world.group, scene]) for (const c of sc.children) { if (c === world.group || !c.visible) continue; const k = (c.name || c.type) + (sc === scene ? '*' : ''); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }
       for (const [k, cs] of groups) { cs.forEach((c) => (c.visible = false)); o[k] = Math.round((all - meas()) / 1000); cs.forEach((c) => (c.visible = true)); }

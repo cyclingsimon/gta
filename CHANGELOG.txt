@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11t  Weniger Zeichenaufrufe
+- Brunnen instanziert, mit bemalter Säule (blau, rot, grün, gold) und goldener Kugel wie die Altstadtbrunnen
+- Fahnen, Pedalos und Kleinobjekte zusammengefasst: 937 → 776 Zeichenaufrufe beim Start (Schwanenplatz 854 → 742)
+
 2026-11-11s  Museggmauer
 - Museggmauer nach OpenStreetMap (barrier=city_wall) mit Zinnen, Lücken bei den Strassendurchfahrten; die Mauer ist ein Hindernis
 - Museggtürme in Naturstein statt Wohnhaus-Fassade; Zytturm mit Zifferblättern (Stadt- und Seeseite)

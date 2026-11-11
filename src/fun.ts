@@ -218,13 +218,17 @@ export class Boats {
   constructor(spots: number[][]) {
     this.group.name = 'boats';
     const cols = ['#F7C531', '#E94B3C', '#3FA9F5', '#7ED957', '#FF8FB1'];
+    const boatMat = toon('#ffffff', { vertexColors: true });
     spots.forEach(([x, z], i) => {
-      const o = new THREE.Group(); const c = cols[i % cols.length];
-      const hull = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.8), toon(c)); hull.position.y = 0.25; o.add(hull);
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.5), toon('#FFFFFF')); seat.position.set(0, 0.7, -0.4); o.add(seat);
-      const kid = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), toon('#F2C8A0')); kid.position.set(0.35, 1.25, -0.3); o.add(kid);
-      const kid2 = kid.clone(); kid2.position.x = -0.35; o.add(kid2);
-      if (i % 2 === 0) { const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.2, 10), toon('#FFFFFF')); wheel.rotation.z = Math.PI / 2; wheel.position.set(0.9, 0.35, 0.6); o.add(wheel); }
+      // ein Boot = ein Netz mit Vertex-Farben (1 Zeichenaufruf statt 5)
+      const c = cols[i % cols.length], parts: THREE.BufferGeometry[] = [];
+      const add = (g: THREE.BufferGeometry, col: string, x: number, y: number, z: number, rz = 0) => { const q = g.index ? g.toNonIndexed() : g; q.deleteAttribute('uv'); if (rz) q.rotateZ(rz); q.translate(x, y, z); const cc = new THREE.Color(col), n = q.getAttribute('position').count, ca = new Float32Array(n * 3); for (let k = 0; k < n; k++) { ca[k * 3] = cc.r; ca[k * 3 + 1] = cc.g; ca[k * 3 + 2] = cc.b; } q.setAttribute('color', new THREE.BufferAttribute(ca, 3)); parts.push(q); };
+      add(new THREE.BoxGeometry(1.6, 0.5, 2.8), c, 0, 0.25, 0);
+      add(new THREE.BoxGeometry(1.4, 0.5, 0.5), '#FFFFFF', 0, 0.7, -0.4);
+      add(new THREE.SphereGeometry(0.28, 8, 6), '#F2C8A0', 0.35, 1.25, -0.3);
+      add(new THREE.SphereGeometry(0.28, 8, 6), '#F2C8A0', -0.35, 1.25, -0.3);
+      if (i % 2 === 0) add(new THREE.CylinderGeometry(0.45, 0.45, 0.2, 10), '#FFFFFF', 0.9, 0.35, 0.6, Math.PI / 2);
+      const o = new THREE.Mesh(mergeGeometries(parts, false)!, boatMat);
       this.group.add(o);
       this.boats.push({ obj: o, cx: x, cz: z, r: 6 + (i % 3) * 3, w: (i % 2 ? 1 : -1) * (0.05 + (i % 4) * 0.012), a: i * 1.7 });
     });

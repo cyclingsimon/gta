@@ -590,7 +590,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const pm = new THREE.InstancedMesh(postG, mat, posts.length), rm = new THREE.InstancedMesh(railG, mat, rails.length), mm = new THREE.InstancedMesh(midG, mat, rails.length);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
       posts.forEach(([x, z], i) => { const y = terrain.height(x, z); m4.compose(v.set(x, y, z), q.identity(), one); pm.setMatrixAt(i, m4); e.set(0, rails[i][2], 0); q.setFromEuler(e); m4.compose(v.set(x, y, z), q, one); rm.setMatrixAt(i, m4); mm.setMatrixAt(i, m4); });
-      for (const im of [pm, rm, mm]) { im.computeBoundingSphere(); im.name = 'railings'; group.add(chunkInstanced(im, 500)); }
+      for (const im of [pm, rm, mm]) { im.computeBoundingSphere(); im.name = 'railings'; group.add(chunkInstanced(im, 1000)); }
     }
   }
 
@@ -897,7 +897,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setX(i, x + 0.8); fp.setZ(i, Math.sin((x + 0.8) * 2.6) * 0.12); }
     fg.computeVertexNormals();
     const mCH = new THREE.MeshBasicMaterial({ map: ch, side: THREE.DoubleSide }), mLU = new THREE.MeshBasicMaterial({ map: lu, side: THREE.DoubleSide }), poleM = toon('#E9E6E0');
-    const poles: THREE.Matrix4[] = []; let n = 0; const fl = new THREE.Group(); fl.name = 'flags';
+    const poles: THREE.Matrix4[] = []; let n = 0; const fl = new THREE.Group(); fl.name = 'flags'; const gCH: THREE.BufferGeometry[] = [], gLU: THREE.BufferGeometry[] = [];
     for (const p of parts) {
       let acc = 0;
       for (let i = 1; i < p.length; i++) {
@@ -908,12 +908,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
             const x = x1 + ux * t - uz * sd * 7.6, z = z1 + uz * t + ux * sd * 7.6, y = terrain.height(x1 + ux * t, z1 + uz * t);
             if (parts.some((q) => q !== p && distTo(x, z, q) < 7.4)) continue;
             poles.push(new THREE.Matrix4().makeTranslation(x, y + 3.5, z));
-            const f = new THREE.Mesh(fg, n++ % 2 ? mLU : mCH); f.position.set(x, y + 5.9, z); f.rotation.y = Math.atan2(-ux, -uz) + Math.PI / 2 + sd * 0.25; fl.add(f);
+            const f = new THREE.Mesh(fg, n++ % 2 ? mLU : mCH); f.position.set(x, y + 5.9, z); f.rotation.y = Math.atan2(-ux, -uz) + Math.PI / 2 + sd * 0.25; f.updateMatrix(); (f.material === mLU ? gLU : gCH).push(fg.clone().applyMatrix4(f.matrix));
           }
         }
         acc = (acc + L) % 22;
       }
     }
+    for (const [gs, mt] of [[gCH, mCH], [gLU, mLU]] as [THREE.BufferGeometry[], THREE.Material][]) if (gs.length) fl.add(new THREE.Mesh(mergeGeometries(gs, false)!, mt));
     if (poles.length) {
       const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 7, 6), poleM, poles.length);
       poles.forEach((m, i) => pm.setMatrixAt(i, m)); pm.computeBoundingSphere(); fl.add(pm); group.add(fl);
@@ -1813,15 +1814,24 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
     pole.name = 'signals'; G.add(pole, box, lamp);
     (G as any).signalLamp = lamp; (G as any).signalPos = P.signals;
   }
-  // Brunnen
-  for (const [x, z] of P.fountains) {
-    const y = terrain.height(x, z);
-    const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.7, 12), toon('#B8B0A2')); basin.position.set(x, y + 0.35, z);
-    const water = new THREE.Mesh(new THREE.CircleGeometry(1.45, 12), toon('#5BB4E5')); water.rotation.x = -Math.PI / 2; water.position.set(x, y + 0.62, z);
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 2.2, 8), toon('#A39A8B')); col.position.set(x, y + 1.1, z);
-    G.add(basin, water, col);
-    const i = Math.floor((x - mask.x0) / MASK_RES), j = Math.floor((z - mask.z0) / MASK_RES);
-    if (i > 0 && j > 0 && i < mask.w && j < mask.h) mask.data[j * mask.w + i] = 2;
+  // Brunnen (instanziert): Steintrog, Wasser, bemalte Säule mit goldener Kugel wie die Altstadtbrunnen
+  if (P.fountains.length) {
+    const n = P.fountains.length, o = new THREE.Object3D(), c = new THREE.Color();
+    const basin = new THREE.InstancedMesh(new THREE.CylinderGeometry(1.6, 1.8, 0.7, 12), toon('#B8B0A2'), n);
+    const wg = new THREE.CircleGeometry(1.45, 12); wg.rotateX(-Math.PI / 2); const water = new THREE.InstancedMesh(wg, toon('#5BB4E5'), n);
+    const col = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.25, 2.2, 8), toon('#ffffff'), n);
+    const ball = new THREE.InstancedMesh(new THREE.SphereGeometry(0.32, 8, 6), toon('#E3B53B'), n);
+    const cols = ['#3B6EA8', '#C8352E', '#2E7D4F', '#A39A8B', '#D9A520', '#A39A8B'];
+    P.fountains.forEach(([x, z], k) => {
+      const y = terrain.height(x, z);
+      o.position.set(x, y + 0.35, z); o.updateMatrix(); basin.setMatrixAt(k, o.matrix);
+      o.position.set(x, y + 0.62, z); o.updateMatrix(); water.setMatrixAt(k, o.matrix);
+      o.position.set(x, y + 1.1, z); o.updateMatrix(); col.setMatrixAt(k, o.matrix); col.setColorAt(k, c.set(cols[Math.floor(hash(x, z) * cols.length)]));
+      o.position.set(x, y + 2.4, z); o.updateMatrix(); ball.setMatrixAt(k, o.matrix);
+      const i = Math.floor((x - mask.x0) / MASK_RES), j = Math.floor((z - mask.z0) / MASK_RES);
+      if (i > 0 && j > 0 && i < mask.w && j < mask.h) mask.data[j * mask.w + i] = 2;
+    });
+    for (const im of [basin, water, col, ball]) { im.computeBoundingSphere(); im.name = 'fountains'; G.add(im); }
   }
   // Bushaltestellen: blaues Schild
   if (P.stops.length) {
@@ -1836,7 +1846,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   const sig = (G as any).signalLamp as THREE.Object3D | undefined;
   for (const c of [...G.children]) {
     const im = c as THREE.InstancedMesh; if (!im.isInstancedMesh || im.count < 120 || im === sig || im.name === 'signals') continue;
-    const ch = chunkInstanced(im, 500); if (ch !== im) { G.remove(im); G.add(ch); }
+    const ch = chunkInstanced(im, 1000); if (ch !== im) { G.remove(im); G.add(ch); }
   }
   return G;
 }
