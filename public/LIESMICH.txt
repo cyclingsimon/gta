@@ -1,0 +1,7 @@
+Luksi Rescue Luzern – Version 2026-11-11o
+Neu: Züge, Schiffe, Schwäne und Kühe (Hupe drücken!), Busnetz 2027, Luftbild-Boden und echte Wälder, 40 Luksi-Herzen zum Sammeln, Kegel und Abfalleimer fliegen «Boing!»,
+Kriens und Horw (12 Einsätze), Lackierungen freispielen, Blaulicht macht Platz. Fahren: Pfeiltasten oder WASD, Blaulicht: Leertaste, Hupe: H.
+Mehrspieler für bis zu 4 Personen mit Controllern im geteilten Bildschirm (Controller 2–4: A drücken).
+Hochladen: Inhalt dieses ZIP nach /www/luksi-rescue, «Überschreiben». Nichts von Hand löschen.
+Hinweis: Die Daten liegen jetzt komprimiert vor (*.gz). Alte unkomprimierte Dateien auf dem Server stören nicht.
+Grafik umschalten (Pause-Menü): «Echt» = swisstopo-3D-Häuser, «Leicht» = für Handys (Standard auf Touch-Geräten).

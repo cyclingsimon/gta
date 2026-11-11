@@ -1,0 +1,123 @@
+Luksi Rescue Luzern – Änderungen
+
+2026-11-11o  Schneller laden
+- Kartenschattierung in 3×3-Blöcken (Kartenzeichnen deutlich schneller), Boden-Kacheln mit Typed Arrays statt Millionen Einzelobjekten
+- Bau-Zeiten je Schritt in der Konsole ([bau])
+
+2026-11-11n  Erker, Gondelbahn
+- Gondelbahn Kriens – Krienseregg – Fräkmüntegg nach OpenStreetMap (Weg 28147252): 92 rote Kabinen fahren rauf und runter, Masten, Seile, Stationsdächer; Seil mind. 14 m über Gelände
+- 160 Altstadthäuser mit Erker (ein Geschoss, Fenster mit Läden, Kupfer- oder Ziegeldach) an der grössten Fassade
+- Missionstest «Echt» bestätigt: 4 Einsätze, 12 Sterne, Spielstand nach Neuladen erhalten
+
+2026-11-11m  Züge, Lackierungen, Wald aus dem Luftbild
+- Wald überall dort, wo das Luftbild Wald zeigt (SWISSIMAGE: dunkelgrün mit Kronenstruktur, Flecken < 4000 m² entfernt): 14 km² statt 2.7 km² aus OpenStreetMap – Sonnenberg, Bireggwald, die Hügel über Kriens und Horw sind jetzt bewaldet
+- Luftbild-Boden kräftiger grün (Wiesen im Novemberfoto waren beige) und mit feiner Körnung aus der Nähe
+- Züge auf den echten Gleisen: S-Bahn (weiss-rot) Richtung Littau, Emmenbrücke, Zürich und Küssnacht ab Bahnhof Luzern, Zentralbahn (rot) in Horw; pfeifen, wenn die Ambulanz nahe ist, Kollision = harmloser Abpraller
+- Waldbäume halten 6 m Abstand zu Strassen und Häusern (Luftbild-Wald enthält auch Alleen/Gartenbäume)
+- Missionstest: Ambulanz wird beim Vorspulen in Fahrtrichtung gestellt
+- Handy: Tempoanzeige überdeckt den Auftragstext nicht mehr
+- Geländer an Quais und Flussufern (wo Strasse oder Weg am Wasser liegt)
+- Testkit G13: Belebung (Tiere, Schiffe, Züge, Herzen) vorhanden
+- Schwebende Ortsschilder: Kriens, Horw, Pilatus-Bahnen, Swissporarena, Badi Horw
+- Neue Ladebildschirm-Gags (Kühe, Schwäne, Zug, Herzen, Kegel)
+- Grosse Karte (Tab): Ortsnamen Luzern, Kriens, Horw, Littau; offene Einsätze ★ und noch versteckte Herzen ♥ eingezeichnet
+- Lackierungen zum Freispielen mit Luksi-Herzen: 5 ♥ Regenbogen (Farben wechseln), 15 ♥ Luksi-Look (gelb/blau), 30 ♥ Gold – im Pause-Menü wählbar
+
+2026-11-11l  Tiere, Wohnblöcke, Sammelalbum
+- Tiere: 46 Schwäne auf Reuss, See und Horwer Bucht (paddeln vor der Ambulanz davon), 92 Kühe auf den Weiden (Hupe → «Muuuh!» und Hüpfer)
+- Häuser: neuer Stil «Wohnblock» (Verputz, Einzelfenster, Balkone) für Flachdach-Wohnbauten; Fensterbänder nur noch bei grossen Gewerbe-/Schulbauten (vorher fälschlich fast alle Flachdächer, Flächenberechnung in Dezimetern korrigiert)
+- Kursschiffe: zwei Raddampfer drehen ihre Runden im Seebecken (ab Bahnhofquai) und in der Horwer Bucht – hupen in der Nähe, das Schiff antwortet «Tuuut»
+- Grafik «Leicht» (Handy): gröberes Boden-, Strassen- und Flussnetz → Speicher 570 → 360 MB, Start 21 → 16 s (Software-Messung); auch die schnelle Startstufe auf dem PC nutzt das
+- Busbahnhof-Vordächer sind kein Hindernis mehr (Busse fuhren in «Leicht» durch ein unsichtbares Hindernis)
+- 4 neue Einsätze: Sonnenstich in der Badi Horw, Sturz im Schappe-Center Kriens, Kätzchen in Littau, Bauchweh am Bahnhof Horw (jetzt 12)
+- Ans Ufer gefahren: «Platsch!» mit Wasserspritzern; Wand-Rempler zeigen eine Comic-Blase
+- Busse fahren nicht mehr quer durch Häuser, wo in OpenStreetMap ein Stück Linienweg fehlt (Linie wird dort geteilt)
+- Pause-Menü mit Sammelalbum: Sterne, Herzen, Boings und Richtung zum nächsten Herz
+
+2026-11-11k  Neues Busnetz 2027, Luftbild-Boden, Wälder, Herzen
+- Buslinien nach «Luzern fährt neu direkt» (Fahrplan ab 13.12.2026, Quelle luzern-faehrt-neu.ch/busnetz): neue Durchmesserlinien 3 und 4 (Littau – Bahnhof – Verkehrshaus), 8 bis Friedental, 9 Matthof – Kantonsspital – Littau, 20 Meggen – Horw, 21 Ebikon – Kantonsspital – Emmenbrücke, 31 Pilatus-Bahnen – Horw Spitz, 32 Kastanienbaum – Horw – Kriens – Sidhalde, 33 Kriens – Adligenswil; umnummeriert 4→5, 10→17, 14→30; weggefallen 10, 12, 14, 16, 19, 24 sowie bisherige 5
+- Linienwege der neuen Linien aus den bisherigen OSM-Strecken zwischen echten Haltestellen zusammengesetzt (OSM kennt das neue Netz noch nicht)
+- Speicher: Geometrie wird nach dem Hochladen auf die Grafikkarte im Arbeitsspeicher freigegeben
+- Boden mit echtem Luftbild (swisstopo SWISSIMAGE, 2 m, leicht aufgehellt): Wiesen, Felder, Wälder, Plätze wie in echt
+- Echte Wälder: dichter Misch-/Nadelwald (Bireggwald, Sonnenberg, Gütsch, Dattenberg …), Bäume 14–24 m hoch, in Kacheln, ab 1.1 km ausgeblendet
+- Spass: 110 Leitkegel an 22 Baustellen und 153 Abfalleimer an Haltestellen fliegen «Boing!» davon und stehen später wieder da
+- Spass: 40 Luksi-Herzen in Stadt, Kriens und Horw versteckt (Zähler oben, Herzen erscheinen in der Minikarte, Spielstand bleibt)
+- Hupe: Passanten machen einen Freudensprung, Autos hüpfen kurz
+- Comic-Sprechblasen bei Zusammenstössen («Boing!», «Hoppla!», «Plopp!»)
+- Seeflächen ohne Feinnetz (weniger Speicher)
+
+2026-11-10j  Kriens und Horw, Boing und Ladebildschirm
+- Spielfeld erweitert: Kriens, Horw, Littau-Süd und Allmend (ca. 5 × 7.4 km statt 2.6 × 2.4 km) – 12'159 echte 3D-Häuser (swisstopo), Strassen, Bäume, Laternen, Haltestellen
+- Gelände adaptiv: volle 2-m-Auflösung an Hängen, Ufern und Strassenkanten, grosse Dreiecke auf flachem Land (max. Abweichung Siedlung 0.3 m, Wald/Feld 0.8 m); Fahrhöhe immer aus dem vollen 2-m-Raster
+- 4 neue Einsätze: Kriens Zentrum Pilatus, Pilatus-Bahnen, Allmend, Horw Zentrum
+- Buslinien neu für das ganze Feld (56 Linienwege), Linien 1, 2, 4–8 wieder als Trolleybus mit Fahrleitung
+- Stromabnehmer richtig herum: Fuss vorne auf dem Dach, Stangen steigen nach hinten zur Leitung
+- Kein «Tatzelwurm» mehr: Busse halten Abstand zueinander und erscheinen nicht in anderen Bussen (Doppelgelenkbus = 3 Teile, 2 Gelenke)
+- Blaulicht mit Sirene: Autos und Busse vor und hinter der Ambulanz sowie entgegenkommende fahren rechts ran und halten nahe ganz an
+- Boing! Angefahrene Autos hüpfen wie ein Gummiball davon, drehen sich, Sterne fliegen – dann rollen sie zurück auf die Spur (niemand wird verletzt)
+- Lustiger Ladebildschirm: Luksi rennt über den Ladebalken zum Spital, dazwischen Gags mit Luksi-Posen aus Luksis Haus (antippen = nächster Gag)
+- Gelände-Datei neu codiert (Differenzen), Download 9 → 5 MB
+
+2026-11-10i  Fahrleitung und Haltestellen
+- Fahrleitung über allen Trolleybus-Strecken (2 Drähte je Richtung, Masten mit Ausleger)
+- Haltestellenschilder mit echtem Namen (z. B. «Schwanenplatz») bei den nächsten Haltestellen
+
+2026-11-10h  Echte Buslinien
+- 49 echte Linienwege aus OpenStreetMap mit den richtigen Nummern: VBL 1, 2, 4, 5, 6, 7, 8 (Trolleybus), 10, 11, 12, 14, 18, 19, 20, 21, 24, 30 sowie PostAuto 71, 72, 73
+- Busse fahren ihre Linie, halten an den echten Haltestellen (8 s), warten an roten Ampeln und hinter der Ambulanz
+- Aussehen: VBL blau-weiss mit «vbl»-Schriftzug, Zielanzeige vorne (z. B. «1 Obernau, Dorf»), Trolleybusse mit Stromabnehmern; Linien 1, 2, 8 als 25-m-Doppelgelenkbus (Hess lighTram), 4–7, 12, 21, 24, 30 als Gelenkbus, übrige als Solobus; PostAuto gelb
+- Bemalte Fassaden gezielt an Weinmarkt, Hirschenplatz, Kornmarkt, Kapellplatz und Mühlenplatz
+- Testkit: G12 Busse nicht in Häusern
+
+2026-11-10g  Schneller zeichnen
+- Häuser und Boden in 400-m-Kacheln: gezeichnet wird nur, was im Bild liegt (wichtig für Split Screen und Handy); im Testbild 1.82 statt 2.14 Mio. Dreiecke
+
+2026-11-10f  Schneller Start, Handy, Mehrspieler
+- Schneller Start: Daten komprimiert (20 MB → 8 MB), parallel geladen; erst einfache Häuser aus OpenStreetMap, die echten swisstopo-3D-Häuser werden während der Fahrt gebaut und ausgetauscht
+- Smartphone/Android: Touch-Steuerung (Daumen links lenken, rechts Gas/Bremse, Knöpfe für Blaulicht, Hupe, Einsatz, Kamera, Karte), Vollbild und Querformat, App-Symbol für den Startbildschirm, Grafikstufe «Leicht»
+- Mehrspieler: bis 4 Ambulanzen im geteilten Bildschirm, je ein Controller; Beitritt mit A am Controller 2–4, gemeinsame Einsätze (wer zuerst ankommt, hilft)
+- Ampeln schalten (grün/gelb/rot), Autos halten an
+- Erdgeschoss mit Schaufenstern in Altstadt, Neustadt und am Quai
+- Geschossraster beginnt am sichtbaren Boden statt am Wandfuss unter dem Gelände
+
+2026-11-10e  Lebendige Stadt
+- Verkehr: 36 Autos auf dem echten Strassennetz, fahren rechts, beachten Einbahnstrassen, machen dem Blaulicht Platz; Rempler sind harmlos (kein Sternabzug)
+- Passanten: 60 Fussgänger auf Fuss- und Altstadtwegen, hüpfen der Ambulanz comicartig aus dem Weg (nie anfahrbar)
+- Horizont aus echten Höhendaten (swissALTI3D, 42 × 42 km): Pilatus, Rigi, Bürgenstock statt Platzhalter-Kegeln
+- Dachfarben je Gebäude aus dem swisstopo-Luftbild (SWISSIMAGE), comicartig verstärkt
+- Aus OpenStreetMap: 67 Stege, 1'642 Bäume (Alleen), Laternen, Ampeln, 29 Brunnen, Bushaltestellen
+- Fassaden nach Referenzfotos: Altstadt mit grünen Fensterläden, Flachdachbauten ausserhalb der Altstadt als Nachkriegsbauten
+- Plätze und Altstadtgassen grau gepflastert statt sandfarben
+- Konturlinien von dünnen Masten/Antennen entfernt
+- Testkit erweitert: G8 Brückenhöhe, G9 Dachfarben, G10 Möblierung, G11 Verkehr
+
+2026-11-10d  Echtes Luzern
+- 4'222 echte Gebäude aus swisstopo swissBUILDINGS3D (Dachformen und Höhen, ±0.2 m zu swisstopo)
+- Gelände swissALTI3D im 2-m-Raster mit exakter LV95-Umrechnung (vorher bis 16 m verschoben)
+- Strassen quer eben, Boden nie über Strassen oder Wasser, Umland-Gitter ausgeschnitten
+- Fassaden nach Quartier: Altstadt (Steingewände, teils bemalt), Neustadt (Gründerzeit), Quai-Hotels, Wohnquartiere
+- Luksi-Originalgrafiken: auf der Ambulanz, am Kinderspital, Start und Übergabe
+- Dampfschiff «Wilhelm Tell» als Raddampfer
+- Kamera hebt sich am Hang, damit die Ambulanz sichtbar bleibt
+- Realismus-Kit: Aufgabenkatalog + Testkit (8 Geometrie-Prüfungen, Kontaktbogen)
+
+2026-11-10c  Navi und Räder
+- Navi beachtet Einbahnstrassen (527 Wegstücke aus OpenStreetMap)
+- Route startet nicht mehr hinter dem Auto
+- Pfeil über der Ambulanz zeigt ruhig in Luftlinie zum Ziel (kein Hin-und-her mehr)
+- Vorderräder lenken über ein Gelenk und drehen sauber (kein Eiern)
+
+2026-11-10b  Gelände und Tempo
+- Echtes Gelände aus swisstopo swissALTI3D (5-m-Raster): Gütsch, Musegg, Reusstal, Spitalhügel
+- Häuser, Strassen, Wasser, Bäume und Brücken stehen auf dem Gelände; Ambulanz neigt sich am Hang
+- Karte und Minimap mit Geländeschattierung
+- Höchsttempo: Entdecken 90, Rettung 119, Profi 144 km/h (mit Blaulicht +15 %); Standardmodus jetzt «Rettung»
+- Credits: Idee und Konzept Simon Infanger
+
+2026-11-10a  Erstes spielbares Paket
+- Echtes Luzern (Altstadt, Seebecken, LUKS) aus OpenStreetMap-Daten in Comic-3D
+- Fassaden mit Fensterläden, Ziegeldächer, Kopfsteinpflaster, bewegtes Wasser
+- Kapellbrücke, Spreuerbrücke, Wasserturm, Jesuitenkirche, Hofkirche, KKL
+- Ambulanz mit Blaulicht, Hupe, Navi-Pfeil, Minimap und grosser Karte
+- 4 Einsätze mit Mini-Spielen, Sterne, Übergabe im Kinderspital
+- Pause, Autosave, Tastatur und Gamepad, 3 Modi, 3 Kameras
