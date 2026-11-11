@@ -256,6 +256,20 @@ function trainTex(kind: string, front: boolean) {
   if (front) { g.fillStyle = '#2C3A46'; g.fillRect(0, 8, 256, 30); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+/** Zugwagen als ein Netz mit einer Atlas-Textur (Seite, Front, Dach, Unterseite) – 1 Zeichenaufruf statt 6 */
+function trainAtlas(kind: string) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d')!;
+  g.drawImage(trainTex(kind, false).image as HTMLCanvasElement, 0, 0); g.drawImage(trainTex(kind, true).image as HTMLCanvasElement, 0, 64);
+  g.fillStyle = kind === 'zb' ? '#9AA0A6' : '#B9BEC4'; g.fillRect(0, 128, 256, 64); g.fillStyle = '#2B2F33'; g.fillRect(0, 192, 256, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function trainCarGeo(carL: number) {
+  const geo = new THREE.BoxGeometry(2.9, 3.4, carL).toNonIndexed(); const uv = geo.getAttribute('uv');
+  // Flächenreihenfolge +x, -x, +y, -y, +z, -z (je 6 Ecken) → Atlas-Zeile (v von unten: Seite 0.75–1, Front 0.5–0.75, Dach 0.25–0.5, unten 0–0.25)
+  const rows = [[0.75, 1], [0.75, 1], [0.25, 0.5], [0, 0.25], [0.5, 0.75], [0.5, 0.75]];
+  for (let f = 0; f < 6; f++) for (let k = 0; k < 6; k++) { const i = f * 6 + k; uv.setY(i, rows[f][0] + uv.getY(i) * (rows[f][1] - rows[f][0])); }
+  geo.clearGroups(); geo.translate(0, 2.2, 0); return geo;
+}
 export class Trains {
   group = new THREE.Group();
   private tr: { line: TrainLine; C: number[]; L: number; s: number; dir: number; wait: number; cars: THREE.Object3D[]; carL: number; v: number; tooted: number }[] = [];
@@ -265,11 +279,11 @@ export class Trains {
     lines.forEach((line, i) => {
       const C = [0]; for (let k = 1; k < line.pts.length; k++) C.push(C[k - 1] + Math.hypot(line.pts[k][0] - line.pts[k - 1][0], line.pts[k][1] - line.pts[k - 1][1]));
       let m = mats.get(line.kind);
-      if (!m) { const side = toon('#ffffff', { map: trainTex(line.kind, false) }), front = toon('#ffffff', { map: trainTex(line.kind, true) }), roof = toon(line.kind === 'zb' ? '#9AA0A6' : '#B9BEC4'), dark = toon('#2B2F33');
-        m = [side, side, roof, dark, front, front]; mats.set(line.kind, m); }
+      if (!m) { m = [toon('#ffffff', { map: trainAtlas(line.kind) })]; mats.set(line.kind, m); }
       const n = line.kind === 'zb' ? 3 : 4, carL = line.kind === 'zb' ? 19 : 24;
+      const geo = trainCarGeo(carL);
       const cars: THREE.Object3D[] = [];
-      for (let k = 0; k < n; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.4, carL), m); b.position.y = 2.2; const g = new THREE.Group(); g.add(b); this.group.add(g); cars.push(g); }
+      for (let k = 0; k < n; k++) { const b = new THREE.Mesh(geo, m[0]); this.group.add(b); cars.push(b); }
       this.tr.push({ line, C, L: C[C.length - 1], s: (i * 0.29 % 1) * C[C.length - 1], dir: i % 2 ? -1 : 1, wait: 0, cars, carL, v: 0, tooted: 0 });
     });
   }

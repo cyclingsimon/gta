@@ -801,6 +801,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       g.setAttribute('normal', new THREE.Float32BufferAttribute(buf.nor, 3));
       g.setAttribute('color', new THREE.Float32BufferAttribute(buf.col, 3));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(buf.uv, 2));
+      buf.pos = []; buf.nor = []; buf.col = []; buf.uv = []; // JS-Arrays sofort freigeben (Speicherspitze beim Laden)
       const mesh = new THREE.Mesh(g, mats[k]);
       mesh.name = 'buildings-' + k;
       group.add(mesh);
@@ -808,13 +809,14 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     await onProgress('Konturen …');
     const lmat = new THREE.LineBasicMaterial({ color: '#3b302b', transparent: true, opacity: 0.6 });
-    for (const [, , L] of groups) {
-      if (!L.length) continue;
-      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(L, 3));
+    for (const gr of groups) {
+      const L = gr[2]; if (!L.length) continue;
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(L, 3)); gr[2] = [];
       const lines = new THREE.LineSegments(lg, lmat);
       lines.name = 'edges-buildings';
       group.add(lines);
     }
+    b3dTiles.clear(); lpos.length = 0;
   }
 
   await onProgress('Wahrzeichen …');

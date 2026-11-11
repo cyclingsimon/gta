@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Terrain } from './terrain';
 import { toon } from './world';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export interface BusLine { ref: string; op: string; to: string; kind: 'double' | 'artic' | 'rigid'; trolley: boolean; wire?: boolean; len: number; pts: number[][]; stops: [number, string][] }
 interface Bus { line: number; s: number; v: number; dwell: number; yT: number; yo: number; nextStop: number; group: THREE.Group; segs: THREE.Object3D[]; segL: number; gap: number; alive: boolean }
@@ -179,6 +180,10 @@ export class Buses {
         for (const x of [-0.3, 0.3]) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, L, 5), toon('#2A2F33')); pole.rotation.x = -(Math.PI / 2 - A); pole.position.set(x, 3.3 + Math.sin(A) * L / 2, 0.8 - Math.cos(A) * L / 2); seg.add(pole);
           const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.35), toon('#1A1D20')); head.position.set(x, 3.3 + Math.sin(A) * L, 0.8 - Math.cos(A) * L); seg.add(head); }
       }
+      // Räder und Stromabnehmer (alle dunkel) zu einem Netz zusammenfassen: 1 Zeichenaufruf statt bis 7
+      const dark: THREE.BufferGeometry[] = [];
+      for (const c of [...seg.children]) { if (c === body) continue; const mm = c as THREE.Mesh; mm.updateMatrix(); const q = (mm.geometry.index ? mm.geometry.toNonIndexed() : mm.geometry.clone()); q.deleteAttribute('uv'); q.applyMatrix4(mm.matrix); dark.push(q); seg.remove(c); }
+      if (dark.length) seg.add(new THREE.Mesh(mergeGeometries(dark, false)!, wheelM));
       g.add(seg); segs.push(seg);
     }
     this.group.add(g);

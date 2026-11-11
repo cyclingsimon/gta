@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { toon, outline, type Mask } from './world';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Terrain } from './terrain';
 import type { Controls } from './input';
 
@@ -117,6 +118,20 @@ export function buildAmbulance() {
   dizzy.position.y = 3.8; dizzy.visible = false;
   root.add(dizzy);
 
+  // Feste Teile nach Material zusammenfassen (Konturen in ein Liniennetz): ~45 → ~12 Zeichenaufrufe
+  {
+    const keep = new Set<THREE.Material>([white, yellow, red, dark, glass, grey]);
+    const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>(); const lineGeos: THREE.BufferGeometry[] = []; let lineMat: THREE.Material | null = null;
+    for (const c of [...body.children]) {
+      const mm = c as THREE.Mesh;
+      if ((mm as any).isMesh && keep.has(mm.material as THREE.Material) && !lights.includes(mm)) {
+        mm.updateMatrix(); const q = mm.geometry.index ? mm.geometry.toNonIndexed() : mm.geometry.clone(); q.deleteAttribute('uv'); q.applyMatrix4(mm.matrix);
+        const a = byMat.get(mm.material as THREE.Material) || []; a.push(q); byMat.set(mm.material as THREE.Material, a); body.remove(c);
+      } else if ((c as any).isLineSegments) { const ls = c as THREE.LineSegments; ls.updateMatrix(); lineGeos.push(ls.geometry.clone().applyMatrix4(ls.matrix)); lineMat = ls.material as THREE.Material; body.remove(c); }
+    }
+    for (const [mat, gs] of byMat) body.add(new THREE.Mesh(mergeGeometries(gs, false)!, mat));
+    if (lineGeos.length && lineMat) body.add(new THREE.LineSegments(mergeGeometries(lineGeos, false)!, lineMat));
+  }
   return { root, body, lights, blueOn, blueOff, dizzy, wheels, steerPivots, mats: { white, yellow, red, rear: rearPlane.material } };
 }
 

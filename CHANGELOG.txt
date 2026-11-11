@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11u  Weniger Speicher beim Laden
+- Speicherspitze beim Bau der 3D-Häuser 2.3 → 1.6 GB, nach dem Start 1.6 → 1.15 GB (Zwischenpuffer werden sofort freigegeben)
+- Zugwagen mit einer Textur (1 statt 6 Zeichenaufrufe je Wagen), Bus-Räder und Stromabnehmer zusammengefasst, Ambulanz-Teile zusammengefasst
+- Zeichenaufrufe beim Start 776 → 692
+
 2026-11-11t  Weniger Zeichenaufrufe
 - Brunnen instanziert, mit bemalter Säule (blau, rot, grün, gold) und goldener Kugel wie die Altstadtbrunnen
 - Fahnen, Pedalos und Kleinobjekte zusammengefasst: 937 → 776 Zeichenaufrufe beim Start (Schwanenplatz 854 → 742)
