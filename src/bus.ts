@@ -39,6 +39,29 @@ function frontTex(op: string, ref: string, to: string) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+/** Ein Bus = eine Atlas-Textur (Seite, Front, Heck, Dach, Unterseite) → 1 Zeichenaufruf je Wagenkasten statt 5 */
+const ATLAS = 1024;
+const R = { side: [0, 0, 512, 128], front: [512, 0, 256, 256], roof: [768, 0, 256, 128], dark: [768, 128, 256, 128], rear: [0, 256, 512, 560] } as Record<string, number[]>;
+function busAtlas(op: string, ref: string, to: string) {
+  const c = document.createElement('canvas'); c.width = c.height = ATLAS; const g = c.getContext('2d')!;
+  const st = sideTex(op, ref).image as HTMLCanvasElement, fr = frontTex(op, ref, to).image as HTMLCanvasElement, rt = rearTex(op);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const draw = () => {
+    g.drawImage(st, 0, 0, 512, 128); g.drawImage(fr, 512, 0, 256, 256);
+    g.fillStyle = op === 'PAG' ? '#FFCC00' : '#F4F6F8'; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
+    g.drawImage(rt.image as HTMLCanvasElement, 0, 256, 512, 560); t.needsUpdate = true;
+  };
+  draw(); (rt as any).listeners.push(draw);
+  return toon('#ffffff', { map: t });
+}
+function busSegGeo(segL: number, front: boolean, rear: boolean) {
+  const geo = new THREE.BoxGeometry(2.55, 2.75, segL).toNonIndexed(); const uv = geo.getAttribute('uv');
+  const faces = [['side', false], ['side', true], ['roof', false], ['dark', false], [front ? 'front' : 'roof', false], [rear ? 'rear' : 'roof', false]] as [string, boolean][];
+  faces.forEach(([k, mirror], f) => { const [x, y, w, h] = R[k]; const u0 = x / ATLAS, u1 = (x + w) / ATLAS, vt = 1 - y / ATLAS, vb = 1 - (y + h) / ATLAS;
+    for (let i = f * 6; i < f * 6 + 6; i++) { const u = mirror ? 1 - uv.getX(i) : uv.getX(i); uv.setXY(i, u0 + u * (u1 - u0), vb + uv.getY(i) * (vt - vb)); } });
+  geo.clearGroups(); return geo;
+}
+
 /** Heck: Werbung «Kinderspital Zentralschweiz» mit Luksi (ein Canvas je Betreiberfarbe, Luksi-Bild wird nachgeladen) */
 const rearCache = new Map<string, THREE.CanvasTexture>();
 function rearTex(op: string) {
@@ -52,9 +75,9 @@ function rearTex(op: string) {
     const L = imgs.luksi; if (L) { const h = 128, w = L.width * h / L.height; g.drawImage(L, 16, 98, w, h); }
     const G = imgs.logo; if (G) { const w = 140, h = G.height * w / G.width; g.drawImage(G, 100, 162 - h / 2, w, h); }
     g.fillStyle = '#D61E1E'; g.fillRect(14, 244, 34, 18); g.fillRect(208, 244, 34, 18);   // Rücklichter
-    t.needsUpdate = true;
+    t.needsUpdate = true; for (const f of ((t as any).listeners || [])) f();
   };
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; rearCache.set(k, t);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; rearCache.set(k, t); (t as any).listeners = [] as (() => void)[];
   draw();
   const a = new Image(); a.onload = () => { imgs.luksi = a; draw(); }; a.src = 'img/luksi/lp2-winkt.webp';
   const b = new Image(); b.onload = () => { imgs.logo = b; draw(); }; b.src = 'img/kinderspital-logo.png';
@@ -68,6 +91,7 @@ export class Buses {
   private rnd = (() => { let a = 77; return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
   private mats = new Map<string, THREE.Material[]>();
   private rearMats = new Map<string, THREE.Material>();
+  private atlasMats = new Map<string, THREE.Material>();
   private rearMat(op: string) { let r = this.rearMats.get(op); if (!r) { r = toon('#ffffff', { map: rearTex(op) }); this.rearMats.set(op, r); } return r; }
   private sig: number[][] = []; private sigState: (i: number) => number = () => 0;
   stats = { spawns: 0, stops: 0 };
@@ -155,23 +179,13 @@ export class Buses {
     const n = l.kind === 'double' ? 3 : l.kind === 'artic' ? 2 : 1;
     const segL = l.kind === 'double' ? 7.9 : l.kind === 'artic' ? 8.7 : 12, gap = 0.6;
     const key = l.op + '|' + l.ref + '|' + l.to;
-    let m = this.mats.get(key);
-    if (!m) {
-      const st = sideTex(l.op, l.ref); const stL = st.clone(); stL.wrapS = THREE.RepeatWrapping; stL.repeat.x = -1; stL.needsUpdate = true;
-      const side = toon('#ffffff', { map: st }), sideL = toon('#ffffff', { map: stL });
-      const front = toon('#ffffff', { map: frontTex(l.op, l.ref, l.to) });
-      const roof = toon(l.op === 'PAG' ? '#FFCC00' : '#F4F6F8');
-      m = [side, sideL, roof, toon('#1B1F24'), front, roof]; // +x, -x, +y, -y, +z (vorne), -z
-      this.mats.set(key, m);
-    }
     const g = new THREE.Group(); const segs: THREE.Object3D[] = [];
     const wheelG = new THREE.CylinderGeometry(0.5, 0.5, 2.62, 10); wheelG.rotateZ(Math.PI / 2);
     const wheelM = toon('#1B1F24');
     for (let i = 0; i < n; i++) {
       const seg = new THREE.Group();
-      const rear = this.rearMat(l.op);
-      const mats = [m[0], m[1], m[2], m[3], i === 0 ? m[4] : m[5], i === n - 1 ? rear : m[5]];
-      const body = new THREE.Mesh(new THREE.BoxGeometry(2.55, 2.75, segL), mats); body.position.y = 1.72; seg.add(body);
+      let am = this.atlasMats.get(key); if (!am) { am = busAtlas(l.op, l.ref, l.to); this.atlasMats.set(key, am); }
+      const body = new THREE.Mesh(busSegGeo(segL, i === 0, i === n - 1), am); body.position.y = 1.72; seg.add(body);
       for (const z of [segL / 2 - 2.2, -segL / 2 + 2.0]) { const w = new THREE.Mesh(wheelG, wheelM); w.position.set(0, 0.5, z); seg.add(w); }
       if (i === 0 && l.trolley) { // Stromabnehmer (Trolleybus)
         // Fuss vorne auf dem Dach, Stangen steigen nach HINTEN zur Fahrleitung (5.6 m) an – wie beim echten Trolleybus

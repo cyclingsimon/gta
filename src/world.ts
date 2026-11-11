@@ -1715,6 +1715,11 @@ function rasterize(d: CityData, b3d?: B3D) {
 }
 
 // ---- R9/R11: Stege, Laternen, Ampeln, Brunnen, Haltestellen (OSM) ----
+/** Mehrere Geometrien mit je einer Farbe zu einer (Vertex-Farben) zusammenfügen */
+function colorMerge(parts: [THREE.BufferGeometry, string][]) {
+  const gs = parts.map(([g, col]) => { const q = g.index ? g.toNonIndexed() : g.clone(); q.deleteAttribute('uv'); const c = new THREE.Color(col), n = q.getAttribute('position').count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } q.setAttribute('color', new THREE.BufferAttribute(a, 3)); return q; });
+  return mergeGeometries(gs, false)!;
+}
 /** InstancedMesh räumlich aufteilen (Zellgrösse in m) – bessere Sichtbarkeitsprüfung */
 export function chunkInstanced(im: THREE.InstancedMesh, cell: number): THREE.Object3D {
   const m = new THREE.Matrix4(), cells = new Map<string, number[]>();
@@ -1734,18 +1739,13 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   // Sitzbänke (OSM amenity=bench, Innenstadt): Holzbank auf zwei Füssen, zur nächsten Strasse ausgerichtet
   if (P.benches && P.benches.length) {
     const ok = P.benches.filter(([x, z]) => mask.at(x, z) === 0 && !mask.isRoad(x, z));
-    const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.08, 0.45), toon('#8A5A36'), ok.length);
-    const back = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.4, 0.06), toon('#8A5A36'), ok.length);
-    const feet = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.42, 0.4), toon('#3F4A50'), ok.length);
-    const m4 = new THREE.Matrix4(), o = new THREE.Object3D();
+    const bench = new THREE.InstancedMesh(colorMerge([[new THREE.BoxGeometry(1.8, 0.08, 0.45).translate(0, 0.45, 0), '#8A5A36'], [new THREE.BoxGeometry(1.8, 0.4, 0.06).translate(0, 0.7, -0.22), '#8A5A36'], [new THREE.BoxGeometry(1.5, 0.42, 0.4).translate(0, 0.21, 0), '#3F4A50']]), toon('#ffffff', { vertexColors: true }), ok.length);
+    const o = new THREE.Object3D();
     ok.forEach(([x, z], i) => {
       let a = 0; for (let k = 0; k < 8; k++) { const t = k * Math.PI / 4; if (mask.isRoad(x + Math.sin(t) * 3, z + Math.cos(t) * 3)) { a = t; break; } }
-      const y = terrain.height(x, z);
-      o.position.set(x, y + 0.45, z); o.rotation.set(0, a, 0); o.updateMatrix(); seat.setMatrixAt(i, o.matrix);
-      o.translateZ(-0.22); o.translateY(0.25); o.updateMatrix(); back.setMatrixAt(i, o.matrix);
-      o.position.set(x, y + 0.21, z); o.rotation.set(0, a, 0); o.updateMatrix(); feet.setMatrixAt(i, o.matrix); void m4;
+      o.position.set(x, terrain.height(x, z), z); o.rotation.set(0, a, 0); o.updateMatrix(); bench.setMatrixAt(i, o.matrix);
     });
-    for (const im of [seat, back, feet]) { im.computeBoundingSphere(); im.name = 'benches'; G.add(im); }
+    bench.computeBoundingSphere(); bench.name = 'benches'; G.add(bench);
   }
   // Strände und Badeplätze (Lido, Ufschötti, Tribschen …): bunte Badetücher und Sonnenschirme
   if (P.beaches && P.beaches.length) {
@@ -1839,10 +1839,9 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   if (P.stops.length) {
     const poleG = new THREE.CylinderGeometry(0.05, 0.05, 2.6, 4); poleG.translate(0, 1.3, 0);
     const signG = new THREE.BoxGeometry(0.6, 0.45, 0.05); signG.translate(0, 2.55, 0);
-    const pole = new THREE.InstancedMesh(poleG, toon('#8A8F94'), P.stops.length);
-    const sign = new THREE.InstancedMesh(signG, toon('#2F6FB8'), P.stops.length);
-    P.stops.forEach(([x, z], i) => { m4.makeRotationY(hash(x + 1, z) * Math.PI); m4.setPosition(x, terrain.height(x, z), z); pole.setMatrixAt(i, m4); sign.setMatrixAt(i, m4); });
-    G.add(pole, sign);
+    const st = new THREE.InstancedMesh(colorMerge([[poleG, '#8A8F94'], [signG, '#2F6FB8']]), toon('#ffffff', { vertexColors: true }), P.stops.length);
+    P.stops.forEach(([x, z], i) => { m4.makeRotationY(hash(x + 1, z) * Math.PI); m4.setPosition(x, terrain.height(x, z), z); st.setMatrixAt(i, m4); });
+    st.computeBoundingSphere(); st.name = 'stops'; G.add(st);
   }
   // Instanzen in 500-m-Zellen aufteilen, damit nur sichtbare Zellen gezeichnet werden (Ampeln bleiben am Stück: Index = Ampel)
   const sig = (G as any).signalLamp as THREE.Object3D | undefined;

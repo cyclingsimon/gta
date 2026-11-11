@@ -32,7 +32,7 @@ R = [('S-Bahn Littau', 'sbb', (190, 240), (-3801, -245)),
      ('S-Bahn Küssnacht', 'sbb', (205, 240), (2699, 133)),
      ('IR Richtung Zürich', 'sbb', (175, 240), (-1137, -1101)),
      ('S-Bahn Emmenbrücke', 'sbb', (160, 240), (-1640, -1101)),
-     ('Zentralbahn Horw', 'zb', (-126, 3453), (-72, 4539))]
+     ('Zentralbahn Luzern–Horw', 'zb', (130, 330), (361, 6299))]
 out = []
 for name, kind, a, b in R:
     r = route(a, b)

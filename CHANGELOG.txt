@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11w  Zentralbahn ab Luzern, Busse in einem Stück
+- Zentralbahn fährt jetzt die ganze Strecke ab Bahnhof Luzern: durch den Luzernertunnel unter der Allmend, über Kriens Mattenhof und Horw, durch den Tunnel Haltiwald bis zum Spielfeldrand (6.6 km statt 1.1 km)
+- Busse: je Wagenkasten eine Textur (Seite, Front mit Linienanzeige, Heck mit Kinderspital-Werbung) statt fünf Materialien
+- Sitzbänke und Haltestellenschilder je als ein Netz; Zeichenaufrufe beim Start 704 → 635
+- Geprüft: Spass-Test (Kegel, Herzen, Tiere, Schiffe, Züge) für Version v fehlerfrei; Tunnelportal südlich des Bahnhofs liegt korrekt im Gleiseinschnitt unter der Strasse
+
 2026-11-11v  Züge fahren durch Tunnel
 - Tunnel aus OpenStreetMap (tunnel=*): Gütschtunnel, Schönheimtunnel, Luzerner Stadttunnel (Richtung Küssnacht, 2.1 km), Littauer Tunnel, Friedental, Schiltenneune beim Verkehrshaus und weitere
 - Vorher fuhren die Züge auf 30–45 % ihrer Strecke oben übers Gelände und durch Häuser, und 9.4 km Gleis lagen sichtbar auf Hügeln und Strassen. Jetzt verschwinden die Wagen im Tunnel, die Gleise darüber sind weg, 15 Tunnelportale (Steinrahmen) stehen an den Ein- und Ausfahrten
