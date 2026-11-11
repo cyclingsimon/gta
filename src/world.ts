@@ -436,7 +436,7 @@ const ROAD_LAYER: Record<string, number> = { footway: 0.3, path: 0.3, steps: 0.3
 
 export interface B3D { meta: { buildings: number[][] }; pos: ArrayLike<number>; idx: Uint16Array; edges?: Uint16Array; roof?: string[] }
 
-export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][] }
+export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][] }
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
@@ -953,6 +953,88 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
+  // Verkehrshaus: Schaustücke im Hof (Flugzeug auf Stelzen, rote Lok auf einem Gleisstück)
+  if (X1 > 2200) {
+    const free = (x: number, z: number, r: number) => { for (let a = 0; a < 6.283; a += 0.5) for (const rr of [0, r * 0.5, r]) { const q = mask.at(x + Math.cos(a) * rr, z + Math.sin(a) * rr); if (q !== 0) return false; } return true; };
+    const find = (x: number, z: number, r: number): [number, number] | null => { for (let d0 = 0; d0 < 60; d0 += 4) for (let a = 0; a < 6.283; a += 0.4) { const px = x + Math.cos(a) * d0, pz = z + Math.sin(a) * d0; if (free(px, pz, r)) return [px, pz]; if (d0 === 0) break; } return null; };
+    const V = new THREE.Group(); V.name = 'verkehrshaus';
+    const white = toon('#F4F4F2'), red = toon('#D7262E'), dark = toon('#2E3A48'), grey = toon('#8D949B'), black = toon('#2B2B2B');
+    const pp = find(2195, -100, 13);
+    if (pp) {
+      const pl = new THREE.Group(); const y0 = terrain.height(pp[0], pp[1]);
+      const fus = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 18, 12), white); fus.rotation.x = Math.PI / 2; pl.add(fus);
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), white); nose.rotation.x = Math.PI / 2; nose.position.z = 9; pl.add(nose);
+      const tailc = new THREE.Mesh(new THREE.ConeGeometry(1.4, 4, 12), white); tailc.rotation.x = -Math.PI / 2; tailc.position.z = -11; pl.add(tailc);
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 3), red); fin.position.set(0, 2.6, -11.2); pl.add(fin);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(24, 0.35, 3.4), white); wing.position.set(0, -0.4, 0.5); pl.add(wing);
+      const stab = new THREE.Mesh(new THREE.BoxGeometry(8, 0.25, 2), white); stab.position.set(0, 0.3, -11.5); pl.add(stab);
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(1.42, 1.42, 16, 12, 1, true, Math.PI * 0.35, Math.PI * 0.3), red); stripe.rotation.x = Math.PI / 2; pl.add(stripe);
+      const win = new THREE.Mesh(new THREE.BoxGeometry(2.86, 0.4, 13), dark); win.position.set(0, 0.45, 0.5); pl.add(win);
+      for (const sx of [-6, 6]) { const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 3, 10), grey); eng.rotation.x = Math.PI / 2; eng.position.set(sx, -1.0, 1.4); pl.add(eng); }
+      for (const [sx, sz] of [[0, 6], [-4, -1], [4, -1]]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 4.2, 6), grey); st.position.set(sx, -3.2, sz); pl.add(st); }
+      pl.position.set(pp[0], y0 + 5.3, pp[1]); pl.rotation.y = 0.6; V.add(pl);
+    }
+    const lp = find(2200, -160, 9);
+    if (lp) {
+      const lo = new THREE.Group(); const y0 = terrain.height(lp[0], lp[1]);
+      for (const sx of [-0.72, 0.72]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 20), grey); rail.position.set(sx, 0.08, 0); lo.add(rail); }
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.0, 15), red); body.position.y = 2.6; lo.add(body);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.4, 14), grey); roof.position.y = 4.3; lo.add(roof);
+      for (const sz of [-7.52, 7.52]) { const w = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 0.05), dark); w.position.set(0, 3.3, sz); lo.add(w); }
+      const band = new THREE.Mesh(new THREE.BoxGeometry(2.95, 0.25, 15.05), white); band.position.y = 1.6; lo.add(band);
+      for (const sz of [-5.5, -3.2, 3.2, 5.5]) for (const sx of [-1.2, 1.2]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.3, 12), black); wh.rotation.z = Math.PI / 2; wh.position.set(sx, 0.7, sz); lo.add(wh); }
+      for (const sz of [-4, 4]) { const pan = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.1), black); pan.position.set(0, 5.3, sz); lo.add(pan); const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 0.08), black); arm.position.set(0, 4.8, sz); arm.rotation.x = 0.5; lo.add(arm); }
+      lo.position.set(lp[0], y0, lp[1]); lo.rotation.y = 0.4; V.add(lo);
+    }
+    if (V.children.length) group.add(mergeGroup(V));
+  }
+
+  // Spielplätze (OSM leisure=playground): Rutschbahn und Schaukel in der Mitte
+  {
+    const spots: [number, number, number][] = [];
+    for (const g of d.green) {
+      if (g.k !== 'playground') continue;
+      const [cx, cz] = centroid(g.p);
+      if (!pointInPoly(cx, cz, g.p) || mask.at(cx, cz) !== 0 || mask.isRoad(cx, cz)) continue;
+      if (Math.abs(signedArea(g.p)) < 60) continue;
+      spots.push([cx, cz, hash(cx, cz) * Math.PI * 2]);
+    }
+    if (spots.length) {
+      const P = new THREE.Group(); P.name = 'spielplaetze';
+      const slideM = toon('#F2B705'), frameM = toon('#D9472B'), woodM = toon('#9A6A3E'), seatM = toon('#2F7FC1');
+      for (const [x, z, a] of spots) {
+        const y = terrain.height(x, z), o = new THREE.Group(); o.position.set(x, y, z); o.rotation.y = a;
+        const tower = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, 1.6), woodM); tower.position.set(0, 1.6, 0); o.add(tower);
+        for (const [px, pz] of [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.6, 0.14), woodM); leg.position.set(px, 1.3, pz); o.add(leg); }
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.9, 4), frameM); roof.position.set(0, 3.0, 0); roof.rotation.y = Math.PI / 4; o.add(roof);
+        const slide = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 3.4), slideM); slide.position.set(0, 0.85, 2.3); slide.rotation.x = 0.5; o.add(slide);
+        for (const sx of [-1.4, 1.4]) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.12), frameM); f.position.set(3.2 + sx * 0.0, 1.2, sx); f.rotation.x = sx > 0 ? -0.25 : 0.25; o.add(f); }
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 3.0), frameM); bar.position.set(3.2, 2.35, 0); o.add(bar);
+        for (const sz of [-0.6, 0.6]) { const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.3), seatM); seat.position.set(3.2, 0.55, sz); o.add(seat); for (const k of [-0.2, 0.2]) { const rope = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.8, 0.03), woodM); rope.position.set(3.2 + k, 1.45, sz); o.add(rope); } }
+        P.add(o);
+      }
+      group.add(mergeGroup(P));
+    }
+  }
+
+  // Nadelwehr in der Reuss (OSM-Weg 27549263): Holznadeln dicht an dicht unter einem schmalen Steg
+  if (X0 < -340) {
+    const line = [[-342, 79], [-338, 60], [-337, 56]];
+    const pts: [number, number][] = [];
+    for (let i = 1; i < line.length; i++) { const [x1, z1] = line[i - 1], [x2, z2] = line[i]; const L = Math.hypot(x2 - x1, z2 - z1); for (let t = 0; t < L; t += 0.22) pts.push([x1 + (x2 - x1) * t / L, z1 + (z2 - z1) * t / L]); }
+    const ang = Math.atan2(line[2][0] - line[0][0], line[2][1] - line[0][1]);
+    const nd = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 2.0, 0.16), toon('#7A5232'), pts.length); const m4 = new THREE.Matrix4(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ang), one = new THREE.Vector3(1, 1, 1);
+    pts.forEach(([x, z], i) => nd.setMatrixAt(i, m4.compose(new THREE.Vector3(x, 0.45, z), q, one))); nd.computeBoundingSphere();
+    const W = new THREE.Group(); W.name = 'nadelwehr'; W.add(nd);
+    const deckM = toon('#8E959C'), railM = toon('#4E5A63');
+    for (let i = 1; i < line.length; i++) {
+      const [x1, z1] = line[i - 1], [x2, z2] = line[i]; const L = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(x2 - x1, z2 - z1);
+      const dk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, L + 0.2), deckM); dk.position.set((x1 + x2) / 2, 1.55, (z1 + z2) / 2); dk.rotation.y = a; W.add(dk);
+      for (const sd of [-0.75, 0.75]) { const rl = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, L), railM); rl.position.set((x1 + x2) / 2 + Math.cos(a) * sd, 2.6, (z1 + z2) / 2 - Math.sin(a) * sd); rl.rotation.y = a; W.add(rl); }
+    }
+    group.add(W);
+  }
+
   // Löwendenkmal (in den Fels gehauener Löwe über dem Teich, Denkmalstrasse). Kinderfreundlich: der Löwe schläft.
   if (X0 < 236 && X1 > 236 && Z0 < -757 && Z1 > -757) {
     const L = new THREE.Group(); L.name = 'loewendenkmal';
@@ -1202,7 +1284,8 @@ export function outline(m: THREE.Mesh) {
 function coveredBridge(p: number[][], width: number, terrain: Terrain, flowers = false) {
   const g = new THREE.Group();
   const wood = toon('#A87445'), roofM = toon('#8B3A2B'), deckM = toon('#9C6B43'), leafM = toon('#3F8A3A'), bloomM = toon('#E8322E');
-  leafM.userData.noEdges = bloomM.userData.noEdges = true;
+  const lightM = toon('#FFF2B8', { emissive: new THREE.Color('#5A4E20') }); lightM.name = 'lampHead';
+  leafM.userData.noEdges = bloomM.userData.noEdges = lightM.userData.noEdges = true;
   const hw = width / 2;
   for (let i = 0; i < p.length - 1; i++) {
     const [x1, z1] = p[i], [x2, z2] = p[i + 1];
@@ -1234,6 +1317,8 @@ function coveredBridge(p: number[][], width: number, terrain: Terrain, flowers =
       roof.rotation.z = -s * 0.42;
       seg.add(roof);
     }
+    // Laternen unter dem Dachfirst (leuchten am Abend)
+    for (let k = 0; k < Math.max(1, Math.round(len / 6)); k++) { const lt = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.35), lightM); lt.position.set(0, 3.55, -len / 2 + (k + 0.5) * len / Math.max(1, Math.round(len / 6))); seg.add(lt); }
     // Pfähle im Wasser
     const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 2.2, 6), wood); pile.position.set(0, -1.2, 0);
     seg.add(pile);
@@ -1268,6 +1353,8 @@ function quarter(x: number, z: number): 'altstadt' | 'neustadt' | 'quai' | 'othe
   if (x > -520 && x < -120 && z >= 40 && z < 230) return 'altstadt';
   // Hotels Schweizerhofquai/Nationalquai/Haldenstrasse
   if (x >= 150 && x < 900 && z > -420 && z < -120) return 'quai';
+  // Bahnhofstrasse/Theater (linkes Reussufer zwischen Altstadt und Bahnhof): Gründerzeit
+  if (x > -120 && x < 160 && z >= 40 && z < 230) return 'neustadt';
   // Neustadt / Hirschmatt
   if (x > -400 && x < 420 && z >= 230 && z < 950) return 'neustadt';
   return 'other';
@@ -1585,6 +1672,44 @@ function rasterize(d: CityData, b3d?: B3D) {
 // ---- R9/R11: Stege, Laternen, Ampeln, Brunnen, Haltestellen (OSM) ----
 function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   const G = new THREE.Group(); G.name = 'props';
+  // Sitzbänke (OSM amenity=bench, Innenstadt): Holzbank auf zwei Füssen, zur nächsten Strasse ausgerichtet
+  if (P.benches && P.benches.length) {
+    const ok = P.benches.filter(([x, z]) => mask.at(x, z) === 0 && !mask.isRoad(x, z));
+    const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.08, 0.45), toon('#8A5A36'), ok.length);
+    const back = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.4, 0.06), toon('#8A5A36'), ok.length);
+    const feet = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.42, 0.4), toon('#3F4A50'), ok.length);
+    const m4 = new THREE.Matrix4(), o = new THREE.Object3D();
+    ok.forEach(([x, z], i) => {
+      let a = 0; for (let k = 0; k < 8; k++) { const t = k * Math.PI / 4; if (mask.isRoad(x + Math.sin(t) * 3, z + Math.cos(t) * 3)) { a = t; break; } }
+      const y = terrain.height(x, z);
+      o.position.set(x, y + 0.45, z); o.rotation.set(0, a, 0); o.updateMatrix(); seat.setMatrixAt(i, o.matrix);
+      o.translateZ(-0.22); o.translateY(0.25); o.updateMatrix(); back.setMatrixAt(i, o.matrix);
+      o.position.set(x, y + 0.21, z); o.rotation.set(0, a, 0); o.updateMatrix(); feet.setMatrixAt(i, o.matrix); void m4;
+    });
+    for (const im of [seat, back, feet]) { im.computeBoundingSphere(); im.name = 'benches'; G.add(im); }
+  }
+  // Strände und Badeplätze (Lido, Ufschötti, Tribschen …): bunte Badetücher und Sonnenschirme
+  if (P.beaches && P.beaches.length) {
+    const spots: [number, number][] = [];
+    for (const p of P.beaches) {
+      const xs = p.map((q) => q[0]), zs = p.map((q) => q[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+      const n = Math.min(40, Math.floor(Math.abs(signedArea(p)) / 120));
+      for (let i = 0; i < n * 4 && spots.length < 400; i++) { const x = x0 + hash(i, x0) * (x1 - x0), z = z0 + hash(z0, i + 0.3) * (z1 - z0); if (pointInPoly(x, z, p) && mask.at(x, z) === 0 && !mask.isRoad(x, z) && !spots.some(([a, c]) => Math.hypot(a - x, c - z) < 4)) spots.push([x, z]); }
+    }
+    if (spots.length) {
+      const towel = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.04, 1.8), toon('#ffffff'), spots.length);
+      const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.04, 0.04, 2.1, 5), toon('#EEEEEE'), spots.length);
+      const top = new THREE.InstancedMesh(new THREE.ConeGeometry(1.2, 0.45, 8), toon('#ffffff'), spots.length);
+      const o = new THREE.Object3D(), c = new THREE.Color(); const cols = ['#E94B3C', '#F7C531', '#3FA9F5', '#7ED957', '#FF8FB1', '#FFFFFF'];
+      spots.forEach(([x, z], i) => {
+        const y = terrain.height(x, z);
+        o.position.set(x, y + 0.03, z); o.rotation.set(0, hash(x, z) * 3, 0); o.updateMatrix(); towel.setMatrixAt(i, o.matrix); towel.setColorAt(i, c.set(cols[Math.floor(hash(z, x) * cols.length)]));
+        o.position.set(x + 0.9, y + 1.05, z); o.rotation.set(0, 0, 0); o.updateMatrix(); pole.setMatrixAt(i, o.matrix);
+        o.position.set(x + 0.9, y + 2.1, z); o.updateMatrix(); top.setMatrixAt(i, o.matrix); top.setColorAt(i, c.set(cols[Math.floor(hash(x + 1, z) * cols.length)]));
+      });
+      for (const im of [towel, pole, top]) { im.computeBoundingSphere(); im.name = 'beach'; G.add(im); }
+    }
+  }
   // Stege: Holzbänder knapp über dem Wasser
   {
     const pos: number[] = [], col: number[] = [];

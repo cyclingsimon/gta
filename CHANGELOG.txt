@@ -1,5 +1,16 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11q  Bis zum Verkehrshaus, Altstadt-Details
+- Spielfeld nach Osten erweitert bis x 2700 m: Haldenstrasse, Verkehrshaus, Lido, Seeburg, Tribschen-Ost, Schönbühl, Horwer Halbinsel mit St. Niklausen und Kastanienbaum (swissALTI3D 2 m, swissBUILDINGS3D, SWISSIMAGE, OpenStreetMap neu geladen)
+- OpenStreetMap-Daten vollständig neu: vorher war die Strassenliste bei 18'000 Einträgen abgeschnitten, jetzt 22'573 (mehr Wege und Gassen), 13'119 statt 11'722 OSM-Häuser im alten Gebiet
+- 14'289 swisstopo-3D-Häuser (vorher 12'159), Dachfarben aus dem Luftbild
+- Buslinien fahren jetzt bis Würzenbach, Verkehrshaus, Meggen-Grenze und Kastanienbaum; S-Bahn Richtung Küssnacht fährt am Verkehrshaus vorbei
+- 6 neue Einsätze: Verkehrshaus, Seeburg, Wartegg (Tribschen), Schönbühl, Kastanienbaum, Löwendenkmal (jetzt 18)
+- Altstadt: Häuserzeilen in wechselnden Pastellfarben (wie am Rathausquai und Weinmarkt), Kapellbrücke mit roten Geranien und Laternen unter dem Dach (leuchten am Abend), Fahnen Schweiz/Luzern auf der Seebrücke, Restaurant-Terrassen mit Sonnenschirmen an Rathausquai, Unter der Egg, Kapellplatz, Nationalquai und Schwanenplatz, Nadelwehr in der Reuss
+- Löwendenkmal mit schlafendem Löwen über dem Teich, Schild «Löwendenkmal»
+- Verkehrshaus: Flugzeug auf Stelzen und rote Lok im Hof, Schild «Verkehrshaus»
+- Bahnhofstrasse/Theater: Häuser im Gründerzeit-Stil statt Bürobau
+
 2026-11-11p  Abendstimmung
 - Pause-Menü «Tageszeit»: Abend mit Sonnenuntergangshimmel, tiefer orangefarbener Sonne, warm leuchtenden Fenstern (zufällig an/aus) und Laternen; Einstellung bleibt gespeichert
 - Quellcode jetzt auf GitHub: github.com/cyclingsimon/gta

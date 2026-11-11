@@ -1,4 +1,4 @@
-import { Fun, Animals, Ships, Trains, Gondola } from './fun';
+import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
@@ -119,6 +119,7 @@ let buses: Buses | null = null;
 let fun: Fun | null = null;
 let animals: Animals | null = null;
 let ships: Ships | null = null;
+let boats: Boats | null = null;
 let trains: Trains | null = null;
 let gondola: Gondola | null = null;
 let aerialTex: THREE.Texture | undefined;
@@ -314,7 +315,14 @@ function setupFun(data: CityData) {
   animals = new Animals(terrain, swans, cows, isW);
   scene.add(animals.group);
   // Kursschiffe: Rundfahrt ab Bahnhofquai im Seebecken und in der Horwer Bucht (Wegpunkte auf Wasser geprüft)
-  ships = new Ships([[[380, -110], [800, -250], [1100, 100], [950, 450], [620, 260]], [[600, 4900], [1050, 5350], [900, 6100], [520, 5250]]]);
+  ships = new Ships([[[380, -110], [800, -250], [1100, 100], [950, 450], [620, 260]], [[600, 4900], [1050, 5350], [900, 6100], [520, 5250]], [[700, -100], [1400, -100], [2000, 350], [2500, 650], [1800, 900], [1100, 400]]]);
+  // Pedalos vor Inseli, Ufschötti, Lido und Tribschen (nur auf offenem Wasser, 14 m Abstand zum Ufer)
+  { const bs: number[][] = []; const wet = (x: number, z: number) => world.mask.at(x, z) === 1;
+    for (const [ax, az] of [[520, 230], [1050, 520], [2250, 380], [1650, 1250], [-60, 4700]]) for (let k = 0, n = 0; k < 60 && n < 4; k++) {
+      const x = ax + (hsh(k, ax) - 0.5) * 140, z = az + (hsh(az, k) - 0.5) * 140; let ok = wet(x, z);
+      for (let q = 0; q < 8 && ok; q++) ok = wet(x + Math.cos(q * 0.785) * 22, z + Math.sin(q * 0.785) * 22);
+      if (ok && !bs.some((b) => Math.hypot(b[0] - x, b[1] - z) < 30)) { bs.push([x, z]); n++; } }
+    if (bs.length) { boats = new Boats(bs); scene.add(boats.group); } }
   scene.add(ships.group);
 }
 
@@ -469,7 +477,7 @@ function drawBigMap() {
   };
   // Ortsnamen gross (Orientierung für Kinder)
   g.textAlign = 'center';
-  for (const [x, z, n] of [[-900, -750, 'LUZERN'], [-2150, 2150, 'KRIENS'], [150, 3950, 'HORW'], [-3200, 150, 'LITTAU'], [-500, 1700, 'Allmend'], [700, 1500, 'Tribschen']] as [number, number, string][]) {
+  for (const [x, z, n] of [[-900, -750, 'LUZERN'], [-2150, 2150, 'KRIENS'], [150, 3950, 'HORW'], [-3200, 150, 'LITTAU'], [-500, 1700, 'Allmend'], [700, 1500, 'Tribschen'], [2250, -480, 'Würzenbach'], [2100, 4300, 'St. Niklausen'], [2450, 5500, 'Kastanienbaum'], [1600, -700, 'Halde']] as [number, number, string][]) {
     const [a, b] = t(x, z); g.font = n === n.toUpperCase() ? `bold ${64 * K}px system-ui` : `bold ${36 * K}px system-ui`; g.lineWidth = 8 * K; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(n, a, b); g.fillStyle = 'rgba(59,48,43,.75)'; g.fillText(n, a, b);
   }
   g.textAlign = 'left';
@@ -738,6 +746,7 @@ function frame(now: number) {
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (ships) ships.update(dt);
+    if (boats) boats.update(dt);
     if (trains) trains.update(dt, players.map((p) => p.car));
     if (gondola) gondola.update(dt);
     for (const p of players) p.car.animateSkin(dt);

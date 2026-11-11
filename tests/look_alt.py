@@ -2,7 +2,7 @@
 import asyncio, sys
 from playwright.async_api import async_playwright
 PRE = sys.argv[1] if len(sys.argv) > 1 else 'alt'
-spots = [(200, -730, 'loewe', 0, 2.2), (200, -730, 'loewe_oben', 1, 2.2), (2086, -127, 'vhs', 0, 0.3)]
+spots = [(2250, 174, 'lido', 1, 0.5), (1050, 520, 'ufschoetti', 1, 0.5), (-182, 22, 'weinmarkt2', 0), (-472, 7, 'nadelwehr', 1)]
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])

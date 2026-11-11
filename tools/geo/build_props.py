@@ -32,5 +32,11 @@ for e in d.get('sig', []):
     if t.get('highway') == 'traffic_signals': out['signals'].append(q)
     elif t.get('highway') == 'bus_stop': out['stops'].append(q + [t.get('name', '')])
     elif t.get('amenity') == 'fountain': out['fountains'].append(q)
+# Strände/Badeplätze und Sitzbänke (data/beach.json, lokale Meter, aus OpenStreetMap)
+import os
+if os.path.exists('data/beach.json'):
+    bj = json.load(open('data/beach.json'))
+    out['beaches'] = [[[round(x, 1), round(z, 1)] for x, z in p] for p in bj['beach'] if any(ok(q) for q in p)]
+    out['benches'] = [[round(x, 1), round(z, 1)] for x, z in bj['bench'] if ok((x, z))]
 json.dump(out, open('public/data/props.json', 'w'), separators=(',', ':'))
 print({k: len(v) for k, v in out.items()})

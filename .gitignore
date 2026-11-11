@@ -3,3 +3,4 @@ dist/
 shots/
 data/
 *.zip
+__pycache__/
