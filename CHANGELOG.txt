@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11r  Schneller zeichnen
+- See auf Seespiegel als flache Fläche statt fein aufs Gelände gelegt (bis 400'000 Dreiecke weniger); Uferlinie entsteht dort, wo das swisstopo-Gelände über den Seespiegel steigt. Reuss unterhalb des Nadelwehrs folgt weiter dem Gelände
+- Laternen, Bänke, Haltestellen, Geländer, Terrassen in 500-m-Zellen: nur sichtbare Zellen werden gezeichnet
+- Gemessen (Software-Rendering): Start beim Kinderspital 2.27 → 1.84 Mio. Dreiecke, Schwanenplatz 2.69 → 2.32 Mio., Verkehrshaus 1.48 → 0.85 Mio.
+- Testkit: neuer Test G3b (See: Gelände ragt im Seeinnern nicht aus dem Wasser), 0.05 %
+
 2026-11-11q  Bis zum Verkehrshaus, Altstadt-Details
 - Spielfeld nach Osten erweitert bis x 2700 m: Haldenstrasse, Verkehrshaus, Lido, Seeburg, Tribschen-Ost, Schönbühl, Horwer Halbinsel mit St. Niklausen und Kastanienbaum (swissALTI3D 2 m, swissBUILDINGS3D, SWISSIMAGE, OpenStreetMap neu geladen)
 - OpenStreetMap-Daten vollständig neu: vorher war die Strassenliste bei 18'000 Einträgen abgeschnitten, jetzt 22'573 (mehr Wege und Gassen), 13'119 statt 11'722 OSM-Häuser im alten Gebiet

@@ -545,14 +545,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const c = new THREE.Color('#5BA8D8');
     // Seeflächen auf Seehöhe brauchen kein feines Netz (spart viel Speicher), Flüsse/Bäche werden aufs Gelände gelegt
     const fpos: number[] = [], fcol: number[] = [];
-    for (const w of d.water) { const flat = w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
+    for (const w of d.water) { const flat = (w as any).f === 1 || w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
     const dw = drape(pos, col, terrain, opts.coarse ? 12 : 6);
-    for (let i = 0; i < fpos.length; i++) dw.pos.push(fpos[i]); for (let i = 0; i < fcol.length; i++) dw.col!.push(fcol[i]);
-    const m = flatMesh(dw.pos, dw.col!, toon('#ffffff', { vertexColors: true, map: waterTex }));
+    const wmat = toon('#ffffff', { vertexColors: true, map: waterTex });
+    const m = flatMesh(dw.pos, dw.col!, wmat);
     worldUV(m.geometry, 14);
     m.name = 'water';
     waterMeshes.push(m);
     group.add(m);
+    // See auf Seespiegel: flach, Uferlinie entsteht dort, wo das Gelände (swissALTI3D) über den Seespiegel steigt
+    if (fpos.length) { const lk = flatMesh(fpos, fcol, wmat); worldUV(lk.geometry, 14); lk.name = 'water-lake'; waterMeshes.push(lk); group.add(lk); }
     // Seefläche ausserhalb des Spielfelds Richtung Osten/Süden (Vierwaldstättersee)
     const lakeTex = waterTex.clone(); lakeTex.repeat.set(6000 / 14, 6000 / 14); lakeTex.needsUpdate = true;
     const lake = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), toon('#5BA8D8', { map: lakeTex }));
@@ -587,7 +589,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const pm = new THREE.InstancedMesh(postG, mat, posts.length), rm = new THREE.InstancedMesh(railG, mat, rails.length), mm = new THREE.InstancedMesh(midG, mat, rails.length);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
       posts.forEach(([x, z], i) => { const y = terrain.height(x, z); m4.compose(v.set(x, y, z), q.identity(), one); pm.setMatrixAt(i, m4); e.set(0, rails[i][2], 0); q.setFromEuler(e); m4.compose(v.set(x, y, z), q, one); rm.setMatrixAt(i, m4); mm.setMatrixAt(i, m4); });
-      for (const im of [pm, rm, mm]) { im.computeBoundingSphere(); im.name = 'railings'; group.add(im); }
+      for (const im of [pm, rm, mm]) { im.computeBoundingSphere(); im.name = 'railings'; group.add(chunkInstanced(im, 500)); }
     }
   }
 
@@ -948,7 +950,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         table.setMatrixAt(i, m4.makeTranslation(x, y + 0.74, z)); top.setColorAt(i, col.set(cols[Math.floor(hash(x, z) * cols.length)]));
       });
       const tg = new THREE.Group(); tg.name = 'terraces';
-      for (const im of [pole, top, table]) { im.computeBoundingSphere(); tg.add(im); }
+      for (const im of [pole, top, table]) { im.computeBoundingSphere(); tg.add(chunkInstanced(im, 300)); }
       group.add(tg);
     }
   }
@@ -1670,6 +1672,20 @@ function rasterize(d: CityData, b3d?: B3D) {
 }
 
 // ---- R9/R11: Stege, Laternen, Ampeln, Brunnen, Haltestellen (OSM) ----
+/** InstancedMesh räumlich aufteilen (Zellgrösse in m) – bessere Sichtbarkeitsprüfung */
+export function chunkInstanced(im: THREE.InstancedMesh, cell: number): THREE.Object3D {
+  const m = new THREE.Matrix4(), cells = new Map<string, number[]>();
+  for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m); const k = Math.floor(m.elements[12] / cell) + ',' + Math.floor(m.elements[14] / cell); let a = cells.get(k); if (!a) cells.set(k, (a = [])); a.push(i); }
+  if (cells.size <= 1) return im;
+  const out = new THREE.Group(); out.name = im.name; const col = new THREE.Color();
+  for (const idx of cells.values()) {
+    const c = new THREE.InstancedMesh(im.geometry, im.material, idx.length); c.name = im.name;
+    idx.forEach((i, j) => { im.getMatrixAt(i, m); c.setMatrixAt(j, m); if (im.instanceColor) { im.getColorAt(i, col); c.setColorAt(j, col); } });
+    c.computeBoundingSphere(); out.add(c);
+  }
+  return out;
+}
+
 function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   const G = new THREE.Group(); G.name = 'props';
   // Sitzbänke (OSM amenity=bench, Innenstadt): Holzbank auf zwei Füssen, zur nächsten Strasse ausgerichtet
@@ -1775,6 +1791,12 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
     const sign = new THREE.InstancedMesh(signG, toon('#2F6FB8'), P.stops.length);
     P.stops.forEach(([x, z], i) => { m4.makeRotationY(hash(x + 1, z) * Math.PI); m4.setPosition(x, terrain.height(x, z), z); pole.setMatrixAt(i, m4); sign.setMatrixAt(i, m4); });
     G.add(pole, sign);
+  }
+  // Instanzen in 500-m-Zellen aufteilen, damit nur sichtbare Zellen gezeichnet werden (Ampeln bleiben am Stück: Index = Ampel)
+  const sig = (G as any).signalLamp as THREE.Object3D | undefined;
+  for (const c of [...G.children]) {
+    const im = c as THREE.InstancedMesh; if (!im.isInstancedMesh || im.count < 120 || im === sig || im.name === 'signals') continue;
+    const ch = chunkInstanced(im, 500); if (ch !== im) { G.remove(im); G.add(ch); }
   }
   return G;
 }

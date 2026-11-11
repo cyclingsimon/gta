@@ -98,12 +98,21 @@ for w in d['w']:
             pass
 water = unary_union(water_geoms).intersection(CLIP)
 water_out = []
+# Seefläche (Seespiegel) vom Fluss unterhalb des Nadelwehrs (x < -345) trennen: der See wird flach gezeichnet,
+# nur der Fluss wird aufs Gelände gelegt (spart ~300k Dreiecke)
+WEHR_X = -345
+parts = []
 for q in polys(water):
+    if q.area > 100000:
+        parts += [(g, 1) for g in polys(q.intersection(box(WEHR_X, Z0, X1, Z1)))] + [(g, 0) for g in polys(q.intersection(box(X0, Z0, WEHR_X, Z1)))]
+    else:
+        parts.append((q, 0))
+for q, flat in parts:
     q = q.simplify(0.8)
     if q.area < 20:
         continue
     water_out.append({'p': ring(list(q.exterior.coords)[:-1]),
-                      'holes': [ring(list(i.coords)[:-1]) for i in q.interiors if Polygon(i).area > 10]})
+                      'holes': [ring(list(i.coords)[:-1]) for i in q.interiors if Polygon(i).area > 10], **({'f': 1} if flat else {})})
 
 # ---------- Grünflächen ----------
 green = []

@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-11q';
+export const VERSION = '2026-11-11r';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -978,6 +978,14 @@ function qaReport() {
     });
     return { n, bad, share: n ? bad / n : 0, worst };
   };
+  // G3b: See (flach auf Seespiegel) – im Seeinnern (≥ 10 m vom Ufer) darf kein Gelände über die Wasserfläche ragen
+  { let n = 0, bad = 0; const ex: number[][] = []; const [bx0, bz0, bx1, bz1] = world.bounds;
+    for (let x = bx0 + 10; x < bx1 - 10; x += 10) for (let z = bz0 + 10; z < bz1 - 10; z += 10) {
+      if (world.mask.at(x, z) !== 1) continue; let inner = true;
+      for (let q = 0; q < 8 && inner; q++) inner = world.mask.at(x + Math.cos(q * 0.785) * 10, z + Math.sin(q * 0.785) * 10) === 1;
+      if (!inner || Math.abs(world.groundAt(x, z)) > 3) continue; // Flüsse/Bäche liegen tiefer bzw. höher – die prüft G3
+      n++; if (world.groundAt(x, z) > 0.06) { bad++; if (ex.length < 6) ex.push([x, z, Math.round(world.groundAt(x, z) * 100) / 100]); } }
+    add('G3b', 'See: Gelände ragt aus dem Wasser (%)', n ? bad / n * 100 : 0, 0.5, n > 0 && bad / n <= 0.005, { punkte: n, beispiele: ex }); }
   for (const [id, name, mesh] of [['G1', 'Asphalt über Boden', 'roads-asphalt'], ['G2', 'Pflaster/Wege über Boden', 'roads-cobble'], ['G3', 'Wasser über Boden', 'water']]) {
     const r = surf(mesh, 5, 0.01);
     add(id, name, r.share, 0.005, r.share <= 0.005, { samples: r.n, beispiele: r.worst });
