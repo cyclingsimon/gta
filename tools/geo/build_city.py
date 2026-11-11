@@ -129,7 +129,28 @@ for pts, kind in d['g']:
 
 # ---------- Bahn ----------
 rail = []
+rail_all = []  # inkl. Tunnel – für die Zugstrecken
+import os
+TUN = None
+if os.path.exists('data/tunnels.json'):
+    TUN = unary_union([LineString(t['p']).buffer(2.5) for t in json.load(open('data/tunnels.json')) if len(t['p']) > 1])
 for pts, bridge in d['rail']:
+    la = LineString(pts).intersection(CLIP)
+    for part in ([la] if isinstance(la, LineString) else list(getattr(la, 'geoms', []))):
+        if isinstance(part, LineString) and part.length > 2:
+            rail_all.append(ring(part.coords))
+    if TUN is not None:
+        vis = LineString(pts).difference(TUN)
+        pts_list = [list(g.coords) for g in ([vis] if isinstance(vis, LineString) else list(getattr(vis, 'geoms', []))) if isinstance(g, LineString) and len(g.coords) > 1]
+    else:
+        pts_list = [pts]
+    for pts in pts_list:
+      ls = LineString(pts).intersection(CLIP)
+      for part in ([ls] if isinstance(ls, LineString) else list(getattr(ls, 'geoms', []))):
+        if isinstance(part, LineString) and part.length > 2:
+            rail.append(ring(part.coords))
+    continue
+for pts, bridge in []:
     ls = LineString(pts).intersection(CLIP)
     for part in ([ls] if isinstance(ls, LineString) else list(getattr(ls, 'geoms', []))):
         if isinstance(part, LineString) and part.length > 2:
@@ -145,7 +166,7 @@ out = {
     'meta': {'origin': [47.0517, 8.3077], 'bounds': [X0, Z0, X1, Z1],
              'credits': 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL)'},
     'buildings': buildings, 'roads': roads, 'water': water_out,
-    'green': green, 'rail': rail, 'pois': pois,
+    'green': green, 'rail': rail, 'railAll': rail_all, 'pois': pois,
 }
 json.dump(out, open(dst, 'w'), separators=(',', ':'), ensure_ascii=False)
 print({k: len(v) for k, v in out.items() if isinstance(v, (list, dict))})

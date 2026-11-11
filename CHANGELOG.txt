@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-11v  Züge fahren durch Tunnel
+- Tunnel aus OpenStreetMap (tunnel=*): Gütschtunnel, Schönheimtunnel, Luzerner Stadttunnel (Richtung Küssnacht, 2.1 km), Littauer Tunnel, Friedental, Schiltenneune beim Verkehrshaus und weitere
+- Vorher fuhren die Züge auf 30–45 % ihrer Strecke oben übers Gelände und durch Häuser, und 9.4 km Gleis lagen sichtbar auf Hügeln und Strassen. Jetzt verschwinden die Wagen im Tunnel, die Gleise darüber sind weg, 15 Tunnelportale (Steinrahmen) stehen an den Ein- und Ausfahrten
+
 2026-11-11u  Weniger Speicher beim Laden
 - Speicherspitze beim Bau der 3D-Häuser 2.3 → 1.6 GB, nach dem Start 1.6 → 1.15 GB (Zwischenpuffer werden sofort freigegeben)
 - Zugwagen mit einer Textur (1 statt 6 Zeichenaufrufe je Wagen), Bus-Räder und Stromabnehmer zusammengefasst, Ambulanz-Teile zusammengefasst

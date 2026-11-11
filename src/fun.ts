@@ -245,7 +245,7 @@ export class Boats {
 }
 
 // ---------------- Züge: S-Bahn (SBB) und Zentralbahn auf den echten Gleisen ----------------
-export interface TrainLine { name: string; kind: 'sbb' | 'zb'; pts: number[][] }
+export interface TrainLine { name: string; kind: 'sbb' | 'zb'; pts: number[][]; tun?: number[][] }
 function trainTex(kind: string, front: boolean) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d')!;
   const body = kind === 'zb' ? '#C8202C' : '#F4F4F2', band = kind === 'zb' ? '#F4F4F2' : '#D52B1E';
@@ -286,6 +286,24 @@ export class Trains {
       for (let k = 0; k < n; k++) { const b = new THREE.Mesh(geo, m[0]); this.group.add(b); cars.push(b); }
       this.tr.push({ line, C, L: C[C.length - 1], s: (i * 0.29 % 1) * C[C.length - 1], dir: i % 2 ? -1 : 1, wait: 0, cars, carL, v: 0, tooted: 0 });
     });
+    // Tunnelportale (Lage aus OpenStreetMap tunnel=*): Steinrahmen mit dunkler Öffnung, je Portal nur einmal
+    const portals: [number, number, number, number][] = [];
+    for (const t of this.tr) for (const [a, b] of t.line.tun || []) for (const [s, out] of [[a, -1], [b, 1]] as [number, number][]) {
+      if (s < 3 || s > t.L - 3) continue;
+      const p = this.at(t, s), q = this.at(t, s + out * 6);
+      if (portals.some((o) => Math.hypot(o[0] - p[0], o[1] - p[1]) < 25)) continue;
+      portals.push([p[0], p[1], p[2], this.terrain.height(q[0], q[1])]);
+    }
+    if (portals.length) {
+      const frame = new THREE.Shape(); frame.moveTo(-4.2, 0); frame.lineTo(4.2, 0); frame.lineTo(4.2, 7); frame.lineTo(-4.2, 7); frame.lineTo(-4.2, 0);
+      const hole = new THREE.Shape(); hole.moveTo(-2.8, 0); hole.lineTo(2.8, 0); hole.lineTo(2.8, 4.2); hole.absarc(0, 4.2, 2.8, 0, Math.PI, false); hole.lineTo(-2.8, 0); frame.holes.push(hole);
+      const fg = new THREE.ExtrudeGeometry(frame, { depth: 1.4, bevelEnabled: false }); fg.translate(0, 0, -0.7);
+      const og = new THREE.ShapeGeometry(hole);
+      const fm = toon('#A79C8A'), om = new THREE.MeshBasicMaterial({ color: '#141414' });
+      const pg = new THREE.Group(); pg.name = 'tunnelportale';
+      for (const [x, z, h, y] of portals) { const f = new THREE.Mesh(fg, fm), o = new THREE.Mesh(og, om); for (const m of [f, o]) { m.position.set(x, y - 0.3, z); m.rotation.y = h; pg.add(m); } o.position.y += 0.02; }
+      this.group.add(pg);
+    }
   }
   private at(t: { line: TrainLine; C: number[] }, s: number): [number, number, number] {
     const P = t.line.pts, C = t.C; s = Math.max(0, Math.min(C[C.length - 1], s));
@@ -305,7 +323,8 @@ export class Trains {
       for (const c of t.cars) {
         const a = this.at(t, sf), b = this.at(t, sf - t.dir * t.carL);
         const tail = t.dir > 0 ? sf - t.carL < 0 : sf + t.carL > t.L;
-        c.visible = !tail; c.position.set((a[0] + b[0]) / 2, Math.max(this.terrain.height(a[0], a[1]), this.terrain.height(b[0], b[1])) + 0.25, (a[1] + b[1]) / 2);
+        const sc = sf - t.dir * t.carL / 2; const inTun = (t.line.tun || []).some(([a, b]) => sc > a && sc < b);
+        c.visible = !tail && !inTun; c.position.set((a[0] + b[0]) / 2, Math.max(this.terrain.height(a[0], a[1]), this.terrain.height(b[0], b[1])) + 0.25, (a[1] + b[1]) / 2);
         c.rotation.y = Math.atan2(a[0] - b[0], a[1] - b[1]);
         sf -= t.dir * (t.carL + 1);
       }

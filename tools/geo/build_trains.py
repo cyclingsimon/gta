@@ -1,11 +1,14 @@
 """Zugstrecken aus OSM-Gleisen (city.json rail) → public/data/trains.json.
 Gleisstücke werden zu einem Graphen verbunden; Strecken = kürzeste Wege zwischen Bahnhof und Spielfeldrand."""
-import json, math, heapq
+import json, math, heapq, os
+from shapely.geometry import LineString, Point
+from shapely.ops import unary_union
+TUNU = unary_union([LineString(t['p']).buffer(6) for t in json.load(open('data/tunnels.json')) if len(t['p']) > 1]) if os.path.exists('data/tunnels.json') else None
 c = json.load(open('public/data/city.json'))
 key = lambda p: (round(p[0] / 3), round(p[1] / 3))
 adj = {}
 pos = {}
-for r in c['rail']:
+for r in c.get('railAll', c['rail']):
     for a, b in zip(r, r[1:]):
         ka, kb = key(a), key(b); pos[ka] = a; pos[kb] = b
         d = math.dist(a, b)
@@ -37,5 +40,20 @@ for name, kind, a, b in R:
     pts, L = r
     gaps = max(math.dist(p, q) for p, q in zip(pts, pts[1:]))
     print(f'{name:22} {kind} {L:6.0f} m  Punkte {len(pts)}  grösste Lücke {gaps:.0f} m  {pts[0]} → {pts[-1]}')
-    out.append({'name': name, 'kind': kind, 'pts': pts})
+    # Tunnelabschnitte (OpenStreetMap tunnel=*) als Bogenlängen-Intervalle: dort sind die Wagen unsichtbar
+    tun = []
+    if TUNU is not None:
+        acc = 0.0; cur = None
+        for p0, p1 in zip(pts, pts[1:]):
+            seg = math.dist(p0, p1); n = max(1, int(seg / 4))
+            for k in range(n):
+                s0 = acc + seg * k / n; q = (p0[0] + (p1[0] - p0[0]) * (k + 0.5) / n, p0[1] + (p1[1] - p0[1]) * (k + 0.5) / n)
+                inside = TUNU.contains(Point(q))
+                if inside and cur is None: cur = s0
+                if not inside and cur is not None: tun.append([round(cur, 1), round(s0, 1)]); cur = None
+            acc += seg
+        if cur is not None: tun.append([round(cur, 1), round(acc, 1)])
+        tun = [t for t in tun if t[1] - t[0] > 25]
+    print('   Tunnel:', tun)
+    out.append({'name': name, 'kind': kind, 'pts': pts, 'tun': tun})
 json.dump(out, open('public/data/trains.json', 'w'), separators=(',', ':'))
