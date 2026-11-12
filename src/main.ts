@@ -21,8 +21,9 @@ const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) ret
 interface Save { region?: 'luzern' | 'nord'; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || ''); if (s && s.best) return s; } catch { /* leer */ }
-  return { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
+  const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || ''); if (s && s.best) return { ...def, ...s }; } catch { /* leer */ } // fehlende Felder (ältere Stände) ergänzen
+  return def;
 }
 let save = loadSave();
 // Regionen: «luzern» (Stadt, Kriens, Horw, Verkehrshaus) und «nord» (Emmenbrücke, Rotsee, Ebikon, Adligenswil, Etappe 2).
@@ -218,7 +219,7 @@ function setupMissions() {
   const inseli = snap(P['Inseli'] || [480, 160]);
   const kapell = snap(mid('Kapellbrücke') || [0, 0]);
   // Agglomeration: Orte über echte Haltestellen (OpenStreetMap) finden
-  const stop = (n: string, fb: [number, number]) => { const s = propsData?.stops?.find((q: any) => q[2] === n); return snap(s ? [s[0], s[1]] : fb); };
+  const stop = (n: string, fb: [number, number]) => { const s = propsData?.stops?.find((q: any) => q[2] === n); return snap(s ? [s[0], s[1]] : fb, true); }; // nächste Fahrstrasse an der Haltestelle
   const krZentrum = stop('Zentrum Pilatus', [-2130, 2001]), horw = stop('Horw Zentrum', [216, 3668]), pilBahn = stop('Pilatus-Bahnen', [-2304, 2338]), allmend = stop('Allmend/Messe', [-371, 1840]);
   const badi = stop('Badi', [409, 6257]), schappe = stop('Schappe-Center', [-2600, 1950]), gasshof = stop('Gasshof', [-3544, 288]), horwBhf = stop('Horw Bahnhof', [-6, 3690]);
   // Osterweiterung (Version q): Verkehrshaus, Seeburg, Tribschen/Wartegg, Schönbühl, Kastanienbaum
@@ -247,7 +248,7 @@ function setupMissions() {
 
 /** Einsätze der Region Nord (Etappe 2), Orte über echte Haltestellen (OpenStreetMap) */
 function setupMissionsNord() {
-  const stop = (n: string, fb: [number, number]) => { const s = propsData?.stops?.find((q: any) => q[2] === n); return snap(s ? [s[0], s[1]] : fb); };
+  const stop = (n: string, fb: [number, number]) => { const s = propsData?.stops?.find((q: any) => q[2] === n); return snap(s ? [s[0], s[1]] : fb, true); }; // nächste Fahrstrasse an der Haltestelle
   missions = [
     { id: 'n1', title: 'Bauchweh am Bahnhof', radio: 'Am Bahnhof Emmenbrücke hat ein Kind nach der Zugfahrt Bauchweh.', place: 'Emmenbrücke Bahnhof', at: stop('Emmenbrücke Bahnhof', [-1929, -2086]), game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es schon besser. Danke, Luksi!' },
     { id: 'n2', title: 'Sonnenstich am Rotsee', radio: 'Am Rotsee hat ein Ruderer zu lange in der Sonne trainiert und ist ganz schwindlig.', place: 'Rotsee', at: stop('Maihofmatte-Rotsee', [325, -1545]), game: waterGame, transport: true, prop: propTourist, thanks: 'Schatten und Wasser – schon besser. Merci!' },
@@ -872,7 +873,7 @@ async function boot() {
   const pProps = opt(getJSON('props.json'));
   const pBus = opt(getJSON('bus.json'));
   const pTrains = opt(getJSON('trains.json'));
-  const pGondola = opt(getJSON('gondola.json'));
+  const pGondola = REGION === 'nord' ? Promise.resolve(null) : opt(getJSON('gondola.json')); // Gondelbahn (Kriens–Pilatus) nur in Luzern
   const pB = echt ? opt(Promise.all([getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null;
   const data: CityData = await pCity;
   memLog('city'); status.textContent = 'Lade Gelände …'; loaderProgress(0.25);

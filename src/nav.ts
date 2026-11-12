@@ -97,13 +97,22 @@ export class NavGraph {
     for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++)
       for (const id of this.grid.get(`${cx + i},${cz + j}`) || []) if (this.adj[id].length) cand.push([(this.xs[id] - x) ** 2 + (this.zs[id] - z) ** 2, id]);
     cand.sort((a, b) => a[0] - b[0]);
-    for (const [, id] of cand.slice(0, 40)) {
-      const x2 = this.xs[id], z2 = this.zs[id];
-      const n = Math.ceil(Math.hypot(x2 - x, z2 - z) / 1.2) || 1;
-      let ok = true;
-      for (let k = 1; k <= n && ok; k++) { const v = mask.at(x + ((x2 - x) * k) / n, z + ((z2 - z) * k) / n); if (v === 2 || v === 3) ok = false; }
-      if (ok) return id;
+    const vis = (x2: number, z2: number) => { const n = Math.ceil(Math.hypot(x2 - x, z2 - z) / 1.2) || 1;
+      for (let k = 1; k <= n; k++) { const v = mask.at(x + ((x2 - x) * k) / n, z + ((z2 - z) * k) / n); if (v === 2 || v === 3) return false; } return true; };
+    if (heading !== undefined) {
+      // Mit Fahrtrichtung: nächste Kante in Fahrtrichtung suchen und deren Zielknoten nehmen. Sonst springt die Route bei
+      // zweibahnigen Strassen (Einbahn-Fahrbahnen, lange Kanten) zwischen den Fahrbahnen hin und her und das Auto wendet ständig.
+      const hx = Math.sin(heading), hz = Math.cos(heading);
+      let be = -1, bd = Infinity;
+      for (const [, id] of cand.slice(0, 80)) for (const e of this.adj[id]) {
+        const ax = this.xs[id], az = this.zs[id], dx = this.xs[e.to] - ax, dz = this.zs[e.to] - az, L2 = dx * dx + dz * dz || 1e-9, L = Math.sqrt(L2);
+        if ((dx * hx + dz * hz) / L < 0.3) continue;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)), px = ax + dx * t, pz = az + dz * t, d = Math.hypot(px - x, pz - z);
+        if (d < bd && d < 30 && vis(px, pz)) { bd = d; be = e.to; }
+      }
+      if (be >= 0) return be;
     }
+    for (const [, id] of cand.slice(0, 40)) if (vis(this.xs[id], this.zs[id])) return id;
     return this.nearest(x, z);
   }
 

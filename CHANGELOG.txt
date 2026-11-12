@@ -4,6 +4,10 @@ Luksi Rescue Luzern – Änderungen
 - Region Nord: Züge fahren jetzt auch hier – S-Bahn Richtung Rothenburg über Emmenbrücke und IR Richtung Zürich am Rotsee vorbei nach Ebikon (Tunnelstücke unsichtbar)
 - Brücken, die in OpenStreetMap aus mehreren Stücken bestehen, haben jetzt ein gerades Deck zwischen den Brückenköpfen statt einer Delle über dem Fluss (Nord: Prüfung G8 11.2 % → 7.0 %)
 - Wagenbachbrunnen auf dem Bahnhofplatz mit Wasserstrahl, Fritschibrunnen auf dem Kapellplatz mit Fritschi-Figur
+- Navi: Der Routenstart richtet sich nach der Fahrtrichtung (nächste Kante in Fahrtrichtung). Vorher sprang die Route auf zweibahnigen Strassen (z. B. Haldenstrasse) zwischen den Fahrbahnen hin und her und das Auto wendete ständig
+- Fahrstrassen, die in den Daten unter einem Gebäude durchführen (Durchfahrt, Einkaufszentrum), sind befahrbar
+- Nord: Einsatzorte liegen an der nächsten Fahrstrasse der Haltestelle; keine Gondelbahn-Abfrage mehr in Nord
+- Spielstand: fehlende Felder älterer Stände werden ergänzt (vorher konnte ein unvollständiger Stand das Spiel anhalten)
 - Testhilfe: Strahl-Abfrage (pick) für Sichtprüfungen
 
 2026-11-12y  Etappe 2: Emmenbrücke, Rotsee, Ebikon, Adligenswil

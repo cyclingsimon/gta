@@ -1743,6 +1743,13 @@ function rasterize(d: CityData, b3d?: B3D) {
   }
   g.fillStyle = '#0f0';
   if (b3d) drawB3DFootprints(g, b3d, tx, tz, 0.35); else for (const b of d.buildings) if (b.t !== 'roof' && b.t !== 'carport') poly(g, b.p, b.holes, tx, tz); // Vordächer (Busbahnhof) sind kein Hindernis
+  // Fahrstrassen, die in den Daten unter einem Gebäude durchführen (Durchfahrt, Einkaufszentrum, Torbogen), bleiben befahrbar
+  g.strokeStyle = '#00f';
+  for (const r of d.roads) {
+    if (['footway', 'path', 'steps', 'cycleway', 'pedestrian', 'track', 'bridleway'].includes(r.c)) continue;
+    g.lineWidth = r.w / MASK_RES;
+    g.beginPath(); r.p.forEach(([x, z], i) => (i ? g.lineTo(tx(x), tz(z)) : g.moveTo(tx(x), tz(z)))); g.stroke();
+  }
   const img = g.getImageData(0, 0, c.width, c.height).data;
   for (let i = 0, k = 0; i < mask.data.length; i++, k += 4) {
     mask.data[i] = img[k + 1] > 128 ? 2 : img[k] > 128 ? 1 : 0;
