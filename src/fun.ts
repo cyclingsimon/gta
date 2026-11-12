@@ -150,7 +150,8 @@ export class Animals {
   private cows: { x: number; z: number; h: number; hop: number; y: number; vy: number }[] = [];
   private sm: THREE.InstancedMesh; private cm: THREE.InstancedMesh;
   private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private e = new THREE.Euler(); private v = new THREE.Vector3(); private one = new THREE.Vector3(1, 1, 1);
-  constructor(private terrain: Terrain, swanSpots: number[][], cowSpots: number[][], private isWater: (x: number, z: number) => boolean) {
+  /** flatLake: Wasser auf Seespiegel (Luzern); sonst liegt das Wasser aufs Gelände (Rotsee, Reuss in Nord) */
+  constructor(private terrain: Terrain, swanSpots: number[][], cowSpots: number[][], private isWater: (x: number, z: number) => boolean, private flatLake = true) {
     this.group.name = 'animals';
     for (const [x, z] of swanSpots) this.swans.push({ x, z, h: hash(x, z) * 6.28, vx: 0, vz: 0, flee: 0 });
     for (const [x, z] of cowSpots) this.cows.push({ x, z, h: hash(z, x) * 6.28, hop: 0, y: 0, vy: 0 });
@@ -174,7 +175,7 @@ export class Animals {
       if (Math.hypot(s.vx, s.vz) > 0.05) { const th = Math.atan2(s.vx, s.vz); let dh = th - s.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; s.h += dh * Math.min(1, dt * 3); }
       s.flee = Math.max(0, s.flee - dt);
     }
-    this.swans.forEach((s, i) => { this.e.set(0, s.h, Math.sin(time * 2 + i) * 0.04); this.q.setFromEuler(this.e); this.m.compose(this.v.set(s.x, Math.max(0.04, this.terrain.ground(s.x, s.z) + 0.06) + Math.sin(time * 1.5 + i) * 0.03, s.z), this.q, this.one); this.sm.setMatrixAt(i, this.m); });
+    this.swans.forEach((s, i) => { this.e.set(0, s.h, Math.sin(time * 2 + i) * 0.04); this.q.setFromEuler(this.e); this.m.compose(this.v.set(s.x, (this.flatLake ? Math.max(0.04, this.terrain.ground(s.x, s.z) + 0.06) : this.terrain.ground(s.x, s.z) + 0.1) + Math.sin(time * 1.5 + i) * 0.03, s.z), this.q, this.one); this.sm.setMatrixAt(i, this.m); });
     this.sm.instanceMatrix.needsUpdate = true;
     let moved = false;
     for (const c of this.cows) if (c.hop > 0) { moved = true; c.vy -= 14 * dt; c.y += c.vy * dt; if (c.y <= 0) { c.y = 0; c.vy = 0; c.hop = 0; } }

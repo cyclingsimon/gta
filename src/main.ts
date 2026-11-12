@@ -337,7 +337,7 @@ function setupFun(data: CityData) {
     if ((x1 - x0) * (z1 - z0) < 6000) continue; let n = 0;
     for (let k = 0; k < 40 && n < 4; k++) { const x = x0 + hsh(k, x0) * (x1 - x0), z = z0 + hsh(z0, k) * (z1 - z0);
       if (world.mask.at(x, z) !== 0 || world.mask.isRoad(x, z) || !inPoly(x, z, g.p)) continue; cows.push([x, z]); n++; } }
-  animals = new Animals(terrain, swans, cows, isW);
+  animals = new Animals(terrain, swans, cows, isW, REGION === 'luzern');
   scene.add(animals.group);
   // Kursschiffe: Rundfahrt ab Bahnhofquai im Seebecken und in der Horwer Bucht (Wegpunkte auf Wasser geprüft)
   if (REGION === 'nord') { // Kursschiffe nur im Seebecken; auf dem Rotsee fahren Boote (Wasserfläche liegt auf Rotsee-Höhe)

@@ -8,7 +8,7 @@ Luksi Rescue Luzern – Änderungen
 - Fahrstrassen, die in den Daten unter einem Gebäude durchführen (Durchfahrt, Einkaufszentrum), sind befahrbar
 - Nord: Einsatzorte liegen an der nächsten Fahrstrasse der Haltestelle; keine Gondelbahn-Abfrage mehr in Nord
 - Spielstand: fehlende Felder älterer Stände werden ergänzt (vorher konnte ein unvollständiger Stand das Spiel anhalten)
-- Nord: Der Rotsee war unsichtbar (die grüne Umgebungsfläche lag über dem Wasser, weil der Rotsee 14 m unter dem Seespiegel liegt) – jetzt blau, mit 8 Booten
+- Nord: Der Rotsee war unsichtbar (die grüne Umgebungsfläche lag über dem Wasser, weil der Rotsee 14 m unter dem Seespiegel liegt) – jetzt blau, mit 8 Booten; Schwäne schwimmen auf Rotsee und Reuss statt in der Luft
 - Testhilfe: Strahl-Abfrage (pick) und Boot-Kamera für Sichtprüfungen
 
 2026-11-12y  Etappe 2: Emmenbrücke, Rotsee, Ebikon, Adligenswil
