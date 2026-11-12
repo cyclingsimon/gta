@@ -25,6 +25,7 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 
 ## Tests (Version z, Software-Rendering, Stand 12.11. abends)
 - missions.py Luzern: alle 18 Einsätze, 54 Sterne, nach Neuladen erhalten, keine Fehler. Nord: alle 8, 24 Sterne, keine Fehler.
+- Rotsee-Fix: Umgebungsfläche (outer) liegt jetzt 3 m unter dem tiefsten Gelände des Feldes (Nord: Rotsee −14.6 m war verdeckt). 8 Boote auf dem Rotsee (Boats mit Höhe je Boot).
 - Navi-Fix: nav.nearestVisible mit Fahrtrichtung nimmt die nächste Kante in Fahrtrichtung (vorher Pendeln auf der Haldenstrasse, Einsatz m13 nie erreicht).
 - Luzern qa grün (G8 7.65 %, P1 1.90 Mio. / 681 Draw Calls). Nord qa ganz grün (G8 7.0 %, G13 mit 2 Zugstrecken). region.py: Wechsel hin und zurück ok, keine Fehler.
 

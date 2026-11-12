@@ -529,7 +529,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   const apron = new THREE.Mesh(gridMesh(terrain, X0 - 2520, Z0 - 2500, X1 + 2480, Z1 + 2500, 60, -0.6, 12, [X0 + 1, Z0 + 1, X1 - 1, Z1 - 1]), toon('#B9C995', { map: apronTex }));
   group.add(apron);
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), toon('#A9C285', { fog: true }));
-  outer.rotation.x = -Math.PI / 2; outer.position.y = -12; // tief: sonst deckt sie das Reussbett unterhalb des Nadelwehrs (Wasser < Seespiegel)
+  // tief: sonst deckt sie das Reussbett unterhalb des Nadelwehrs (Wasser < Seespiegel); Region Nord: Rotsee/Reuss bis 17 m unter Seespiegel
+  let lowest = -9; { const [bx0, bz0, bx1, bz1] = d.meta.bounds; for (let x = bx0; x < bx1; x += 50) for (let z = bz0; z < bz1; z += 50) lowest = Math.min(lowest, terrain.ground(x, z)); }
+  outer.rotation.x = -Math.PI / 2; outer.position.y = Math.min(-12, lowest - 3);
   group.add(outer);
 
   // ---- Wasser ----

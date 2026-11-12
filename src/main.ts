@@ -340,7 +340,15 @@ function setupFun(data: CityData) {
   animals = new Animals(terrain, swans, cows, isW);
   scene.add(animals.group);
   // Kursschiffe: Rundfahrt ab Bahnhofquai im Seebecken und in der Horwer Bucht (Wegpunkte auf Wasser geprüft)
-  if (REGION === 'nord') return; // Kursschiffe und Pedalos nur im Seebecken
+  if (REGION === 'nord') { // Kursschiffe nur im Seebecken; auf dem Rotsee fahren Boote (Wasserfläche liegt auf Rotsee-Höhe)
+    const bs: number[][] = []; const wet = (x: number, z: number) => world.mask.at(x, z) === 1;
+    for (let k = 0; k < 400 && bs.length < 8; k++) {
+      const x = -600 + hsh(k, 7) * 2200, z = -2750 + hsh(11, k) * 1500; let ok = wet(x, z);
+      for (let q = 0; q < 8 && ok; q++) ok = wet(x + Math.cos(q * 0.785) * 14, z + Math.sin(q * 0.785) * 14);
+      if (ok && !bs.some((b) => Math.hypot(b[0] - x, b[1] - z) < 60)) bs.push([x, z, terrain.height(x, z) + 0.1]); }
+    if (bs.length) { boats = new Boats(bs); scene.add(boats.group); }
+    return;
+  }
   ships = new Ships([[[380, -110], [800, -250], [1100, 100], [950, 450], [620, 260]], [[600, 4900], [1050, 5350], [900, 6100], [520, 5250]], [[700, -100], [1400, -100], [2000, 350], [2500, 650], [1800, 900], [1100, 400]]]);
   // Pedalos vor Inseli, Ufschötti, Lido und Tribschen (nur auf offenem Wasser, 14 m Abstand zum Ufer)
   { const bs: number[][] = []; const wet = (x: number, z: number) => world.mask.at(x, z) === 1;
@@ -1146,6 +1154,7 @@ if (location.search.includes('test')) {
     animals: () => animals ? (animals as any).swans.length + ' Schwäne, ' + (animals as any).cows.length + ' Kühe' : null,
     swanCam: () => { const s = (animals as any).swans[0]; (window as any).__cam = [s.x + 8, 3, s.z + 8, s.x, 0.5, s.z]; camera.far = 4000; return [Math.round(s.x), Math.round(s.z)]; },
     cowCam: () => { const c = (animals as any).cows[0]; const y = terrain.ground(c.x, c.z); (window as any).__cam = [c.x + 9, y + 4, c.z + 9, c.x, y + 1, c.z]; return [Math.round(c.x), Math.round(c.z)]; },
+    boatCam: () => { const o = (boats as any).boats[0].obj; (window as any).__cam = [o.position.x + 18, o.position.y + 8, o.position.z + 18, o.position.x, o.position.y, o.position.z]; return [Math.round(o.position.x), Math.round(o.position.z), (boats as any).boats.length]; },
     shipCam: () => { const o = (ships as any).ships[0].obj; (window as any).__cam = [o.position.x + 40, 14, o.position.z + 50, o.position.x, 3, o.position.z]; camera.far = 4000; return [Math.round(o.position.x), Math.round(o.position.z)]; },
     skin: (n: string) => { for (const p of players) p.car.setSkin(n); return n; },
     trainCam: (k = 0) => { const c = (trains as any).tr[k].cars[0]; (window as any).__cam = [c.position.x + 30, c.position.y + 12, c.position.z + 30, c.position.x, c.position.y, c.position.z]; return [Math.round(c.position.x), Math.round(c.position.z), c.visible]; },

@@ -214,12 +214,12 @@ export class Ships {
 // ---------------- Pedalos und Ruderboote: drehen gemütlich Runden vor den Badeplätzen ----------------
 export class Boats {
   group = new THREE.Group();
-  private boats: { obj: THREE.Object3D; cx: number; cz: number; r: number; w: number; a: number }[] = [];
+  private boats: { obj: THREE.Object3D; cx: number; cz: number; y: number; r: number; w: number; a: number }[] = [];
   constructor(spots: number[][]) {
     this.group.name = 'boats';
     const cols = ['#F7C531', '#E94B3C', '#3FA9F5', '#7ED957', '#FF8FB1'];
     const boatMat = toon('#ffffff', { vertexColors: true });
-    spots.forEach(([x, z], i) => {
+    spots.forEach(([x, z, y0], i) => {
       // ein Boot = ein Netz mit Vertex-Farben (1 Zeichenaufruf statt 5)
       const c = cols[i % cols.length], parts: THREE.BufferGeometry[] = [];
       const add = (g: THREE.BufferGeometry, col: string, x: number, y: number, z: number, rz = 0) => { const q = g.index ? g.toNonIndexed() : g; q.deleteAttribute('uv'); if (rz) q.rotateZ(rz); q.translate(x, y, z); const cc = new THREE.Color(col), n = q.getAttribute('position').count, ca = new Float32Array(n * 3); for (let k = 0; k < n; k++) { ca[k * 3] = cc.r; ca[k * 3 + 1] = cc.g; ca[k * 3 + 2] = cc.b; } q.setAttribute('color', new THREE.BufferAttribute(ca, 3)); parts.push(q); };
@@ -230,7 +230,7 @@ export class Boats {
       if (i % 2 === 0) add(new THREE.CylinderGeometry(0.45, 0.45, 0.2, 10), '#FFFFFF', 0.9, 0.35, 0.6, Math.PI / 2);
       const o = new THREE.Mesh(mergeGeometries(parts, false)!, boatMat);
       this.group.add(o);
-      this.boats.push({ obj: o, cx: x, cz: z, r: 6 + (i % 3) * 3, w: (i % 2 ? 1 : -1) * (0.05 + (i % 4) * 0.012), a: i * 1.7 });
+      this.boats.push({ obj: o, cx: x, cz: z, y: y0 || 0, r: 6 + (i % 3) * 3, w: (i % 2 ? 1 : -1) * (0.05 + (i % 4) * 0.012), a: i * 1.7 });
     });
     this.update(0);
   }
@@ -239,7 +239,7 @@ export class Boats {
     for (const b of this.boats) {
       b.a += b.w * dt;
       const x = b.cx + Math.cos(b.a) * b.r, z = b.cz + Math.sin(b.a) * b.r;
-      b.obj.position.set(x, Math.sin(t * 1.3 + b.a * 3) * 0.05, z); b.obj.rotation.y = -b.a + (b.w > 0 ? Math.PI : 0); b.obj.rotation.z = Math.sin(t * 1.1 + b.a) * 0.03;
+      b.obj.position.set(x, b.y + Math.sin(t * 1.3 + b.a * 3) * 0.05, z); b.obj.rotation.y = -b.a + (b.w > 0 ? Math.PI : 0); b.obj.rotation.z = Math.sin(t * 1.1 + b.a) * 0.03;
     }
   }
 }

@@ -8,7 +8,8 @@ Luksi Rescue Luzern – Änderungen
 - Fahrstrassen, die in den Daten unter einem Gebäude durchführen (Durchfahrt, Einkaufszentrum), sind befahrbar
 - Nord: Einsatzorte liegen an der nächsten Fahrstrasse der Haltestelle; keine Gondelbahn-Abfrage mehr in Nord
 - Spielstand: fehlende Felder älterer Stände werden ergänzt (vorher konnte ein unvollständiger Stand das Spiel anhalten)
-- Testhilfe: Strahl-Abfrage (pick) für Sichtprüfungen
+- Nord: Der Rotsee war unsichtbar (die grüne Umgebungsfläche lag über dem Wasser, weil der Rotsee 14 m unter dem Seespiegel liegt) – jetzt blau, mit 8 Booten
+- Testhilfe: Strahl-Abfrage (pick) und Boot-Kamera für Sichtprüfungen
 
 2026-11-12y  Etappe 2: Emmenbrücke, Rotsee, Ebikon, Adligenswil
 - Neue Region «Nord» (x −3800..4600, z −3900..−550): echtes Gelände (swissALTI3D), 9689 Häuser aus swissBUILDINGS3D mit Dachfarben aus dem Luftbild, Luftbild-Boden, Wald, Strassen, Reuss, Emme und Rotsee aus OpenStreetMap, 53 Buslinienwege (VBL, Auto AG Rothenburg, PostAuto)
