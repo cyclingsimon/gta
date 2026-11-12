@@ -3,7 +3,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, NIGHT, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, toon, outline, type CityData, type World } from './world';
+import { AERIAL, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -71,6 +71,7 @@ const totalStars = () => Object.values(save.best).reduce((a, b) => a + b, 0);
 // ---------------- DOM ----------------
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const ui = $('#ui');
+let lastKmh = -1;
 function toast(text: string, ms = 2200) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = text;
   ui.appendChild(t); setTimeout(() => t.classList.add('out'), ms); setTimeout(() => t.remove(), ms + 500);
@@ -84,7 +85,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('#app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#A9DDF3');
-scene.fog = new THREE.Fog('#BFE6F6', 260, 1500);
+scene.fog = new THREE.Fog('#CFE9F5', 260, 1500);
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 1800); // Nebel endet bei 1500 m: dahinter zeichnet die Fernsicht (farScene)
 // Ferne Szene (Horizont) mit eigener Kamera: grosse Sichtweite ohne Tiefenpuffer-Probleme in der Nähe
 const farScene = new THREE.Scene();
@@ -93,8 +94,26 @@ farScene.add(new THREE.HemisphereLight('#ffffff', '#c9b994', 1.35));
 { const s2 = new THREE.DirectionalLight('#fff3dc', 2.1); s2.position.set(-400, 700, 300); farScene.add(s2); }
 renderer.autoClear = false;
 farScene.background = scene.background; scene.background = null; renderer.setClearColor('#A9DDF3', 1);
+// Himmelskuppel (Referenz: Föhn-/Sommerhimmel über dem Vierwaldstättersee): oben kräftiges Blau, zum Horizont dunstig hell, Lichthof um die Sonne
+const SKY = { zenith: new THREE.Color('#3E8FD6'), horizon: new THREE.Color('#CFE9F5'), sunCol: new THREE.Color('#FFF4D6'), sunDir: new THREE.Vector3(-400, 700, 300).normalize() };
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: { zen: { value: SKY.zenith }, hor: { value: SKY.horizon }, sunC: { value: SKY.sunCol }, sunD: { value: SKY.sunDir } },
+  vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }',
+  fragmentShader: `uniform vec3 zen, hor, sunC, sunD; varying vec3 vD;
+    void main(){ vec3 d = normalize(vD); float h = max(d.y, 0.0);
+      vec3 c = mix(hor, zen, pow(h, 0.55));
+      float s = max(dot(d, sunD), 0.0); c += sunC * (pow(s, 12.0) * 0.35 + pow(s, 600.0) * 1.2);
+      c = mix(c, hor, smoothstep(0.0, -0.05, d.y));
+      gl_FragColor = vec4(c, 1.0);
+      #include <colorspace_fragment>
+    }`,
+  side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+});
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), skyMat); skyDome.renderOrder = -1000; skyDome.frustumCulled = false;
+skyDome.onBeforeRender = (_r, _s, cam) => skyDome.position.copy(cam.position);
+farScene.add(skyDome); farScene.background = null;
 function renderView(cam: THREE.PerspectiveCamera) {
-  if (farScene.children.length > 2) { farCam.position.copy(cam.position); farCam.quaternion.copy(cam.quaternion); farCam.aspect = cam.aspect; farCam.fov = cam.fov; farCam.updateProjectionMatrix(); renderer.render(farScene, farCam); renderer.clearDepth(); }
+  { farCam.position.copy(cam.position); farCam.quaternion.copy(cam.quaternion); farCam.aspect = cam.aspect; farCam.fov = cam.fov; farCam.updateProjectionMatrix(); renderer.render(farScene, farCam); renderer.clearDepth(); }
   renderer.render(scene, cam);
 }
 /** Split Screen: Rechtecke [x, y(von oben), w, h] in CSS-Pixeln je Spieler */
@@ -120,14 +139,44 @@ function renderAll() {
 }
 const hemi = new THREE.HemisphereLight('#ffffff', '#c9b994', 1.35); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff3dc', 2.1); sun.position.set(-400, 700, 300); scene.add(sun);
+/** Sonnenschatten (nur «Echt»): eine Schattenkarte rund um die Kamera, wandert mit. Gelände und flache Flächen werfen keinen Schatten (Kosten), empfangen aber. */
+const SHADOWS = QUALITY === 'echt' && !/[?&]noshadow/.test(location.search);
+const SUN_DIR = new THREE.Vector3(-400, 700, 300).normalize(), SH_R = 140;
+if (SHADOWS) {
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  const c = sun.shadow.camera; c.left = -SH_R; c.right = SH_R; c.top = SH_R; c.bottom = -SH_R; c.near = 10; c.far = 1600; c.updateProjectionMatrix();
+  sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.6; scene.add(sun.target);
+}
+const NO_CAST = new Set(['ground', 'water', 'beach', 'horizon', 'piers']);
+function enableShadows(g: THREE.Object3D) {
+  if (!SHADOWS) return;
+  g.traverse((o: any) => {
+    if (!o.isMesh) return;
+    o.receiveShadow = true;
+    if (NO_CAST.has(o.name) || (o.material && o.material.map && o.material.map === aerialTex)) return;
+    const geo = o.geometry; if (!geo.boundingBox) geo.computeBoundingBox();
+    const bb = geo.boundingBox; o.castShadow = !!bb && (bb.max.y - bb.min.y > 1.2 || o.isInstancedMesh);
+  });
+}
+const _shTmp = new THREE.Vector3(), _shFwd = new THREE.Vector3();
+/** Schattenkamera auf ganze Texel einrasten (kein Flimmern beim Fahren) */
+function updateShadow(cx: number, cz: number, cy: number) {
+  if (!SHADOWS) return;
+  const texel = (SH_R * 2) / 2048; const sx = Math.round(cx / texel) * texel, sz = Math.round(cz / texel) * texel;
+  _shTmp.copy(SUN_DIR);
+  sun.target.position.set(sx, cy, sz); sun.position.set(sx + _shTmp.x * 800, cy + _shTmp.y * 800, sz + _shTmp.z * 800);
+  sun.target.updateMatrixWorld();
+}
 /** Tageszeit: Tag oder Abend (Sonnenuntergang über dem Pilatus, Fenster und Laternen leuchten) */
 function setEvening(on: boolean) {
   NIGHT.value = on ? 1 : 0;
   hemi.color.set(on ? '#9AA3D6' : '#ffffff'); hemi.groundColor.set(on ? '#4A3A52' : '#c9b994'); hemi.intensity = on ? 0.95 : 1.35;
-  sun.color.set(on ? '#FFA866' : '#fff3dc'); sun.intensity = on ? 1.5 : 2.1; sun.position.set(on ? -900 : -400, on ? 160 : 700, on ? 500 : 300);
+  sun.color.set(on ? '#FFA866' : '#fff3dc'); sun.intensity = on ? 1.5 : 2.1; sun.position.set(on ? -900 : -400, on ? 160 : 700, on ? 500 : 300); SUN_DIR.copy(sun.position).normalize();
   for (const l of farScene.children) { if ((l as any).isHemisphereLight) { (l as any).intensity = on ? 0.95 : 1.35; (l as any).color.set(on ? '#9AA3D6' : '#ffffff'); } if ((l as any).isDirectionalLight) { (l as any).color.set(on ? '#FFA866' : '#fff3dc'); (l as any).intensity = on ? 1.4 : 2.1; } }
-  const sky = on ? '#F2A877' : '#A9DDF3'; renderer.setClearColor(sky, 1); (farScene.background as THREE.Color).set(on ? '#F2A877' : '#A9DDF3');
-  (scene.fog as THREE.Fog).color.set(on ? '#E9B08E' : '#BFE6F6');
+  const sky = on ? '#F2A877' : '#A9DDF3'; renderer.setClearColor(sky, 1);
+  SKY.zenith.set(on ? '#4F5FA8' : '#3E8FD6'); SKY.horizon.set(on ? '#F4B183' : '#CFE9F5'); SKY.sunCol.set(on ? '#FFB46A' : '#FFF4D6'); SKY.sunDir.copy(SUN_DIR); WATER.sun.value.copy(SKY.sunDir); WATER.sky.value.copy(SKY.horizon);
+  (scene.fog as THREE.Fog).color.set(on ? '#EDB38C' : '#CFE9F5');
   scene.traverse((o: any) => { const m = o.material; if (m && m.name === 'lampHead') m.emissive.set(on ? '#FFD27A' : '#5A4E20'); });
   document.body.classList.toggle('evening', on);
 }
@@ -158,7 +207,7 @@ let ships: Ships | null = null;
 let boats: Boats | null = null;
 let trains: Trains | null = null;
 let gondola: Gondola | null = null;
-let aerialTex: THREE.Texture | undefined;
+let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined;
 let forestMask: ForestMask | undefined;
 /** Waldmaske (aus Luftbild, 4 m) laden: PNG → Bytes */
 async function loadForestMask(x0: number, z0: number): Promise<ForestMask | undefined> {
@@ -417,7 +466,7 @@ function startOffer() {
   phase = 'offer';
   sfxPlay.radio();
   const r = $('#radio');
-  r.innerHTML = `<b>📻 Funk</b><span>${current.radio}</span><div class="radio-btns"><button id="acc">Einsatz annehmen <kbd>E</kbd>/<kbd>X</kbd></button><button id="dec">Nein danke <kbd>N</kbd>/<kbd>LB</kbd></button></div>`;
+  r.innerHTML = `<span>${current.radio}</span><div class="radio-btns"><button id="acc">Einsatz annehmen <kbd>E</kbd>/<kbd>X</kbd></button><button id="dec">Nein danke <kbd>N</kbd>/<kbd>LB</kbd></button></div>`;
   r.classList.add('show');
   ($('#acc') as HTMLButtonElement).onclick = acceptOffer;
   ($('#dec') as HTMLButtonElement).onclick = declineOffer;
@@ -532,7 +581,7 @@ function drawMinimap() {
     mctx.beginPath(); route.forEach(([x, z], i) => (i ? mctx.lineTo(x, z) : mctx.moveTo(x, z))); mctx.stroke();
   }
   const dot = (x: number, z: number, c: string, r = 9) => { mctx.fillStyle = c; mctx.strokeStyle = '#3b302b'; mctx.lineWidth = 3; mctx.beginPath(); mctx.arc(x, z, r, 0, Math.PI * 2); mctx.fill(); mctx.stroke(); };
-  if (fun) for (const [hx, hz] of fun.open()) if (Math.hypot(hx - car.x, hz - car.z) < 280) { mctx.fillStyle = '#E2001A'; mctx.font = 'bold 26px system-ui'; mctx.textAlign = 'center'; mctx.save(); mctx.translate(hx, hz); mctx.rotate(-(Math.PI + car.heading)); mctx.fillText('♥', 0, 9); mctx.restore(); }
+  if (fun) for (const [hx, hz] of fun.open()) if (Math.hypot(hx - car.x, hz - car.z) < 280) { mctx.fillStyle = '#E2001A'; mctx.font = 'bold 26px Play, sans-serif'; mctx.textAlign = 'center'; mctx.save(); mctx.translate(hx, hz); mctx.rotate(-(Math.PI + car.heading)); mctx.fillText('♥', 0, 9); mctx.restore(); }
   dot(hospitalBay[0], hospitalBay[1], '#3FA9FF', 11);
   if (target) dot(target[0], target[1], '#F39204', 12);
   else if (phase === 'offer' && current) dot(current.at[0], current.at[1], '#FFD447', 10);
@@ -542,7 +591,7 @@ function drawMinimap() {
   mctx.beginPath(); mctx.moveTo(S / 2, S / 2 - 10); mctx.lineTo(S / 2 + 7, S / 2 + 8); mctx.lineTo(S / 2, S / 2 + 4); mctx.lineTo(S / 2 - 7, S / 2 + 8); mctx.closePath(); mctx.fill(); mctx.stroke();
   // Norden
   mctx.save(); mctx.translate(S / 2, S / 2); mctx.rotate(Math.PI + car.heading);
-  mctx.fillStyle = '#3b302b'; mctx.font = 'bold 14px system-ui'; mctx.textAlign = 'center'; mctx.fillText('N', 0, -S / 2 + 16);
+  mctx.fillStyle = '#3b302b'; mctx.font = 'bold 14px Play, sans-serif'; mctx.textAlign = 'center'; mctx.fillText('N', 0, -S / 2 + 16);
   mctx.restore();
 }
 
@@ -558,18 +607,18 @@ function drawBigMap() {
   const label = (x: number, z: number, text: string, col: string) => {
     const [a, b] = t(x, z); g.fillStyle = col; g.strokeStyle = '#3b302b'; g.lineWidth = 3;
     g.beginPath(); g.arc(a, b, 9 * K, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.font = `bold ${20 * K}px system-ui`; g.lineWidth = 5 * K; g.strokeStyle = '#fff'; const tw = g.measureText(text).width, tx = a + 13 * K + tw > g.canvas.width - 4 ? a - 13 * K - tw : a + 13 * K; g.strokeText(text, tx, b + 7 * K); g.fillStyle = '#3b302b'; g.fillText(text, tx, b + 7 * K);
+    g.font = `bold ${20 * K}px Play, sans-serif`; g.lineWidth = 5 * K; g.strokeStyle = '#fff'; const tw = g.measureText(text).width, tx = a + 13 * K + tw > g.canvas.width - 4 ? a - 13 * K - tw : a + 13 * K; g.strokeText(text, tx, b + 7 * K); g.fillStyle = '#3b302b'; g.fillText(text, tx, b + 7 * K);
   };
   // Ortsnamen gross (Orientierung für Kinder)
   g.textAlign = 'center';
   for (const [x, z, n] of [[-900, -750, 'LUZERN'], [-2150, 2150, 'KRIENS'], [150, 3950, 'HORW'], [-3200, 150, 'LITTAU'], [-500, 1700, 'Allmend'], [700, 1500, 'Tribschen'], [2250, -480, 'Würzenbach'], [2100, 4300, 'St. Niklausen'], [2450, 5500, 'Kastanienbaum'], [1600, -700, 'Halde']] as [number, number, string][]) {
-    let [a, b] = t(x, z); g.font = n === n.toUpperCase() ? `bold ${64 * K}px system-ui` : `bold ${36 * K}px system-ui`; const hw = g.measureText(n).width / 2 + 6; a = Math.max(hw, Math.min(g.canvas.width - hw, a)); g.lineWidth = 8 * K; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(n, a, b); g.fillStyle = 'rgba(59,48,43,.75)'; g.fillText(n, a, b);
+    let [a, b] = t(x, z); g.font = n === n.toUpperCase() ? `bold ${64 * K}px Play, sans-serif` : `bold ${36 * K}px Play, sans-serif`; const hw = g.measureText(n).width / 2 + 6; a = Math.max(hw, Math.min(g.canvas.width - hw, a)); g.lineWidth = 8 * K; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(n, a, b); g.fillStyle = 'rgba(59,48,43,.75)'; g.fillText(n, a, b);
   }
   g.textAlign = 'left';
   for (const l of world.landmarks) label(l.x, l.z, l.name.replace(/ \(.*\)/, ''), '#FFF6DE');
   // offene Einsätze und gefundene/fehlende Herzen
-  for (const m of missions) if (!(save.best[m.id] >= 1)) { const [a, b] = t(m.at[0], m.at[1]); g.fillStyle = '#FFD447'; g.strokeStyle = '#3b302b'; g.lineWidth = 3; g.font = `bold ${30 * K}px system-ui`; g.strokeText('★', a - 10 * K, b + 10 * K); g.fillText('★', a - 10 * K, b + 10 * K); }
-  if (fun) for (const [hx, hz] of fun.open()) { const [a, b] = t(hx, hz); g.fillStyle = '#E2001A'; g.font = `bold ${26 * K}px system-ui`; g.fillText('♥', a - 8 * K, b + 9 * K); }
+  for (const m of missions) if (!(save.best[m.id] >= 1)) { const [a, b] = t(m.at[0], m.at[1]); g.fillStyle = '#FFD447'; g.strokeStyle = '#3b302b'; g.lineWidth = 3; g.font = `bold ${30 * K}px Play, sans-serif`; g.strokeText('★', a - 10 * K, b + 10 * K); g.fillText('★', a - 10 * K, b + 10 * K); }
+  if (fun) for (const [hx, hz] of fun.open()) { const [a, b] = t(hx, hz); g.fillStyle = '#E2001A'; g.font = `bold ${26 * K}px Play, sans-serif`; g.fillText('♥', a - 8 * K, b + 9 * K); }
   label(hospitalBay[0], hospitalBay[1], 'Kinderspital', '#3FA9FF');
   if (target) label(target[0], target[1], 'Einsatz', '#F39204');
   const [a, b] = t(car.x, car.z);
@@ -921,9 +970,11 @@ function frame(now: number) {
     saveTimer -= dt; if (saveTimer <= 0) { writeSave(); saveTimer = 60; }
     drawMinimap();
     updateHud();
-    $('#speed').textContent = `${Math.round(Math.abs(car.speed) * 3.6)} km/h`;
+    { const kmh = Math.round(Math.abs(car.speed) * 3.6); if (kmh !== lastKmh) { lastKmh = kmh; $('#speed').innerHTML = `<b>${kmh}</b><small>km/h</small>`; } }
     if ($('#bigmap-wrap').classList.contains('show') && Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) drawBigMap();
   }
+  WATER.time.value = now / 1000;
+  if (SHADOWS && world) { const cam0 = players.length ? players[0].cam : camera; cam0.getWorldDirection(_shFwd); _shFwd.y = 0; _shFwd.normalize(); updateShadow(cam0.position.x + _shFwd.x * 70, cam0.position.z + _shFwd.z * 70, world.groundAt(cam0.position.x, cam0.position.z)); }
   renderAll();
   fpsAcc += dt; fpsN++;
   if (fpsAcc > 0.5) {
@@ -958,6 +1009,8 @@ let fullReady = false;
 async function boot() {
   const status = $('#load-status');
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
+  if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
+  try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = 'Lade Luzern …';
   const echt = QUALITY === 'echt';
@@ -986,8 +1039,8 @@ async function boot() {
   forestMask = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1]);
   cityData = data; propsData = props ? JSON.parse(JSON.stringify(props)) : null;
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
-  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
-  scene.add(world.group);
+  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  scene.add(world.group); enableShadows(world.group);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
   if (TEST) (window as any).__dbgWorld = scene;
@@ -1077,17 +1130,18 @@ async function stageB(pB: Promise<any>, data: CityData, props: any) {
     const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
     // warten, bis das Spiel läuft (Startbildschirm nicht blockieren)
     while (document.getElementById('start') && !TEST) await new Promise((res) => setTimeout(res, 300));
-    const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+    const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
     memLog('worldB'); swapWorld(nw); memLog('swapped');
     ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
   } catch (e) { console.warn('Stufe B fehlgeschlagen, bleibe bei OSM-Häusern', e); ind.remove(); }
+  enableShadows(scene);
   fullReady = true; (window as any).__luksiReady = true;
 }
 function swapWorld(nw: World) {
   const old = world.group;
   scene.remove(old);
   old.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
-  world = nw; scene.add(nw.group);
+  world = nw; scene.add(nw.group); enableShadows(nw.group);
   for (const p of players) { p.car.mask = nw.mask; if (p.car.blocked(p.car.x, p.car.z, p.car.heading)) placeCar(p.car.x, p.car.z, undefined, p.car); }
   if (traffic) { traffic.setMask(nw.mask); const pg = nw.group.getObjectByName('props') as any; if (pg && pg.signalPos) { traffic.setSignals(pg.signalPos, pg.signalLamp); const tr = traffic; buses?.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
   if (save.evening) setEvening(true);
@@ -1223,6 +1277,13 @@ if (location.search.includes('test')) {
     styles: () => STYLE_COUNT,
     erkerCam: (k = 0) => { const e = ERKER[k]; if (!e) return ERKER.length; const [x, z, y, , rot] = e; (window as any).__cam = [x + Math.sin(rot) * 18 + Math.cos(rot) * 6, y + 1, z + Math.cos(rot) * 18 - Math.sin(rot) * 6, x, y + 2, z]; return [ERKER.length, Math.round(x), Math.round(z)]; },
     qa: () => qaReport(),
+    sunShadow: (on: boolean) => { sun.castShadow = on; return on; },
+    shadowInfo: () => { const o: Record<string, number> = {}; scene.traverse((m: any) => { if (!m.isMesh) return; const k = (m.castShadow ? 'C' : '-') + (m.receiveShadow ? 'R' : '-') + ':' + m.material.type; o[k] = (o[k] || 0) + 1; }); return { on: renderer.shadowMap.enabled, sun: sun.castShadow, pos: sun.position.toArray().map(Math.round), tgt: sun.target.position.toArray().map(Math.round), o }; },
+    gdiff: (thr = 1.5) => { const out: any = { n: 0, bad: 0, worst: [] as any[], byMesh: {} as Record<string, number> }; world.group.updateMatrixWorld(true);
+      const v = new THREE.Vector3(); world.group.traverse((o: any) => { if (!o.isMesh) return; const isG = o.name === 'ground' || (o.material && o.material.map && o.material.map === aerialTex); if (!isG || !o.visible) return; const cp = (players.length ? players[0].cam : camera).position;
+        const P = o.geometry.getAttribute('position'); for (let i = 0; i < P.count; i += 5) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (Math.hypot(v.x - cp.x, v.z - cp.z) > 600) continue; const d = v.y - world.groundAt(v.x, v.z); out.n++;
+          if (Math.abs(d) > thr) { out.bad++; const k = (o.name || 'tile') + (o.visible ? '' : '(unsichtbar)'); out.byMesh[k] = (out.byMesh[k] || 0) + 1; if (out.worst.length < 400) out.worst.push([Math.round(v.x), Math.round(v.z), Math.round(d * 10) / 10]); } } });
+      return out; },
     perf: (calls = false) => { const o: Record<string, number> = {}; const meas = () => { renderer.info.autoReset = false; renderer.info.reset(); renderAll(); renderer.info.autoReset = true; return calls ? renderer.info.render.calls * 1000 : renderer.info.render.triangles; };
       const all = meas(); const groups = new Map<string, THREE.Object3D[]>();
       for (const sc of [world.group, scene]) for (const c of sc.children) { if (c === world.group || !c.visible) continue; const k = (c.name || c.type) + (sc === scene ? '*' : ''); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }

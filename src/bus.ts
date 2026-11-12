@@ -12,7 +12,7 @@ export interface BusPlayer { x: number; z: number; heading: number; speed: numbe
 const MAX_BUSES = 14;
 const LANE = 1.7;
 
-function sideTex(op: string, ref: string) {
+function sideTex(op: string, ref: string, flip = false) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d')!;
   const pag = op === 'PAG';
   g.fillStyle = pag ? '#FFCC00' : '#F4F6F8'; g.fillRect(0, 0, 512, 128);           // Dach/Grundfarbe
@@ -21,8 +21,8 @@ function sideTex(op: string, ref: string) {
   g.fillStyle = '#1B1F24'; for (let x = 62; x < 512; x += 64) g.fillRect(x, 26, 4, 52);             // Fensterpfosten
   g.fillStyle = pag ? '#FFCC00' : '#0B5CAB'; g.fillRect(0, 78, 512, 50);             // Unterteil
   if (!pag) { g.fillStyle = '#FFFFFF'; g.fillRect(0, 78, 512, 5); }
-  g.font = 'bold 34px system-ui, sans-serif'; g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.fillText(pag ? 'PostAuto' : 'vbl', 26, 118);
-  g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(ref, 440, 118);
+  g.font = 'bold 34px system-ui, sans-serif'; g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.textAlign = flip ? 'right' : 'left'; g.fillText(pag ? 'PostAuto' : 'vbl', flip ? 486 : 26, 118);
+  g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(ref, flip ? 72 : 440, 118);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 function frontTex(op: string, ref: string, to: string) {
@@ -41,13 +41,13 @@ function frontTex(op: string, ref: string, to: string) {
 
 /** Ein Bus = eine Atlas-Textur (Seite, Front, Heck, Dach, Unterseite) → 1 Zeichenaufruf je Wagenkasten statt 5 */
 const ATLAS = 1024;
-const R = { side: [0, 0, 512, 128], front: [512, 0, 256, 256], roof: [768, 0, 256, 128], dark: [768, 128, 256, 128], rear: [0, 256, 512, 560] } as Record<string, number[]>;
+const R = { side: [0, 0, 512, 128], side2: [0, 128, 512, 128], front: [512, 0, 256, 256], roof: [768, 0, 256, 128], dark: [768, 128, 256, 128], rear: [0, 256, 512, 560] } as Record<string, number[]>;
 function busAtlas(op: string, ref: string, to: string) {
   const c = document.createElement('canvas'); c.width = c.height = ATLAS; const g = c.getContext('2d')!;
-  const st = sideTex(op, ref).image as HTMLCanvasElement, fr = frontTex(op, ref, to).image as HTMLCanvasElement, rt = rearTex(op);
+  const st = sideTex(op, ref).image as HTMLCanvasElement, st2 = sideTex(op, ref, true).image as HTMLCanvasElement, fr = frontTex(op, ref, to).image as HTMLCanvasElement, rt = rearTex(op);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const draw = () => {
-    g.drawImage(st, 0, 0, 512, 128); g.drawImage(fr, 512, 0, 256, 256);
+    g.drawImage(st, 0, 0, 512, 128); g.drawImage(st2, 0, 128, 512, 128); g.drawImage(fr, 512, 0, 256, 256);
     g.fillStyle = op === 'PAG' ? '#FFCC00' : '#F4F6F8'; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
     g.drawImage(rt.image as HTMLCanvasElement, 0, 256, 512, 560); t.needsUpdate = true;
   };
@@ -56,7 +56,7 @@ function busAtlas(op: string, ref: string, to: string) {
 }
 function busSegGeo(segL: number, front: boolean, rear: boolean) {
   const geo = new THREE.BoxGeometry(2.55, 2.75, segL).toNonIndexed(); const uv = geo.getAttribute('uv');
-  const faces = [['side', false], ['side', true], ['roof', false], ['dark', false], [front ? 'front' : 'roof', false], [rear ? 'rear' : 'roof', false]] as [string, boolean][];
+  const faces = [['side', false], ['side2', false], ['roof', false], ['dark', false], [front ? 'front' : 'roof', false], [rear ? 'rear' : 'roof', false]] as [string, boolean][];
   faces.forEach(([k, mirror], f) => { const [x, y, w, h] = R[k]; const u0 = x / ATLAS, u1 = (x + w) / ATLAS, vt = 1 - y / ATLAS, vb = 1 - (y + h) / ATLAS;
     for (let i = f * 6; i < f * 6 + 6; i++) { const u = mirror ? 1 - uv.getX(i) : uv.getX(i); uv.setXY(i, u0 + u * (u1 - u0), vb + uv.getY(i) * (vt - vb)); } });
   geo.clearGroups(); return geo;

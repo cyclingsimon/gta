@@ -443,7 +443,7 @@ export interface Props { piers: { p: number[][]; w: number; f: number; a: number
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
   const group = new THREE.Group();
@@ -486,7 +486,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // Luftbild (SWISSIMAGE 2 m, leicht stilisiert) als Bodenfarbe: Wiesen, Wald, Plätze wie in echt
   if (opts.aerial) setAerialUV(groundGeo);
   lap('Luftbild-UV');
-  const groundMat = opts.aerial ? withDetail(toon('#ffffff', { map: opts.aerial }), groundTex) : toon('#BDB9B0', { map: groundTex });
+  const groundMat = opts.aerial ? withDetail(toon('#ffffff', { map: opts.aerial }), groundTex, opts.aerialHr) : toon('#BDB9B0', { map: groundTex });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.name = 'ground';
   if (groundMesh) {
@@ -520,7 +520,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const [tx, tz] = key.split(',').map((v) => +v * 400);
       const cg = gridMesh(terrain, Math.max(X0, tx), Math.max(Z0, tz), Math.min(X1, tx + 400), Math.min(Z1, tz + 400), 10, -0.45, 12); if (opts.aerial) setAerialUV(cg);
       const coarse = new THREE.Mesh(cg, groundMat); coarse.name = 'ground-far';
-      const lod = new THREE.LOD(); lod.addLevel(m, 0); lod.addLevel(coarse, 650); lod.name = 'ground-lod'; group.add(lod);
+      // LOD misst den Abstand zur Objektposition: LOD in die Kachelmitte setzen, Kinder zurückschieben (Geometrie bleibt in Weltkoordinaten).
+      // Vorher stand jede LOD im Ursprung → ab 650 m von der Kapellbrücke lag überall das grobe, nach unten gezogene Gitter (Bäume/Strassen «schwebten»).
+      const cxm = tx + 200, czm = tz + 200;
+      const lod = new THREE.LOD(); lod.position.set(cxm, 0, czm); m.position.set(-cxm, 0, -czm); coarse.position.set(-cxm, 0, -czm);
+      lod.addLevel(m, 0); lod.addLevel(coarse, 650 + 283); lod.name = 'ground-lod'; group.add(lod);
     }
     lap('Boden-LOD');
   } else group.add(ground);
@@ -547,12 +551,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   });
   {
     const pos: number[] = [], col: number[] = [];
-    const c = new THREE.Color('#5BA8D8');
+    const c = new THREE.Color('#4AA6BC'); // Referenz SWISSIMAGE 2025: Seebecken/Reuss türkis-grün, nicht himmelblau
     // Seeflächen auf Seehöhe brauchen kein feines Netz (spart viel Speicher), Flüsse/Bäche werden aufs Gelände gelegt
     const fpos: number[] = [], fcol: number[] = [];
     for (const w of d.water) { const flat = (w as any).f === 1 || w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
     const dw = drape(pos, col, terrain, opts.coarse ? 12 : 6);
-    const wmat = toon('#ffffff', { vertexColors: true, map: waterTex });
+    const wmat = withWater(toon('#ffffff', { vertexColors: true, map: waterTex }));
     const m = flatMesh(dw.pos, dw.col!, wmat);
     worldUV(m.geometry, 14);
     m.name = 'water';
@@ -562,7 +566,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (fpos.length) { const lk = flatMesh(fpos, fcol, wmat); worldUV(lk.geometry, 14); lk.name = 'water-lake'; waterMeshes.push(lk); group.add(lk); }
     // Seefläche ausserhalb des Spielfelds Richtung Osten/Süden (Vierwaldstättersee)
     const lakeTex = waterTex.clone(); lakeTex.repeat.set(6000 / 14, 6000 / 14); lakeTex.needsUpdate = true;
-    const lake = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), toon('#5BA8D8', { map: lakeTex }));
+    const lake = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), withWater(toon('#4AA6BC', { map: lakeTex })));
     waterMeshes.push(lake);
     lake.rotation.x = -Math.PI / 2; lake.position.set(X1 + 3000 - 1, -0.1, 1500);
     group.add(lake);
@@ -1580,7 +1584,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       for (const k of order) {
         const p = V[k];
         buf.pos.push(p[0], p[1], p[2]); buf.nor.push(nx, ny, nz);
-        const sh = buf === B.tiles || buf === B.slate ? shadeTop : p[1] < ymin + 0.5 ? 0.86 : 1;
+        const sh = buf === B.tiles || buf === B.slate ? shadeTop : p[1] < ymin + 0.5 ? 0.78 : 1;
         buf.col.push(col.r * sh, col.g * sh, col.b * sh);
         buf.uv.push(...uvf(p));
       }
@@ -1999,17 +2003,66 @@ export function horizonMesh(t: Terrain, hole: number[]) {
 
 /** Erdgeschoss (Textur-v < 1, da v = Höhe über Wandfuss / Geschosshöhe) mit eigener Ladentextur zeichnen */
 /** Luftbild + feine Körnung aus Weltkoordinaten (2-m-Pixel wirken aus Fahrerhöhe sonst verwaschen) */
-function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture) {
+/** Scharfes Luftbild der Kernzone (0.625 m statt 2 m): LV95-Ausschnitt; Weltkoordinaten → UV per Ausgleichsebene (Restfehler < 1 m) */
+export const AERIAL_HR = { E0: 2664760, E1: 2667320, N0: 1210400, N1: 1212960 };
+function hrAffine(): [THREE.Vector3, THREE.Vector3] {
+  // kleinste Quadrate auf einem 9×9-Gitter über die Kernzone
+  const pts: number[][] = []; for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) pts.push([-1300 + i * 325, -1400 + j * 325]);
+  const solve = (f: (E: number, N: number) => number) => {
+    const M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
+    for (const [x, z] of pts) { const [E, N] = lv95(x, z); const r = [x, z, 1], y = f(E, N); for (let a = 0; a < 3; a++) { b[a] += r[a] * y; for (let c = 0; c < 3; c++) M[a][c] += r[a] * r[c]; } }
+    const m = new THREE.Matrix3().set(M[0][0], M[0][1], M[0][2], M[1][0], M[1][1], M[1][2], M[2][0], M[2][1], M[2][2]).invert();
+    return new THREE.Vector3(...b).applyMatrix3(m);
+  };
+  return [solve((E) => (E - AERIAL_HR.E0) / (AERIAL_HR.E1 - AERIAL_HR.E0)), solve((_E, N) => (N - AERIAL_HR.N0) / (AERIAL_HR.N1 - AERIAL_HR.N0))];
+}
+function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture) {
   detail.wrapS = detail.wrapT = THREE.RepeatWrapping;
+  const [hA, hB] = hr ? hrAffine() : [new THREE.Vector3(), new THREE.Vector3()];
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: detail };
+    if (hr) { sh.uniforms.hrMap = { value: hr }; sh.uniforms.hrA = { value: hA }; sh.uniforms.hrB = { value: hB }; }
     sh.vertexShader = 'varying vec2 vWXZ;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
+       #ifdef USE_HR
+       vec2 huv = vec2(dot(hrA, vec3(vWXZ, 1.0)), dot(hrB, vec3(vWXZ, 1.0)));
+       vec2 he = min(huv, 1.0 - huv);
+       float hw = smoothstep(0.0, 0.03, min(he.x, he.y));
+       if (hw > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(hrMap, huv).rgb, hw);
+       #endif
        float dg = texture2D(detailMap, vWXZ / 9.0).r * 0.6 + texture2D(detailMap, vWXZ / 31.0).r * 0.4;
        diffuseColor.rgb *= mix(0.86, 1.1, dg);`);
   };
-  m.customProgramCacheKey = () => 'detail' + detail.uuid;
+  m.customProgramCacheKey = () => 'detail' + detail.uuid + (hr ? 'hr' : '');
+  return m;
+}
+
+/** Wasser: wandernde Wellen-Normalen, Himmel-Spiegelung bei flachem Blick (Fresnel), Sonnenglitzern als harte Comic-Funken */
+export const WATER = { time: { value: 0 }, sun: { value: new THREE.Vector3(-400, 700, 300).normalize() }, sky: { value: new THREE.Color('#CFE9F5') } };
+function withWater(m: THREE.MeshToonMaterial) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uWT = WATER.time; sh.uniforms.uWSun = WATER.sun; sh.uniforms.uWSky = WATER.sky;
+    sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n  vMapUv += vec2(0.0, 0.0);\n#endif');
+    sh.fragmentShader = 'uniform float uWT;\nuniform vec3 uWSun;\nuniform vec3 uWSky;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      {
+        vec2 p = vWP.xz;
+        float t = uWT;
+        vec2 g = vec2(0.0);
+        g += vec2(0.8, 0.6) * cos(dot(p, vec2(0.8, 0.6)) * 0.55 + t * 1.3) * 0.55;
+        g += vec2(-0.5, 0.86) * cos(dot(p, vec2(-0.5, 0.86)) * 0.9 + t * 1.9) * 0.35;
+        g += vec2(0.96, -0.28) * cos(dot(p, vec2(0.96, -0.28)) * 1.7 + t * 2.6) * 0.2;
+        g += vec2(0.1, 1.0) * cos(dot(p, vec2(0.1, 1.0)) * 3.1 + t * 3.4) * 0.12;
+        vec3 n = normalize(vec3(-g.x * 0.18, 1.0, -g.y * 0.18));
+        vec3 v = normalize(cameraPosition - vWP);
+        float fr = pow(1.0 - max(dot(n, v), 0.0), 4.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uWSky, fr * 0.55);
+        float sp = pow(max(dot(reflect(-v, n), uWSun), 0.0), 220.0);
+        totalEmissiveRadiance += vec3(1.0, 0.97, 0.88) * smoothstep(0.35, 0.6, sp) * 1.4;
+      }`);
+  };
+  m.customProgramCacheKey = () => 'water';
   return m;
 }
 
