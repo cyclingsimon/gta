@@ -1,5 +1,15 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-12y  Etappe 2: Emmenbrücke, Rotsee, Ebikon, Adligenswil
+- Neue Region «Nord» (x −3800..4600, z −3900..−550): echtes Gelände (swissALTI3D), 9689 Häuser aus swissBUILDINGS3D mit Dachfarben aus dem Luftbild, Luftbild-Boden, Wald, Strassen, Reuss, Emme und Rotsee aus OpenStreetMap, 53 Buslinienwege (VBL, Auto AG Rothenburg, PostAuto)
+- Nachladen: Wer in Luzern auf einer Strasse nördlich über den Maihof/Reussbühl hinaus fährt (z < −1000), fährt nach 1.5 s in der Region Nord weiter. Zurück geht es im Süden der Region Nord (z > −650). Spielstand, Position und Sterne bleiben; die Seite lädt dafür neu («Weiterfahren ▶»)
+- Beide Regionen enthalten das Kinderspital (Überlappung z −1100..−550), Patienten können also in beiden Regionen abgeliefert werden
+- 8 neue Einsätze: Bahnhof Emmenbrücke, Rotsee, Bahnhof Ebikon, Adligenswil Dorf, Emmen Center, Schwimmbad Mooshüsli, Viscosistadt, Flugzeugwerke Emmen
+- 40 eigene Luksi-Herzen in der Region Nord, Schwäne auf Rotsee und Reuss, Kühe auf den Weiden
+- Wegweiser «⬆ Emmenbrücke · Ebikon» bzw. «⬇ Luzern · Kinderspital» an den Hauptstrassen über die Grenze
+- Während eines Einsatzes und zu zweit wird nicht gewechselt (Hinweis statt Nachladen)
+- Noch nicht in Nord: Züge, Kursschiffe
+
 2026-11-12x  Jesuitenkirche mit Zwiebelhauben, Weinmarktbrunnen
 - Jesuitenkirche: die zwei Türme tragen jetzt Zwiebelhauben mit Laterne und goldener Spitze statt spitzer Pyramidendächer aus den 3D-Daten (Turmspitzen werden im Gebäude automatisch gefunden)
 - Weinmarktbrunnen: gotischer Brunnenstock mit Figurenkranz, bunter Bemalung und grüner Fiale auf achteckigem Trog

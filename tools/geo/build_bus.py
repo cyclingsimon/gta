@@ -1,10 +1,11 @@
 """OSM-Buslinien (VBL, PostAuto) → public/data/bus.json: echte Linienwege im Spielfeld, Haltestellen, Fahrzeugtyp."""
-import json, math
-d = json.load(open('data/osm_bus.json'))
-props = json.load(open('public/data/props.json'))
+import json, math, os
+OUT = 'public/data' + ('/' + os.environ['LR'] if os.environ.get('LR') else '')
+d = json.load(open(os.environ.get('LR_BUS', 'data/osm_bus.json')))
+props = json.load(open(OUT + '/props.json'))
 LAT0, LON0 = 47.0517, 8.3077
 KX, KZ = math.cos(math.radians(LAT0)) * 111320, 110574
-X0, X1, Z0, Z1 = -3790, 2690, -1090, 6290
+X0, Z0, X1, Z1 = [float(v) for v in os.environ.get('LR_BOUNDS', '-3790,-1090,2690,6290').split(',')]
 L = lambda la, lo: (round((lo - LON0) * KX, 1), round(-(la - LAT0) * KZ, 1))
 inside = lambda p: X0 < p[0] < X1 and Z0 < p[1] < Z1
 DOUBLE = {'1', '2', '8'}            # Hess lighTram 25 (doppelgelenkig)
@@ -40,8 +41,8 @@ def chain(rel):
     return out
 lines = []
 for r in d['rels']:
-    t = r['t']; op = t.get('op') or ''; ref = t.get('ref') or ''
-    if op not in ('VBL', 'PAG'): continue
+    t = r['t']; op = t.get('op') or t.get('operator') or ''; ref = t.get('ref') or ''
+    if op not in ('VBL', 'PAG', 'AAGR'): continue  # AAGR = Auto AG Rothenburg (Emmen, Region Nord)
     pts = chain(r)
     if not pts: continue
     length = sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
@@ -68,6 +69,6 @@ for l in lines:
     k = (l['ref'], l['to'])
     if k not in best or l['len'] > best[k]['len']: best[k] = l
 lines = sorted(best.values(), key=lambda l: (len(l['ref']), l['ref']))
-json.dump(lines, open('public/data/bus.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+json.dump(lines, open(OUT + '/bus.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 for l in lines: print(l['ref'], l['op'], l['kind'], l['to'], l['len'], 'm', len(l['stops']), 'Halte:', ', '.join(s[1] for s in l['stops'][:6]))
 print(len(lines), 'Linienwege')

@@ -1,6 +1,6 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 12.11.2026 07:00, Version **2026-11-12x** – **LIVE** auf https://gta.simon-infanger.ch/ (von Claude per FileZilla hochgeladen; geprüft: ausgeliefertes `index-D4LTK10T.js` enthält Version x und den Weinmarktbrunnen). Live seit 11.11.: q, r, s, t, v, w; x am 12.11. ca. 06:57.
+Stand: 12.11.2026 08:00. Live: **2026-11-12x**. Fertig, nicht hochgeladen: **2026-11-12y** (Etappe 2), ZIP `Luksi Rescue 2026-11-12y.zip` (51 MB) – PC war ab 08:00 aus. Version x ist **LIVE** auf https://gta.simon-infanger.ch/ (von Claude per FileZilla hochgeladen; geprüft: ausgeliefertes `index-D4LTK10T.js` enthält Version x und den Weinmarktbrunnen). Live seit 11.11.: q, r, s, t, v, w; x am 12.11. ca. 06:57.
 Lokal auf dem PC: `Downloads\luksi-rescue\web-n` (Vollstand w), `web-x` (nur die in x geänderten Dateien: index.html, LIESMICH.txt, assets/). Vollpaket: `Luksi Rescue 2026-11-12x.zip`.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
@@ -9,12 +9,13 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Feld x −3800..2700, z −1100..6300. Geodaten nur über den eingebauten Browser auf Simons PC (`window.PK`, Base64-Stücke à 225 kB, `tools/geo/collect.py PREFIX N OUTDIR`). Overpass nur overpass-api.de, grosse Abfragen im Hintergrund.
 - `data/tunnels.json` (21 Gleistunnel). build_city: `rail` sichtbar, `railAll` für Zugstrecken. build_trains: `tun` = Tunnel-Intervalle. Zentralbahn Bahnhof → Spielfeldrand Süd (6.6 km).
 
-## Etappe 2 (Emmenbrücke, Ebikon, Adligenswil) – Rohdaten vollständig, noch nicht eingebaut
-Band x −3800..4600, z −3900..−1100 (LV95 E 2662–2670, N 1212–1215).
-- `data/e2/alti/EEEE-NNNN.i16`: 33 swissALTI3D-Kacheln, 500×500 int16 dm relativ 400 m, Kachel links oben (E·1000, (N+1)·1000).
-- `data/e2/b3dm/`: 841 neue swissBUILDINGS3D-Kacheln (x 1037..1089, y 1283..1311) + `wms_w.jpg`/`wms_o.jpg` (SWISSIMAGE 2 m, E 2662190–2666430 bzw. 2666430–2670670, N 1212590–1215560, je 2120×1485 px).
-- `data/e2/osm/osm_a.json`, `osm_b.json`: Overpass-Rohdaten (out geom) lat 47.059–47.089, lon 8.255–8.313 bzw. 8.313–8.370 (Gebäude, Strassen, Bahn, Landnutzung, Natur, Freizeit, Wasser, Amenity, Haltestellen, Barrieren). `osm_bus.json`: 110 Bus-/Trolleybus-Relationen mit Weggeometrie (Format wie data/osm_bus.json).
-- Nächster Schritt: Konverter Overpass-Rohformat → Format von osm_big.json; Gelände anstückeln; b3d für Band bauen; Nachladen (Streaming) als eigene Kachelgruppe, sonst Speicher > 2 GB.
+## Etappe 2 «Nord» – im Spiel ab Version y (noch nicht live)
+- Region Nord: Feld x −3800..4600, z −3900..−550, Daten in `public/data/nord/`. Gebaut mit `sh tools/geo/region_nord.sh` (alle Schritte reproduzierbar).
+- Rohdaten in `data/e2/`: `alti/` (33 swissALTI3D-Kacheln, int16 dm rel. 400 m), `b3dm/` (841 Kacheln + `wms_w.jpg`/`wms_o.jpg`), `osm/osm_a.json`, `osm_b.json` (Overpass out geom), `osm/osm_bus.json`.
+- Werkzeuge neu: `osm_raw2big.py` (Overpass-Rohformat → osm_big/props/tunnels/beach), `merge_osm.py` (nördlich z = −950 Etappe 2, südlich Luzerner OSM), `alti_region.py`, `region_pois.py`. Die bestehenden Werkzeuge lesen `LR=nord` und `LR_*`-Variablen; ohne diese bauen sie unverändert Luzern.
+- Nachladen = Regionswechsel per Neuladen der Seite (`?region=nord|luzern`, `save.region`): Luzern → Nord bei z < −1000, Nord → Luzern bei z > −650, nach 1.5 s, nur ohne laufenden Einsatz und allein. [Entscheid/Annahme: echtes Streaming im laufenden Spiel hätte den Speicher über 2 GB getrieben; so bleibt jede Region klein.]
+- Beide Regionen enthalten das Kinderspital. Herzen getrennt (`save.heartsN`). Einsätze n1–n8. Keine Schiffe und Züge in Nord.
+- Luftbild Nord: E 2662190–2670670, N 1212000–1215560 (unterer Streifen aus dem Luzerner Luftbild; östlich E 2668910 unter N 1212590 fehlt das Bild, Rand gestreckt).
 
 ## Spiel (Module)
 - `world.ts`: Altstadt-Pastellzeilen, Kapellbrücke, Fahnen, Terrassen, Verkehrshaus, Spielplätze, Nadelwehr, Löwendenkmal, Museggmauer + Zytturm-Uhr, Instanzen mit Vertex-Farben (`colorMerge`), `chunkInstanced` 1000 m, See flach.
@@ -22,7 +23,12 @@ Band x −3800..4600, z −3900..−1100 (LV95 E 2662–2670, N 1212–1215).
 - `fun.ts` Züge/Tunnel/Pedalos, `bus.ts` Busatlas, `vehicle.ts` Ambulanz.
 - `tests/look_spots.py prefix 'x,z,h,cam;…'`: Sichtprüfung; cam < 0 = freie Kamera (x, z, Höhe h; Blickziel codiert als −((dz+500)·1000 + (dx+500)), Blickhöhe h−28).
 
-## Tests (Version x, Software-Rendering)
+## Tests (Version y, Software-Rendering)
+- Luzern: qa.py alle grün, 1.90 Mio. Dreiecke / 660 Draw Calls.
+- Nord (`qa.py 'http://localhost:8765/?test&region=nord'`): grün ausser G8 Brücken 11.2 % (Grenze 10 %; Emme-/Reussbrücken in tiefen Tälern, Deck folgt dem Gelände) – offen. G7 8/8, G13 ok, P1 0.58 Mio. Dreiecke am Start, Speicher JS 767 MB nach Start.
+- `tests/region.py`: Wechsel Luzern → Nord → Luzern mit Spielstand und Position geprüft, keine Fehler.
+
+## Tests (Version x)
 - qa.py G1–G13, G3b, P1 grün: 1.90 Mio. Dreiecke / 660 Draw Calls (Start), Ladezeit 40 s.
 - Sichtprüfung Jesuitenkirche (Zwiebelhauben sitzen auf den Türmen) und Weinmarkt (Brunnen sichtbar).
 - fun.py zuletzt Version v, missions.py zuletzt alle 18 (q). Speicher «Echt» Spitze 1.6 GB (w).
@@ -30,4 +36,5 @@ Band x −3800..4600, z −3900..−1100 (LV95 E 2662–2670, N 1212–1215).
 
 ## Offen
 - Punkt 6 teilweise: Jesuitenkirche und Weinmarktbrunnen erledigt. Offen: Bahnhofplatz/Torbogen, KKL-Vorplatz (Europaplatz-Pflaster, Wagenbachbrunnen), hausgenaue Altstadtfarben (keine Fassadenfarb-Datenquelle; Annahme: bleibt zufällig-pastell).
-- Punkt 7: Etappe 2 einbauen (siehe oben) inkl. Nachladen.
+- Punkt 7: Etappe 2 eingebaut (y), Upload offen (PC). Offen in Nord: Züge (S-Bahn Emmenbrücke/Ebikon), G8 Brücken, Ortsnamen-Koordinaten sind Annahmen (±200 m).
+- Bekannt (auch Luzern): langer beiger Balken in Dachhöhe beim Gletschergarten/Wesemlin (x≈560, z≈−700), Ursache nicht geprüft.

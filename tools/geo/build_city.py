@@ -6,7 +6,7 @@ Ausgabe:  public/data/city.json (kompakte Spieldaten)
 
 Aufruf:   python3 tools/geo/build_city.py <osm_json> <out_json>
 """
-import json, sys, hashlib
+import json, sys, hashlib, os
 from shapely.geometry import Polygon, LineString, box, MultiPolygon
 from shapely.ops import linemerge, polygonize, unary_union
 
@@ -103,7 +103,7 @@ water_out = []
 WEHR_X = -345
 parts = []
 for q in polys(water):
-    if q.area > 100000:
+    if q.area > 100000 and not os.environ.get('LR'):  # Region Nord: Rotsee/Reuss liegen nicht auf Seespiegel
         parts += [(g, 1) for g in polys(q.intersection(box(WEHR_X, Z0, X1, Z1)))] + [(g, 0) for g in polys(q.intersection(box(X0, Z0, WEHR_X, Z1)))]
     else:
         parts.append((q, 0))
@@ -132,8 +132,9 @@ rail = []
 rail_all = []  # inkl. Tunnel – für die Zugstrecken
 import os
 TUN = None
-if os.path.exists('data/tunnels.json'):
-    TUN = unary_union([LineString(t['p']).buffer(2.5) for t in json.load(open('data/tunnels.json')) if len(t['p']) > 1])
+TUNF = os.environ.get('LR_TUN', 'data/tunnels.json')
+if os.path.exists(TUNF):
+    TUN = unary_union([LineString(t['p']).buffer(2.5) for t in json.load(open(TUNF)) if len(t['p']) > 1])
 for pts, bridge in d['rail']:
     la = LineString(pts).intersection(CLIP)
     for part in ([la] if isinstance(la, LineString) else list(getattr(la, 'geoms', []))):

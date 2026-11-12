@@ -1,11 +1,13 @@
 """Dachfarbe je Gebäude aus SWISSIMAGE (2-m-Luftbild data/swissimage_2m.jpg, LV95-Ausschnitt) → public/data/roofcolors.json"""
 import json, math, colorsys, numpy as np
 from PIL import Image
-meta = json.load(open('public/data/b3d.json')); raw = open('public/data/b3d.bin', 'rb').read()
+import os
+OUT = 'public/data' + ('/' + os.environ['LR'] if os.environ.get('LR') else '')
+meta = json.load(open(OUT + '/b3d.json')); raw = open(OUT + '/b3d.bin', 'rb').read()
 P = np.frombuffer(raw, dtype=np.int16, count=meta['posBytes'] // 2).reshape(-1, 3).astype(np.float64) / 10
 I = np.frombuffer(raw, dtype=np.uint16, offset=meta['posBytes'] + meta['pad'], count=meta['idxCount'])
-img = np.asarray(Image.open('data/swissimage_2m_x2700.jpg').convert('RGB')).astype(np.int32)
-E0, N1, R = 2662190, 1212690, 2  # aus dem Browser-Export
+img = np.asarray(Image.open(os.environ.get('LR_IMG', 'data/swissimage_2m_x2700.jpg')).convert('RGB')).astype(np.int32)
+E0, N1 = [float(v) for v in os.environ.get('LR_EN', '2662190,1212690').split(',')]; R = 2  # aus dem Browser-Export
 LAT0, LON0 = 47.0517, 8.3077; KX = math.cos(math.radians(LAT0)) * 111320; KZ = 110574
 def lv(x, z):
     lon = LON0 + x / KX; lat = LAT0 - z / KZ
@@ -37,5 +39,5 @@ for m in meta['buildings']:
     h = round(h * 24) / 24; l = round(l * 12) / 12; s = round(s * 8) / 8
     R_, G_, B_ = colorsys.hls_to_rgb(h, l, s)
     out.append('%02x%02x%02x' % (round(R_ * 255), round(G_ * 255), round(B_ * 255)))
-json.dump(out, open('public/data/roofcolors.json', 'w'))
+json.dump(out, open(OUT + '/roofcolors.json', 'w'))
 print(len(out), 'Gebäude,', sum(1 for o in out if o), 'mit Farbe')

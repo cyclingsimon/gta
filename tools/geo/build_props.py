@@ -3,7 +3,9 @@ import json, math, sys
 d = json.load(open(sys.argv[1] if len(sys.argv) > 1 else 'data/osm_props.json'))
 LAT0, LON0 = 47.0517, 8.3077
 KX, KZ = math.cos(math.radians(LAT0)) * 111320, 110574
-X0, X1, Z0, Z1 = -3800, 2700, -1100, 6300
+import os
+OUT = 'public/data' + ('/' + os.environ['LR'] if os.environ.get('LR') else '')
+X0, Z0, X1, Z1 = [float(v) for v in os.environ.get('LR_BOUNDS', '-3800,-1100,2700,6300').split(',')]
 def L(lat, lon): return [round((lon - LON0) * KX, 1), round(-(lat - LAT0) * KZ, 1)]
 def ok(p): return X0 < p[0] < X1 and Z0 < p[1] < Z1
 out = {'piers': [], 'lamps': [], 'trees': [], 'signals': [], 'stops': [], 'fountains': []}
@@ -33,10 +35,10 @@ for e in d.get('sig', []):
     elif t.get('highway') == 'bus_stop': out['stops'].append(q + [t.get('name', '')])
     elif t.get('amenity') == 'fountain': out['fountains'].append(q)
 # Strände/Badeplätze und Sitzbänke (data/beach.json, lokale Meter, aus OpenStreetMap)
-import os
-if os.path.exists('data/beach.json'):
-    bj = json.load(open('data/beach.json'))
+BJ = os.environ.get('LR_BEACH', 'data/beach.json')
+if os.path.exists(BJ):
+    bj = json.load(open(BJ))
     out['beaches'] = [[[round(x, 1), round(z, 1)] for x, z in p] for p in bj['beach'] if any(ok(q) for q in p)]
     out['benches'] = [[round(x, 1), round(z, 1)] for x, z in bj['bench'] if ok((x, z))]
-json.dump(out, open('public/data/props.json', 'w'), separators=(',', ':'))
+json.dump(out, open(OUT + '/props.json', 'w'), separators=(',', ':'))
 print({k: len(v) for k, v in out.items()})

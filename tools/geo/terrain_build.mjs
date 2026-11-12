@@ -2,10 +2,12 @@
 import fs from 'fs';
 import { MeshoptSimplifier } from 'meshoptimizer';
 await MeshoptSimplifier.ready;
-const SEA = 433.6, X0 = -3800, Z0 = -1100, S = 2, NX = 3251, NZ = 3701;
-const raw = new Int16Array(fs.readFileSync('data/terrain_2m_big.i16').buffer.slice(0));
+// Region (Etappe 2): LR=nord LR_GRID=X0,Z0,NX,NZ LR_TERR=data/e2/terrain_2m.i16 → public/data/nord/
+const OUT = 'public/data' + (process.env.LR ? '/' + process.env.LR : '');
+const SEA = 433.6, S = 2, [X0, Z0, NX, NZ] = (process.env.LR_GRID || '-3800,-1100,3251,3701').split(',').map(Number);
+const raw = new Int16Array(fs.readFileSync(process.env.LR_TERR || 'data/terrain_2m_big.i16').buffer.slice(0));
 const h = new Float32Array(raw.length); for (let i = 0; i < raw.length; i++) h[i] = raw[i] / 10 + 400 - SEA;
-const city = JSON.parse(fs.readFileSync('public/data/city.json'));
+const city = JSON.parse(fs.readFileSync(OUT + '/city.json'));
 // --- Strassen quer eben (wie Terrain.flattenRoads, aber offline) ---
 const orig = h.slice();
 const sample = (x, z) => { let fx = (x - X0) / S, fz = (z - Z0) / S; fx = Math.max(0, Math.min(NX - 1.001, fx)); fz = Math.max(0, Math.min(NZ - 1.001, fz)); const i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j; const a = orig[j * NX + i], b = orig[j * NX + i + 1], c = orig[(j + 1) * NX + i], d = orig[(j + 1) * NX + i + 1]; return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz; };
@@ -35,8 +37,8 @@ const out16 = new Int16Array(h.length); for (let i = 0; i < h.length; i++) out16
 { // zeilenweise Differenzen + Byte-Trennung → komprimiert ~3x besser
   const d = new Int16Array(out16.length); for (let j = 0; j < NZ; j++) { let p = 0; for (let i = 0; i < NX; i++) { const k = j * NX + i; d[k] = out16[k] - p; p = out16[k]; } }
   const b8 = new Uint8Array(d.buffer), o = new Uint8Array(b8.length), n = d.length; for (let i = 0; i < n; i++) { o[i] = b8[2 * i]; o[n + i] = b8[2 * i + 1]; }
-  fs.writeFileSync('public/data/terrain.bin', Buffer.from(o)); }
-fs.writeFileSync('public/data/terrain.json', JSON.stringify({ nx: NX, nz: NZ, x0: X0, z0: Z0, step: S, flattened: true, enc: 'delta-shuffle', source: 'swissALTI3D (DTM2) via api3.geo.admin.ch profile, © swisstopo; Strassen quer eben' }));
+  fs.writeFileSync(OUT + '/terrain.bin', Buffer.from(o)); }
+fs.writeFileSync(OUT + '/terrain.json', JSON.stringify({ nx: NX, nz: NZ, x0: X0, z0: Z0, step: S, flattened: true, enc: 'delta-shuffle', source: 'swissALTI3D (DTM2) via api3.geo.admin.ch profile, © swisstopo; Strassen quer eben' }));
 // --- Bodennetz: je 400-m-Kachel vereinfachen (Siedlung 0.3 m, Wald/Feld 0.9 m Fehler), Kachelränder bleiben fest ---
 const TS = 200; // Zellen je Kachel (400 m)
 const roadPts = new Map();
@@ -61,6 +63,6 @@ const q = new Int16Array(vp.length); for (let i = 0; i < vp.length; i += 3) { q[
 const niA = new Uint32Array(ni);
 const pad = (4 - (q.byteLength % 4)) % 4;
 const buf = Buffer.alloc(q.byteLength + pad + niA.byteLength); Buffer.from(q.buffer).copy(buf, 0); Buffer.from(niA.buffer).copy(buf, q.byteLength + pad);
-fs.writeFileSync('public/data/ground.bin', buf);
-fs.writeFileSync('public/data/ground.json', JSON.stringify({ vertices: vp.length / 3, indices: ni.length, posBytes: q.byteLength, pad, maxErrorM: err * extent, enc: 'grid', x0: X0, z0: Z0, step: S }));
+fs.writeFileSync(OUT + '/ground.bin', buf);
+fs.writeFileSync(OUT + '/ground.json', JSON.stringify({ vertices: vp.length / 3, indices: ni.length, posBytes: q.byteLength, pad, maxErrorM: err * extent, enc: 'grid', x0: X0, z0: Z0, step: S }));
 console.log('Gitter', idx.length / 3, 'Dreiecke →', ni.length / 3, 'Vertices', vp.length / 3, 'max. Fehler', (err * extent).toFixed(3), 'm', 'Dateien', (buf.length / 1e6).toFixed(1), 'MB +', (out16.byteLength / 1e6).toFixed(1), 'MB');

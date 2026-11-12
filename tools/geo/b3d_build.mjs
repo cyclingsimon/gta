@@ -149,6 +149,7 @@ const out = Buffer.alloc(posBytes + pad + iOff * 2 + eOff * 2);
 let o = 0; for (const c of posChunks) { Buffer.from(c.buffer).copy(out, o); o += c.byteLength; } o += pad;
 for (const c of idxChunks) { Buffer.from(c.buffer).copy(out, o); o += c.byteLength; }
 for (const c of edgeChunks) { Buffer.from(c.buffer).copy(out, o); o += c.byteLength; }
-fs.writeFileSync('public/data/b3d.bin', out);
-fs.writeFileSync('public/data/b3d.json', JSON.stringify({ source: 'swissBUILDINGS3D 3.0 © swisstopo (3D Tiles, Stand 2026-05-20)', fields: ['egid', 'vStart', 'vCount', 'iStart', 'iCount', 'cx', 'cz', 'ymin', 'ymax', 'eStart', 'eCount'], posBytes, pad, idxCount: iOff, edgeCount: eOff, rel: true, buildings: meta.map((m) => { m[5] = Math.round(m[5] * 10) / 10; m[6] = Math.round(m[6] * 10) / 10; return m; }) }));
+const OUT = 'public/data' + (process.env.LR ? '/' + process.env.LR : '');
+fs.writeFileSync(OUT + '/b3d.bin', out);
+fs.writeFileSync(OUT + '/b3d.json', JSON.stringify({ source: 'swissBUILDINGS3D 3.0 © swisstopo (3D Tiles, Stand 2026-05-20)', fields: ['egid', 'vStart', 'vCount', 'iStart', 'iCount', 'cx', 'cz', 'ymin', 'ymax', 'eStart', 'eCount'], posBytes, pad, idxCount: iOff, edgeCount: eOff, rel: true, buildings: meta.map((m) => { m[5] = Math.round(m[5] * 10) / 10; m[6] = Math.round(m[6] * 10) / 10; return m; }) }));
 console.log('Gebäude', meta.length, 'Dreiecke', triIn, '→', triOut, 'Vertices', vOff, 'Datei', (out.length / 1e6).toFixed(1), 'MB');
