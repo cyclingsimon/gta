@@ -14,7 +14,7 @@ export class Stats {
   tot = { active_s: 0, dist_m: 0, max_kmh: 0, siren_s: 0, horns: 0, boings: 0, hearts: 0, m_accept: 0, m_done: 0, stars: 0, splashes: 0, region_switches: 0 };
   players = 1;
   private ev: StatEvent[] = [];
-  private sinceFlush = 0; private sincePos = 50; private acceptAt = 0; private sent = false; private lastT = 0;
+  private sinceFlush = 0; private sincePos = 25; private acceptAt = 0; private sent = false; private lastT = 0;
 
   constructor(private meta: { v: string; region: string; q: string }, private url = 'stats/api.php', off = false) {
     let d = ''; try { d = localStorage.getItem(DEV_KEY) || ''; if (!d) { d = rid(10); localStorage.setItem(DEV_KEY, d); } } catch { d = rid(10); }
@@ -43,8 +43,8 @@ export class Stats {
     for (const s of speeds) { this.tot.dist_m += Math.abs(s) * dt; this.tot.max_kmh = Math.max(this.tot.max_kmh, Math.abs(s) * 3.6); }
     if (siren) this.tot.siren_s += dt;
     this.sincePos += wall < 5 ? wall : 0; this.sinceFlush += wall < 5 ? wall : 0;
-    if (this.sincePos >= 60) { this.sincePos = 0; this.event('pos', { x: Math.round(pos[0]), z: Math.round(pos[1]) }); }
-    if (this.sinceFlush >= 60) this.flush(false);
+    if (this.sincePos >= 30) { this.sincePos = 0; this.event('pos', { x: Math.round(pos[0]), z: Math.round(pos[1]) }); }
+    if (this.sinceFlush >= 30) this.flush(false); // alle 30 s Spielzeit senden
   }
 
   flush(leaving: boolean) {

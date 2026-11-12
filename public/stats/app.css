@@ -26,3 +26,7 @@ form.karte { background: var(--karte); padding: 22px; border-radius: 16px; borde
 form.karte input { width: 100%; font-size: 17px; padding: 11px; border: 1px solid var(--linie); border-radius: 10px; margin-top: 4px; }
 form.karte button { font-size: 17px; padding: 12px; border: 0; border-radius: 10px; background: var(--akzent); color: #fff; font-weight: 600; }
 .fehler { color: #B3261E; margin: 0; }
+nav { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; } nav a { white-space: nowrap; }
+.zeitraum { margin: 0; font-size: 14px; color: #6b6157; }
+table.uebersicht tr.jahr td { background: var(--akzent-hell); font-weight: 600; } table.uebersicht tr.total td { background: var(--blau); color: #fff; font-weight: 700; }
+table.uebersicht tr.total a { color: #fff; } table.uebersicht a { color: var(--blau); }
