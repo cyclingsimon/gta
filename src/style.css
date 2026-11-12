@@ -64,7 +64,20 @@ button.big { font-size: 22px; background: var(--orange); color: #fff; }
 #pause .panel { background: var(--creme); border: 5px solid var(--ink); border-radius: 26px; padding: 22px 28px; width: min(560px, 92vw); max-height: 90vh; overflow: auto; }
 #pause h2 { margin: 0 0 12px; color: var(--blue); font-size: 34px; text-align: center; }
 #menu-items { display: flex; flex-direction: column; gap: 10px; }
-#menu-items button { text-align: left; }
+.mrow { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 4px 10px; }
+.mrow-main, .mrow-small { grid-template-columns: 1fr; }
+.mlabel { font: 800 15px system-ui; color: var(--blue); }
+.mbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.mrow-main .mbtns button { flex: 1 1 200px; font-size: 20px; padding: 12px; }
+.mrow-main .mbtns button:first-child { background: #FFE2A8; }
+.mrow-opt .mbtns button { flex: 1 1 auto; font-size: 15px; padding: 8px 12px; border-radius: 999px; background: #fff; box-shadow: none; border-width: 3px; }
+.mrow-opt .mbtns button.on { background: var(--blue); color: #fff; }
+.mrow-opt .mbtns button.off { opacity: .5; }
+.mrow-small .mbtns { justify-content: center; } .mrow-small .mbtns button { font-size: 14px; padding: 7px 12px; box-shadow: none; }
+.mnote { grid-column: 2; font: 500 12px system-ui; opacity: .75; margin-top: -2px; }
+.mhead { margin: 6px 0 0; font: 800 17px system-ui; color: var(--ink); border-top: 3px dashed #E2D6BF; padding-top: 10px; }
+#menu-items button.focus { outline: 4px solid var(--orange, #F39204); outline-offset: 2px; }
+@media (max-width: 520px) { .mrow { grid-template-columns: 1fr; } .mnote { grid-column: 1; } }
 #credits { display: none; margin-top: 14px; font: 500 15px system-ui; }
 #credits.show { display: block; }
 #credits h3 { margin: 10px 0 4px; color: var(--blue); }
@@ -148,3 +161,5 @@ body.split #minimap, body.split #speed { display: none; }
 .badges span { font-size: 22px; padding: 2px 6px !important; display: inline-flex; flex-direction: column; align-items: center; min-width: 74px; }
 .badges span em { font-size: 10px; font-style: normal; font-weight: 600; line-height: 1.1; text-align: center; max-width: 80px; }
 .badges span.off { filter: grayscale(1); opacity: .35; }
+.radio-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+#radio #dec { background: #fff; color: var(--ink); font-size: 15px; }

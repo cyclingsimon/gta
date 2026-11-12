@@ -32,7 +32,8 @@ $stunden = array_fill(0, 24, 0);
 foreach ($q("SELECT started, active_s FROM sessions WHERE $ohneTest", $zr) as $r) $stunden[(int)date('G', (int)$r['started'])] += $r['active_s'] / 60;
 $klassen = ['< 2 Min.' => 120, '2–5' => 300, '5–10' => 600, '10–20' => 1200, '20–40' => 2400, '> 40 Min.' => INF]; $hist = array_fill_keys(array_keys($klassen), 0);
 foreach ($dauern as $s) foreach ($klassen as $name => $gr) if ($s < $gr) { $hist[$name]++; break; }
-$missionen = $q("SELECT mission, SUM(type='mission_accept') ang, SUM(type='mission_done') fertig, AVG(CASE WHEN type='mission_done' THEN value END) dauer FROM events WHERE ts >= ? AND ts < ? AND mission IS NOT NULL GROUP BY mission ORDER BY fertig DESC, ang DESC", [$ab, $bis])->fetchAll();
+$missionen = $q("SELECT mission, SUM(type='mission_accept') ang, SUM(type='mission_done') fertig, AVG(CASE WHEN type='mission_done' THEN value END) dauer,
+    SUM(type='mission_decline') abgelehnt, SUM(type='mission_abort') abgegeben FROM events WHERE ts >= ? AND ts < ? AND mission IS NOT NULL GROUP BY mission ORDER BY fertig DESC, ang DESC", [$ab, $bis])->fetchAll();
 $titel = $q('SELECT id, title FROM mission_names')->fetchAll(PDO::FETCH_KEY_PAIR);
 $verteilung = fn(string $feld) => $q("SELECT COALESCE($feld, '?') k, COUNT(*) n, SUM(active_s) s FROM sessions WHERE $ohneTest GROUP BY 1 ORDER BY s DESC", $zr)->fetchAll();
 $punkte = $q("SELECT x, z, region FROM events WHERE ts >= ? AND ts < ? AND type = 'pos' AND x IS NOT NULL ORDER BY id DESC LIMIT 8000", [$ab, $bis])->fetchAll();
@@ -95,8 +96,8 @@ foreach ($proTag as $tg => $v) { $lab = $proMonat ? mb_substr($MONATE[(int)subst
 </section>
 <section><h2>Einsätze</h2>
 <?php if (!$missionen) echo '<p class="leer">Noch keine Einsätze.</p>'; else { ?>
-<div class="tab"><table><thead><tr><th>Einsatz</th><th>angenommen</th><th>erledigt</th><th>Ø Dauer</th></tr></thead><tbody>
-<?php foreach ($missionen as $m) echo '<tr><td>' . h(($titel[$m['mission']] ?? '') ? $titel[$m['mission']] . ' (' . $m['mission'] . ')' : $m['mission']) . '</td><td>' . (int)$m['ang'] . '</td><td>' . (int)$m['fertig'] . '</td><td>' . ($m['dauer'] ? dauer((float)$m['dauer']) : '–') . '</td></tr>'; ?>
+<div class="tab"><table><thead><tr><th>Einsatz</th><th>angenommen</th><th>erledigt</th><th>abgelehnt</th><th>abgegeben</th><th>Ø Dauer</th></tr></thead><tbody>
+<?php foreach ($missionen as $m) echo '<tr><td>' . h(($titel[$m['mission']] ?? '') ? $titel[$m['mission']] . ' (' . $m['mission'] . ')' : $m['mission']) . '</td><td>' . (int)$m['ang'] . '</td><td>' . (int)$m['fertig'] . '</td><td>' . (int)$m['abgelehnt'] . '</td><td>' . (int)$m['abgegeben'] . '</td><td>' . ($m['dauer'] ? dauer((float)$m['dauer']) : '–') . '</td></tr>'; ?>
 </tbody></table></div><?php } ?></section>
 <section><h2>Wo gefahren wird</h2>
 <?php if (!$punkte) echo '<p class="leer">Noch keine Positionen.</p>'; else {

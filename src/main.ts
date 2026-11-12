@@ -391,10 +391,13 @@ function setupFun(data: CityData) {
   scene.add(ships.group);
 }
 
+const declined = new Set<string>(); // in dieser Sitzung abgelehnt: kommen erst wieder, wenn alles andere dran war
 function nextMission(): Mission {
-  const open = missions.find((m) => !(save.best[m.id] >= 1));
+  const pool = missions.filter((m) => !declined.has(m.id));
+  if (!pool.length) declined.clear();
+  const open = (pool.length ? pool : missions).find((m) => !(save.best[m.id] >= 1));
   if (open) return open;
-  const choices = missions.filter((m) => m !== current);
+  const choices = (pool.length ? pool : missions).filter((m) => m !== current);
   return choices[Math.floor(Math.random() * choices.length)];
 }
 
@@ -414,9 +417,26 @@ function startOffer() {
   phase = 'offer';
   sfxPlay.radio();
   const r = $('#radio');
-  r.innerHTML = `<b>📻 Funk</b><span>${current.radio}</span><button id="acc">Einsatz annehmen <kbd>E</kbd>/<kbd>X</kbd></button>`;
+  r.innerHTML = `<b>📻 Funk</b><span>${current.radio}</span><div class="radio-btns"><button id="acc">Einsatz annehmen <kbd>E</kbd>/<kbd>X</kbd></button><button id="dec">Nein danke <kbd>N</kbd>/<kbd>LB</kbd></button></div>`;
   r.classList.add('show');
   ($('#acc') as HTMLButtonElement).onclick = acceptOffer;
+  ($('#dec') as HTMLButtonElement).onclick = declineOffer;
+}
+/** Einsatz ablehnen: Funk schliesst, ein anderer Einsatz kommt etwas später */
+function declineOffer() {
+  if (phase !== 'offer' || !current) return;
+  $('#radio').classList.remove('show');
+  declined.add(current.id); stats.event('mission_decline', { m: current.id });
+  current = null; phase = 'free'; offerTimer = 25;
+  toast('Kein Problem – Luksi fährt frei herum. Der nächste Funkspruch kommt bald.', 2600);
+}
+/** Laufenden Einsatz abbrechen (Pause-Menü): Patient wird von einem anderen Team übernommen */
+function abortMission() {
+  if (!current || (phase !== 'toScene' && phase !== 'toHospital')) return;
+  stats.event('mission_abort', { m: current.id }); declined.add(current.id);
+  if (propObj) { scene.remove(propObj); propObj = null; }
+  setTarget(null); current = null; carrier = null; phase = 'free'; offerTimer = 25; setMusicMode('free'); updateHud();
+  toast('Einsatz abgegeben – ein anderes Team übernimmt. Kein Problem!', 2800);
 }
 function acceptOffer() {
   if (phase !== 'offer' || !current) return;
@@ -660,25 +680,54 @@ const SKIN_LABEL: Record<string, string> = { standard: 'Standard', regenbogen: '
 const SKIN_NEED: [string, number][] = [['standard', 0], ['regenbogen', 5], ['luksi', 15], ['gold', 30]];
 function unlockedSkins() { const n = fun ? fun.heartCount : 0; return SKIN_NEED.filter(([, k]) => n >= k).map(([s]) => s); }
 function nextSkinHint() { const n = fun ? fun.heartCount : 0; const nx = SKIN_NEED.find(([, k]) => n < k); return nx ? `${SKIN_LABEL[nx[0]]} ab ${nx[1]} ♥` : ''; }
-function menuItems() {
-  return [
-    { t: '▶ Weiterfahren', f: () => setPause(false) },
-    { t: `Modus: ${DIFF_LABEL[save.diff]}`, f: () => { save.diff = save.diff === 'entdecken' ? 'rettung' : save.diff === 'rettung' ? 'profi' : 'entdecken'; routeTimer = 0; writeSave(); } },
-    { t: `Kamera: ${CAMS[save.cam]}`, f: () => { save.cam = (save.cam + 1) % 3; writeSave(); } },
-    { t: `Ton: ${isMuted() ? 'aus' : 'an'}`, f: () => { save.muted = !isMuted(); setMuted(save.muted); writeSave(); } },
-    { t: `Tageszeit: ${save.evening ? 'Abend 🌇' : 'Tag ☀️'}`, f: () => { save.evening = !save.evening; setEvening(!!save.evening); writeSave(); } },
-    { t: `Ambulanz: ${SKIN_LABEL[car?.skin] || 'Standard'}${unlockedSkins().length < 4 ? ` (${nextSkinHint()})` : ''}`, f: () => { const u = unlockedSkins(); const i = (u.indexOf(car?.skin) + 1) % u.length; save.skin = u[i]; for (const p of players) p.car.setSkin(u[i]); writeSave(); } },
-    { t: 'Zurück zum Kinderspital', f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } },
-    { t: `Mitspieler: ${players.length} ${players.length > 1 ? '(letzten entfernen)' : '– Controller 2–4: A drücken'}`, f: () => removePlayer() },
-    { t: `Grafik: ${QUALITY === 'echt' ? 'Echt (3D-Häuser swisstopo)' : 'Leicht (Handy, schneller)'} – wechseln lädt neu`, f: () => { save.quality = QUALITY === 'echt' ? 'leicht' : 'echt'; writeSave(); location.reload(); } },
-    { t: 'Spielstand als Datei sichern', f: exportSave },
-    { t: 'Steuerung & Credits', f: () => $('#credits').classList.toggle('show') },
+// Pause-Menü: oben die zwei Hauptknöpfe, darunter Sammelalbum, dann Einstellungen als Auswahl-Knöpfe (alle Möglichkeiten sichtbar,
+// die aktive ist markiert), unten drei kleine Knöpfe. Steuerung: Maus/Touch oder ↑↓ Zeile, ←→ Knopf, A/Enter wählen.
+interface MenuBtn { t: string; on?: boolean; off?: boolean; f: () => void }
+interface MenuRow { label?: string; note?: string; kind: 'main' | 'opt' | 'small'; btns: MenuBtn[] }
+let menuCol = 0;
+function menuRows(): MenuRow[] {
+  const skinN = fun ? fun.heartCount : 0;
+  const setSkin = (sk: string) => { save.skin = sk; for (const p of players) p.car.setSkin(sk); writeSave(); };
+  const rows: MenuRow[] = [
+    { kind: 'main', btns: [{ t: '▶ Weiterfahren', f: () => setPause(false) }, { t: '🏥 Zum Kinderspital', f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } },
+      ...(current && (phase === 'toScene' || phase === 'toHospital') ? [{ t: '✋ Einsatz abgeben', f: () => { abortMission(); setPause(false); } }] : [])] },
+    { kind: 'opt', label: 'Fahren', note: { entdecken: 'Navi-Linie auf der Strasse, bis 150 km/h', rettung: 'bis 190 km/h', profi: 'bis 230 km/h, flinker' }[save.diff] + ' (mit Blaulicht schneller)',
+      btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Entdecken', rettung: '🚑 Rettung', profi: '⚡ Profi' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
+    { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '👀 Nah dran'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
+    { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
+    { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
+    { kind: 'opt', label: 'Ambulanz', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Lackierungen gibt es mit Luksi-Herzen.' : undefined,
+      btns: SKIN_NEED.map(([sk, need]) => ({ t: skinN >= need ? SKIN_LABEL[sk] : `🔒 ${need} ♥`, on: (car?.skin || 'standard') === sk, off: skinN < need, f: () => { if (skinN >= need) setSkin(sk); else toast(`${SKIN_LABEL[sk]} gibt es ab ${need} Luksi-Herzen.`, 2500); } })) },
+    { kind: 'opt', label: 'Grafik', note: 'Wechseln lädt das Spiel neu (Spielstand bleibt).', btns: [
+      { t: '🏙️ Echt', on: QUALITY === 'echt', f: () => { if (QUALITY !== 'echt') { save.quality = 'echt'; writeSave(); location.reload(); } } },
+      { t: '📱 Leicht', on: QUALITY === 'leicht', f: () => { if (QUALITY !== 'leicht') { save.quality = 'leicht'; writeSave(); location.reload(); } } }] },
+    { kind: 'small', btns: [
+      ...(players.length > 1 ? [{ t: `👥 Mitspieler ${players.length} → ${players.length - 1}`, f: () => removePlayer() }] : []),
+      { t: '💾 Spielstand sichern', f: exportSave }, { t: '❓ Steuerung & Credits', f: () => $('#credits').classList.toggle('show') }] },
   ];
+  return rows;
 }
 function renderMenu() {
   const m = $('#menu-items');
-  const items = menuItems();
+  const rows = menuRows();
+  menuFocus = Math.max(0, Math.min(menuFocus, rows.length - 1)); menuCol = Math.max(0, Math.min(menuCol, rows[menuFocus].btns.length - 1));
   m.innerHTML = '';
+  const mkRow = (r: MenuRow, ri: number) => {
+    const row = document.createElement('div'); row.className = 'mrow mrow-' + r.kind;
+    if (r.label) { const l = document.createElement('span'); l.className = 'mlabel'; l.textContent = r.label; row.appendChild(l); }
+    const g = document.createElement('div'); g.className = 'mbtns';
+    r.btns.forEach((bt, ci) => {
+      const b = document.createElement('button'); b.textContent = bt.t;
+      b.className = [bt.on ? 'on' : '', bt.off ? 'off' : '', ri === menuFocus && ci === menuCol ? 'focus' : ''].join(' ').trim();
+      if (r.kind === 'opt') b.setAttribute('aria-pressed', String(!!bt.on));
+      b.onclick = () => { menuFocus = ri; menuCol = ci; bt.f(); sfxPlay.click(); if (paused) renderMenu(); };
+      g.appendChild(b);
+    });
+    row.appendChild(g);
+    if (r.note) { const n = document.createElement('small'); n.className = 'mnote'; n.textContent = r.note; row.appendChild(n); }
+    return row;
+  };
+  m.appendChild(mkRow(rows[0], 0));
   { // Sammelalbum: was schon gefunden/geschafft ist
     const d = document.createElement('div'); d.className = 'album';
     const nb = fun ? fun.heartCount : 0, tot = fun ? fun.heartTotal : 0;
@@ -688,17 +737,15 @@ function renderMenu() {
       b.innerHTML = `<small>Abzeichen ${got.size}/${BADGES.length}</small>` + BADGES.map(([id, ic, name]) => `<span class="${got.has(id) ? 'on' : 'off'}" title="${name}">${ic}<em>${name}</em></span>`).join(''); d.appendChild(b); }
     m.appendChild(d);
   }
-  items.forEach((it, i) => {
-    const b = document.createElement('button'); b.textContent = it.t; b.className = i === menuFocus ? 'focus' : '';
-    b.onclick = () => { menuFocus = i; it.f(); sfxPlay.click(); renderMenu(); };
-    m.appendChild(b);
-  });
+  const h = document.createElement('h3'); h.className = 'mhead'; h.textContent = 'Einstellungen'; m.appendChild(h);
+  rows.slice(1).forEach((r, k) => m.appendChild(mkRow(r, k + 1)));
+  m.querySelector('button.focus')?.scrollIntoView({ block: 'nearest' });
 }
 function setPause(p: boolean) {
   if (!world || !car) return;
   paused = p;
   $('#pause').classList.toggle('show', p);
-  if (p) { renderMenu(); setSiren(false); updateEngine(0, 0); }
+  if (p) { menuFocus = 0; menuCol = 0; renderMenu(); setSiren(false); updateEngine(0, 0); }
   else { $('#credits').classList.remove('show'); setSiren(car.siren); }
 }
 function exportSave() {
@@ -785,10 +832,12 @@ function frame(now: number) {
   if (world && !overlayOpen) {
     if (hit('pause')) setPause(!paused);
     if (paused) {
-      const items = menuItems();
-      if (hit('up')) { menuFocus = (menuFocus + items.length - 1) % items.length; renderMenu(); }
-      if (hit('down')) { menuFocus = (menuFocus + 1) % items.length; renderMenu(); }
-      if (hit('confirm')) { items[menuFocus].f(); sfxPlay.click(); renderMenu(); }
+      const rows = menuRows();
+      if (hit('up')) { menuFocus = (menuFocus + rows.length - 1) % rows.length; menuCol = rows[menuFocus].btns.findIndex((b) => b.on) >= 0 ? rows[menuFocus].btns.findIndex((b) => b.on) : 0; renderMenu(); }
+      if (hit('down')) { menuFocus = (menuFocus + 1) % rows.length; menuCol = rows[menuFocus].btns.findIndex((b) => b.on) >= 0 ? rows[menuFocus].btns.findIndex((b) => b.on) : 0; renderMenu(); }
+      if (hit('left')) { menuCol = Math.max(0, menuCol - 1); renderMenu(); }
+      if (hit('right')) { menuCol = Math.min(rows[menuFocus].btns.length - 1, menuCol + 1); renderMenu(); }
+      if (hit('confirm')) { const b = rows[menuFocus].btns[menuCol]; if (b) { b.f(); sfxPlay.click(); if (paused) renderMenu(); } }
     }
   }
   if (overlayOpen && phase === 'handover' && hit('confirm')) (document.querySelector('.mg') as any)._close?.();
@@ -829,6 +878,7 @@ function frame(now: number) {
       if (hitP(0, 'reset')) { placeCar(car.x, car.z); sfxPlay.reset(); toast('Luksi hupt – Auto hüpft zurück auf die Strasse!', 1600); }
       if (hit('map')) { const bm = $('#bigmap-wrap'); bm.classList.toggle('show'); if (bm.classList.contains('show')) drawBigMap(); }
       if (hit('accept') && phase === 'offer') acceptOffer();
+      if (hit('decline') && phase === 'offer') declineOffer();
     }
     car.update(dt, c, save.diff, (water) => {
       if (water) { stats.tot.splashes++; sfxPlay.splash(); comic(car.x + car.fx * 3, car.z + car.fz * 3, 4); fun?.splash(car.x + car.fx * 3.5, car.z + car.fz * 3.5); if (hintTimer <= 0) { toast('Platsch! Da ist Wasser – nimm eine Brücke.', 1500); hintTimer = 4; } }

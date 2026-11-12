@@ -5,7 +5,7 @@ import type { Terrain } from './terrain';
 import type { Controls } from './input';
 
 export type Difficulty = 'entdecken' | 'rettung' | 'profi';
-const VMAX: Record<Difficulty, number> = { entdecken: 25, rettung: 33, profi: 40 }; // m/s: 90 / 119 / 144 km/h, mit Blaulicht +15 %
+const VMAX: Record<Difficulty, number> = { entdecken: 42, rettung: 52, profi: 64 }; // m/s: 151 / 187 / 230 km/h, mit Blaulicht +15 % (Wunsch Simon: viel schneller)
 
 function textSprite(text: string, bg: string, fg: string, w = 256, h = 96, font = 'bold 44px system-ui, sans-serif') {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -167,7 +167,7 @@ export class Vehicle {
 
   /** Rückgabe: true, wenn es in diesem Schritt einen Rempler gab */
   update(dt: number, c: Controls, diff: Difficulty, onBump: (hard: boolean) => void) {
-    const n = Math.abs(this.speed) > 18 ? 3 : 1;
+    const n = Math.min(8, Math.max(1, Math.ceil(Math.abs(this.speed) * dt / 0.7))); // Teilschritte: nie mehr als 0.7 m pro Schritt (keine Wände durchfahren)
     for (let i = 0; i < n; i++) this.step(dt / n, c, diff, onBump, i === n - 1);
   }
 
@@ -177,7 +177,7 @@ export class Vehicle {
     // Längsdynamik
     if (c.throttle > 0) {
       if (this.speed < -0.3) this.speed += 20 * dt * c.throttle; // aus Rückwärts bremsen
-      else this.speed += (diff === 'profi' ? 20 : 16) * c.throttle * dt * (1 - Math.max(0, this.speed) / vmax) + (this.speed > vmax ? -6 * dt : 0);
+      else this.speed += (diff === 'profi' ? 30 : 24) * c.throttle * dt * (1 - Math.max(0, this.speed) / vmax) + (this.speed > vmax ? -6 * dt : 0);
     }
     if (c.brake > 0) {
       if (this.speed > 0.3) this.speed -= 24 * dt * c.brake;
