@@ -1,6 +1,6 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 12.11.2026 08:00. Live: **2026-11-12x**. Fertig, nicht hochgeladen: **2026-11-12y** (Etappe 2), ZIP `Luksi Rescue 2026-11-12y.zip` (51 MB) – PC war ab 08:00 aus. Version x ist **LIVE** auf https://gta.simon-infanger.ch/ (von Claude per FileZilla hochgeladen; geprüft: ausgeliefertes `index-D4LTK10T.js` enthält Version x und den Weinmarktbrunnen). Live seit 11.11.: q, r, s, t, v, w; x am 12.11. ca. 06:57.
+Stand: 12.11.2026 08:00. Live: **2026-11-12x**. Fertig, nicht hochgeladen: **2026-11-12z** (Etappe 2 + Züge Nord + Brückenketten + Wagenbach-/Fritschibrunnen), ZIP `Luksi Rescue 2026-11-12z.zip` (51 MB, Vollpaket) – PC seit 08:00 aus, beim nächsten Einschalten hochladen (Vollordner, da data/nord/ neu). Version x ist **LIVE** auf https://gta.simon-infanger.ch/ (von Claude per FileZilla hochgeladen; geprüft: ausgeliefertes `index-D4LTK10T.js` enthält Version x und den Weinmarktbrunnen). Live seit 11.11.: q, r, s, t, v, w; x am 12.11. ca. 06:57.
 Lokal auf dem PC: `Downloads\luksi-rescue\web-n` (Vollstand w), `web-x` (nur die in x geänderten Dateien: index.html, LIESMICH.txt, assets/). Vollpaket: `Luksi Rescue 2026-11-12x.zip`.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
@@ -23,7 +23,10 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - `fun.ts` Züge/Tunnel/Pedalos, `bus.ts` Busatlas, `vehicle.ts` Ambulanz.
 - `tests/look_spots.py prefix 'x,z,h,cam;…'`: Sichtprüfung; cam < 0 = freie Kamera (x, z, Höhe h; Blickziel codiert als −((dz+500)·1000 + (dx+500)), Blickhöhe h−28).
 
-## Tests (Version y, Software-Rendering)
+## Tests (Version z, Software-Rendering)
+- Luzern qa grün (G8 7.65 %, P1 1.90 Mio. / 681 Draw Calls). Nord qa ganz grün (G8 7.0 %, G13 mit 2 Zugstrecken). region.py: Wechsel hin und zurück ok, keine Fehler.
+
+## Tests (Version y)
 - Luzern: qa.py alle grün, 1.90 Mio. Dreiecke / 660 Draw Calls.
 - Nord (`qa.py 'http://localhost:8765/?test&region=nord'`): grün ausser G8 Brücken 11.2 % (Grenze 10 %; Emme-/Reussbrücken in tiefen Tälern, Deck folgt dem Gelände) – offen. G7 8/8, G13 ok, P1 0.58 Mio. Dreiecke am Start, Speicher JS 767 MB nach Start.
 - `tests/region.py`: Wechsel Luzern → Nord → Luzern mit Spielstand und Position geprüft, keine Fehler.
@@ -36,5 +39,7 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 
 ## Offen
 - Punkt 6 teilweise: Jesuitenkirche und Weinmarktbrunnen erledigt. Offen: Bahnhofplatz/Torbogen, KKL-Vorplatz (Europaplatz-Pflaster, Wagenbachbrunnen), hausgenaue Altstadtfarben (keine Fassadenfarb-Datenquelle; Annahme: bleibt zufällig-pastell).
-- Punkt 7: Etappe 2 eingebaut (y), Upload offen (PC). Offen in Nord: Züge (S-Bahn Emmenbrücke/Ebikon), G8 Brücken, Ortsnamen-Koordinaten sind Annahmen (±200 m).
-- Bekannt (auch Luzern): langer beiger Balken in Dachhöhe beim Gletschergarten/Wesemlin (x≈560, z≈−700), Ursache nicht geprüft.
+- Punkt 7: Etappe 2 eingebaut (y), Upload offen (PC). Züge Nord (S-Bahn Rothenburg, IR Zürich via Rotsee/Ebikon) und G8 erledigt in z. Offen: Seetalbahn (Gleisgraph an der Nordkante unterbrochen), Ortsnamen-Koordinaten sind Annahmen (±200 m).
+- Geprüft: der «beige Balken» bei x≈560, z≈−700 ist die Kante einer flachen Überdachung aus den 3D-Daten, kein Fehler.
+- Punkt 6: Wagenbachbrunnen (Annahme: unbenannter OSM-Brunnen Bahnhofplatz) und Fritschibrunnen in z. Offen: Europaplatz-Pflaster (Flächen fehlen im Datenformat), hausgenaue Altstadtfarben (keine Quelle).
+- Brücken: world.ts verkettet OSM-Brückenstücke (gerades Deck zwischen Kettenenden), Holzbrücken ausgenommen.

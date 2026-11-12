@@ -104,9 +104,10 @@ export class Terrain {
   }
 
   /** Brückendeck linear zwischen den Brückenenden eintragen */
-  addBridge(p: number[][], width: number, lift = 0.25) {
+  /** h0/h1: Deckhöhe an den Enden (sonst Boden an den Enden; bei in Stücke geteilten Brücken kommen sie von den Kettenenden) */
+  addBridge(p: number[][], width: number, lift = 0.25, e0?: number, e1?: number) {
     if (p.length < 2) return;
-    const h0 = this.ground(p[0][0], p[0][1]), h1 = this.ground(p[p.length - 1][0], p[p.length - 1][1]);
+    const h0 = e0 ?? this.ground(p[0][0], p[0][1]), h1 = e1 ?? this.ground(p[p.length - 1][0], p[p.length - 1][1]);
     let total = 0; for (let i = 1; i < p.length; i++) total += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
     let acc = 0;
     const r = width / 2 + 1;

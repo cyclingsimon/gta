@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-12y';
+export const VERSION = '2026-11-12z';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1073,7 +1073,7 @@ function qaReport() {
       if (L < 8) continue; n++;
       let dmax = 0; for (let i = 1; i < r.p.length - 1; i++) { const t = segs[i] / L; const d = Math.abs(terrain.height(r.p[i][0], r.p[i][1]) - (ha + (hb - ha) * t)); dmax = Math.max(dmax, d); }
       const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; dmax = Math.max(dmax, Math.abs(terrain.height(mid[0], mid[1]) - (ha + hb) / 2) * (L > 30 ? 1 : 0));
-      if (dmax > 1) { bad++; if (ex.length < 6) ex.push([r.n || '?', Math.round(dmax * 10) / 10]); } worst = Math.max(worst, dmax); }
+      if (dmax > 1) { bad++; if (ex.length < 40) ex.push([r.n || '?', Math.round(dmax * 10) / 10, Math.round(a[0]), Math.round(a[1]), Math.round(L), r.c]); } worst = Math.max(worst, dmax); }
     add('G8', 'Brücken: Deck >1 m neben Uferlinie (%)', n ? (bad / n) * 100 : 0, 10, n > 0 && bad / n <= 0.1, { bruecken: n, max: Math.round(worst * 10) / 10, beispiele: ex }); }
   // G9 (R8): Dachfarbe aus Luftbild je Gebäude
   if (b3dMeta) { const nB = b3dMeta.buildings.length, nR = roofData ? roofData.filter(Boolean).length : 0; add('G9', 'Dachfarbe aus SWISSIMAGE (%)', (nR / nB) * 100, 95, nR / nB >= 0.95); }
@@ -1091,7 +1091,7 @@ function qaReport() {
   // G13: Belebung vorhanden (Tiere, Schiffe, Züge, Spass-Objekte, Herzen)
   { const a = animals as any, sh = ships as any, tr = trains as any;
     const n = { schwaene: a ? a.swans.length : 0, kuehe: a ? a.cows.length : 0, schiffe: sh ? sh.ships.length : 0, zuege: tr ? tr.tr.length : 0, kegel: fun ? fun.hops.length : 0, herzen: fun ? fun.heartTotal : 0 };
-    const ok = REGION === 'nord' ? n.schwaene > 10 && n.kuehe > 30 && n.kegel > 100 && n.herzen === 40 // Nord: keine Kursschiffe, Züge noch offen
+    const ok = REGION === 'nord' ? n.schwaene > 10 && n.kuehe > 30 && n.zuege >= 2 && n.kegel > 100 && n.herzen === 40 // Nord: keine Kursschiffe
       : n.schwaene > 20 && n.kuehe > 30 && n.schiffe >= 2 && n.zuege >= 4 && n.kegel > 100 && n.herzen === 40;
     add('G13', 'Belebung (Tiere, Schiffe, Züge, Herzen)', ok ? 1 : 0, 1, ok, n); }
   // P1: Leistung
@@ -1107,6 +1107,9 @@ if (location.search.includes('test')) {
     offer: () => { offerTimer = 0; },
     accept: () => acceptOffer(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
+    pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
+      return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }
+        return { path: n.join('<'), p: [Math.round(h.point.x), Math.round(h.point.y * 10) / 10, Math.round(h.point.z)], d: Math.round(h.distance) }; }); },
     info: () => ({ phase, target, routePts: route, route: route ? route.length : 0, routeLen: route ? Math.round(pathLength(route)) : 0, bay: hospitalBay, missions: missions.map((m) => [m.id, m.at]), fps: $('#fps').textContent }),
     render: (on: boolean) => { world.group.visible = on; },
     quiet: () => { offerTimer = 1e9; $('#ui').style.display = 'none'; },

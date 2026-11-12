@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-12z  Züge im Norden, Brücken, Brunnen
+- Region Nord: Züge fahren jetzt auch hier – S-Bahn Richtung Rothenburg über Emmenbrücke und IR Richtung Zürich am Rotsee vorbei nach Ebikon (Tunnelstücke unsichtbar)
+- Brücken, die in OpenStreetMap aus mehreren Stücken bestehen, haben jetzt ein gerades Deck zwischen den Brückenköpfen statt einer Delle über dem Fluss (Nord: Prüfung G8 11.2 % → 7.0 %)
+- Wagenbachbrunnen auf dem Bahnhofplatz mit Wasserstrahl, Fritschibrunnen auf dem Kapellplatz mit Fritschi-Figur
+- Testhilfe: Strahl-Abfrage (pick) für Sichtprüfungen
+
 2026-11-12y  Etappe 2: Emmenbrücke, Rotsee, Ebikon, Adligenswil
 - Neue Region «Nord» (x −3800..4600, z −3900..−550): echtes Gelände (swissALTI3D), 9689 Häuser aus swissBUILDINGS3D mit Dachfarben aus dem Luftbild, Luftbild-Boden, Wald, Strassen, Reuss, Emme und Rotsee aus OpenStreetMap, 53 Buslinienwege (VBL, Auto AG Rothenburg, PostAuto)
 - Nachladen: Wer in Luzern auf einer Strasse nördlich über den Maihof/Reussbühl hinaus fährt (z < −1000), fährt nach 1.5 s in der Region Nord weiter. Zurück geht es im Süden der Region Nord (z > −650). Spielstand, Position und Sterne bleiben; die Seite lädt dafür neu («Weiterfahren ▶»)

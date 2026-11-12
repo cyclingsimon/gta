@@ -628,7 +628,20 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   {
     const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] };
     const dashes: number[] = [];
-    for (const r of d.roads) if (r.b || r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6);
+    // Brücken, die in OSM aus mehreren Wegstücken bestehen, als Kette behandeln: das Deck verläuft gerade zwischen den Kettenenden
+    // (sonst sackt es an einer Stückgrenze mitten über dem Fluss auf Talhöhe ab)
+    const brs = d.roads.filter((r) => r.b || r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke');
+    const bkey = (q: number[]) => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2), blen = (p: number[][]) => { let l = 0; for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return l; };
+    const ends = new Map<string, [number, number][]>();
+    brs.forEach((r, i) => { if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') return; for (const e of [0, 1]) { const k = bkey(e ? r.p[r.p.length - 1] : r.p[0]); if (!ends.has(k)) ends.set(k, []); ends.get(k)!.push([i, e]); } });
+    const walk = (i: number, e: number): [number, number[]] => { let len = 0, cur = i, ce = e; const seen = new Set([i]);
+      for (;;) { const pt = ce ? brs[cur].p[brs[cur].p.length - 1] : brs[cur].p[0]; const nb = ends.get(bkey(pt))!.filter(([j]) => j !== cur);
+        if (nb.length !== 1 || seen.has(nb[0][0])) return [len, pt]; const [j, je] = nb[0]; seen.add(j); len += blen(brs[j].p); cur = j; ce = 1 - je; } };
+    const holz = (r: any) => r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke';
+    brs.forEach((r, i) => { if (holz(r)) { terrain.addBridge(r.p, Math.max(r.w, 4.6), r.c === 'footway' ? 0.4 : 0.6); return; } // Holzbrücken wie bisher
+      const [lA, pA] = walk(i, 0), [lB, pB] = walk(i, 1), L = blen(r.p), tot = lA + L + lB || 1;
+      const HA = terrain.ground(pA[0], pA[1]), HB = terrain.ground(pB[0], pB[1]);
+      terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, HA + (HB - HA) * lA / tot, HA + (HB - HA) * (lA + L) / tot); });
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
       if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') continue; // eigene Holzbrücke
@@ -1892,6 +1905,33 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
       add(new THREE.CylinderGeometry(0.6, 0.35, 0.4, 8), '#D9A520', 5.6);
       add(new THREE.ConeGeometry(0.55, 2.4, 8), '#2E7D4F', 7.0, true);
       add(new THREE.SphereGeometry(0.22, 8, 6), '#E3B53B', 8.3);
+      G.add(W);
+    }
+    // Wagenbachbrunnen (Bahnhofplatz; Annahme: unbenannter OSM-Brunnen bei 47.05076/8.31038) und Fritschibrunnen (Kapellplatz)
+    const special = (cx: number, cz: number, r: number) => P.fountains.find(([x, z]) => Math.hypot(x - cx, z - cz) < r);
+    const wb = special(203, 104, 15);
+    if (wb) {
+      const [x, z] = wb, y = terrain.height(x, z), W = new THREE.Group(); W.position.set(x, y, z); W.name = 'wagenbachbrunnen';
+      const m = (g: THREE.BufferGeometry, c: string, py: number, ol = true, mat?: THREE.Material) => { const o = new THREE.Mesh(g, mat || toon(c)); o.position.y = py; W.add(o); if (ol) W.add(outline(o)); return o; };
+      m(new THREE.CylinderGeometry(5.2, 5.4, 0.8, 24), '#C9BFAE', 0.4);
+      const wg3 = new THREE.CircleGeometry(4.9, 24); wg3.rotateX(-Math.PI / 2); m(wg3, '#5BB4E5', 0.72, false);
+      m(new THREE.CylinderGeometry(1.4, 1.8, 1.2, 12), '#B5AA97', 1.2);
+      m(new THREE.CylinderGeometry(0.9, 0.9, 0.3, 12), '#B5AA97', 1.95);
+      const jet = new THREE.MeshBasicMaterial({ color: '#EAF7FF', transparent: true, opacity: 0.75 });
+      m(new THREE.CylinderGeometry(0.12, 0.35, 4.5, 8), '', 4.3, false, jet); // Wasserstrahl
+      m(new THREE.SphereGeometry(0.9, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), '', 6.4, false, jet);
+      G.add(W);
+    }
+    const fb = special(0, -100, 20);
+    if (fb) {
+      const [x, z] = fb, y = terrain.height(x, z), W = new THREE.Group(); W.position.set(x, y, z); W.name = 'fritschibrunnen';
+      const m = (g: THREE.BufferGeometry, c: string, py: number, ol = true) => { const o = new THREE.Mesh(g, toon(c)); o.position.y = py; W.add(o); if (ol) W.add(outline(o)); return o; };
+      m(new THREE.CylinderGeometry(2.0, 2.2, 0.8, 8), '#B8AE9C', 0.4);
+      m(new THREE.CylinderGeometry(0.35, 0.45, 3.0, 8), '#A39A8B', 2.1);
+      m(new THREE.CylinderGeometry(0.7, 0.4, 0.4, 8), '#D9A520', 3.8);
+      m(new THREE.CapsuleGeometry(0.35, 0.8, 3, 8), '#C8352E', 4.6); // Fritschi im Fasnachtsgewand
+      m(new THREE.SphereGeometry(0.3, 8, 6), '#F2D2B0', 5.4);
+      m(new THREE.ConeGeometry(0.32, 0.6, 8), '#2E7D4F', 5.85);
       G.add(W);
     }
   }

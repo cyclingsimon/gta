@@ -27,4 +27,5 @@ python3 tools/geo/roofcolors.py
 LR_BEACH=data/e2/merged/beach.json python3 tools/geo/build_props.py data/e2/merged/osm_props.json
 LR_BOUNDS=-3790,-3890,4590,-560 LR_BUS=data/e2/merged/osm_bus.json python3 tools/geo/build_bus.py > /dev/null
 cp public/data/horizon.json public/data/horizon.bin public/data/nord/
-ls -la public/data/nord
+
+LR_TUN=data/e2/merged/tunnels.json python3 tools/geo/build_trains.py

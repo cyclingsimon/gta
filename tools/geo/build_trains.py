@@ -1,10 +1,12 @@
 """Zugstrecken aus OSM-Gleisen (city.json rail) → public/data/trains.json.
 Gleisstücke werden zu einem Graphen verbunden; Strecken = kürzeste Wege zwischen Bahnhof und Spielfeldrand."""
 import json, math, heapq, os
+OUT = 'public/data' + ('/' + os.environ['LR'] if os.environ.get('LR') else '')
+TUNF = os.environ.get('LR_TUN', 'data/tunnels.json')
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
-TUNU = unary_union([LineString(t['p']).buffer(6) for t in json.load(open('data/tunnels.json')) if len(t['p']) > 1]) if os.path.exists('data/tunnels.json') else None
-c = json.load(open('public/data/city.json'))
+TUNU = unary_union([LineString(t['p']).buffer(6) for t in json.load(open(TUNF)) if len(t['p']) > 1]) if os.path.exists(TUNF) else None
+c = json.load(open(OUT + '/city.json'))
 key = lambda p: (round(p[0] / 3), round(p[1] / 3))
 adj = {}
 pos = {}
@@ -13,6 +15,20 @@ for r in c.get('railAll', c['rail']):
         ka, kb = key(a), key(b); pos[ka] = a; pos[kb] = b
         d = math.dist(a, b)
         adj.setdefault(ka, []).append((kb, d)); adj.setdefault(kb, []).append((ka, d))
+if os.environ.get('LR'):  # Nord: Gleisenden an der Nahtstelle z = −950 (zwei OSM-Stände) bis 25 m verbinden
+    dang = [k for k, v in adj.items() if len(v) == 1]
+    segs = [(key(a), key(b), a, b) for r in c.get('railAll', c['rail']) for a, b in zip(r, r[1:])]
+    for ka in dang:  # Gleisende auf das nächste fremde Gleisstück (Weiche) bis 20 m einhängen
+        P = pos[ka]; best = None
+        for k1, k2, a, b in segs:
+            if ka in (k1, k2): continue
+            dx, dz = b[0] - a[0], b[1] - a[1]; L2 = dx * dx + dz * dz or 1e-9
+            t = max(0, min(1, ((P[0] - a[0]) * dx + (P[1] - a[1]) * dz) / L2)); q = [a[0] + dx * t, a[1] + dz * t]; d = math.dist(P, q)
+            if d < 20 and (best is None or d < best[0]): best = (d, k1, k2, q)
+        if not best: continue
+        d, k1, k2, q = best; kq = (ka[0] + 0.5, ka[1] + 0.5, 1); pos[kq] = q
+        for kk in (k1, k2): w = math.dist(q, pos[kk]); adj.setdefault(kq, []).append((kk, w)); adj[kk].append((kq, w))
+        adj[ka].append((kq, d)); adj[kq].append((ka, d))
 def near(p):
     return min(pos, key=lambda k: math.dist(pos[k], p))
 def route(a, b):
@@ -33,6 +49,9 @@ R = [('S-Bahn Littau', 'sbb', (190, 240), (-3801, -245)),
      ('IR Richtung Zürich', 'sbb', (175, 240), (-1137, -1101)),
      ('S-Bahn Emmenbrücke', 'sbb', (160, 240), (-1640, -1101)),
      ('Zentralbahn Luzern–Horw', 'zb', (130, 330), (361, 6299))]
+if os.environ.get('LR') == 'nord':  # Region Nord: Strecken zwischen Spielfeldrändern (Kreuzungspunkte der Gleise mit dem Rand)
+    R = [('S-Bahn Rothenburg', 'sbb', (-1580, -552), (-2027, -3899)),
+         ('IR Richtung Zürich', 'sbb', (-1578, -552), (2929, -3899))]
 out = []
 for name, kind, a, b in R:
     r = route(a, b)
@@ -56,4 +75,4 @@ for name, kind, a, b in R:
         tun = [t for t in tun if t[1] - t[0] > 25]
     print('   Tunnel:', tun)
     out.append({'name': name, 'kind': kind, 'pts': pts, 'tun': tun})
-json.dump(out, open('public/data/trains.json', 'w'), separators=(',', ':'))
+json.dump(out, open(OUT + '/trains.json', 'w'), separators=(',', ':'))
