@@ -4,3 +4,7 @@ shots/
 data/
 *.zip
 __pycache__/
+
+public/stats/config.php
+public/stats/data/*.sqlite*
+public/stats/data/backups/

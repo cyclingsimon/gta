@@ -17,6 +17,13 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Beide Regionen enthalten das Kinderspital. Herzen getrennt (`save.heartsN`). Einsätze n1–n8. Keine Schiffe und Züge in Nord.
 - Luftbild Nord: E 2662190–2670670, N 1212000–1215560 (unterer Streifen aus dem Luzerner Luftbild; östlich E 2668910 unter N 1212590 fehlt das Bild, Rand gestreckt).
 
+## Spielstatistik und Dashboard (ab z)
+- Server: `public/stats/` → `/www/luksi-rescue/stats/` (PHP 8.2 + SQLite, Muster webprojekte-Skill). `api.php` nimmt Pakete an (sendBeacon/fetch, gleiche Domain), `index.php` = Dashboard mit Login (bcrypt, CSRF, Drosselung 5/15 Min.), monatliches Auto-Backup in `stats/data/backups/` (zufälliger Name), `data/` und `inc/` per .htaccess gesperrt.
+- DB `stats/data/stats.sqlite` entsteht beim ersten Paket; wird nie ausgeliefert (dist.sh löscht lokale Test-DBs). Verzeichnis `stats/data` muss auf dem Server schreibbar sein (775).
+- `config.php` mit Passwort-Hash ist NICHT im Repo (öffentlich); lokal in `data/stats_config.php` und `public/stats/config.php` (gitignored), Vorlage `config.sample.php`. Passwort hat Simon im Chat bekommen.
+- Client `src/stats.ts`: zufällige Geräte-ID (localStorage luksiDev), Sitzungs-ID je Seitenaufruf, Summen fortlaufend (Server nimmt MAX → doppelte Pakete schaden nicht), Ereignisse (mission_accept mit Titel, mission_done mit Dauer, stars, heart, region_switch, pos jede Spielminute). Senden alle 60 s Spielzeit und beim Verlassen. Spielzeit nach Uhr, nur wenn fertig geladen, Fenster sichtbar, nicht pausiert; Mini-Spiele zählen. In Tests aus (ausser `?stats`). Abschaltbar im Pause-Menü (localStorage luksiStatsOff).
+- Lokal getestet (php -S): Paket kommt an, Dashboard-Login, falsches Passwort, ungültiges Paket 400. Nicht lokal prüfbar: .htaccess-Sperren (php -S ignoriert sie) – nach dem Upload prüfen, dass /stats/data/stats.sqlite und /stats/config.php 403 liefern.
+
 ## Spiel (Module)
 - `world.ts`: Altstadt-Pastellzeilen, Kapellbrücke, Fahnen, Terrassen, Verkehrshaus, Spielplätze, Nadelwehr, Löwendenkmal, Museggmauer + Zytturm-Uhr, Instanzen mit Vertex-Farben (`colorMerge`), `chunkInstanced` 1000 m, See flach.
 - Neu in x: `findSpires` sucht in swissBUILDINGS3D die zwei Turmspitzen der Jesuitenkirche, lässt die spitzen Dächer weg und setzt Zwiebelhauben (`ONIONS`). Weinmarktbrunnen als eigener Brunnenstock beim OSM-Brunnen (−233, −29) [Annahme: dieser OSM-Brunnen ist der Weinmarktbrunnen].

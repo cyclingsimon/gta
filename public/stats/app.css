@@ -1,0 +1,28 @@
+:root { --akzent: #F39204; --akzent-hell: #FFE7C2; --blau: #0E73BA; --bg: #FFF8EC; --text: #2B2622; --karte: #fff; --linie: #EADFCC; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+header { background: var(--blau); color: #fff; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2; }
+h1 { font-size: 19px; margin: 0; } h2 { font-size: 15px; margin: 0 0 8px; color: var(--blau); }
+nav { display: flex; gap: 6px; flex-wrap: wrap; } nav a { color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 18px; background: rgba(255,255,255,.15); min-height: 36px; }
+nav a.aktiv { background: var(--akzent); }
+main { max-width: 1100px; margin: 0 auto; padding: 14px; display: grid; gap: 14px; }
+section { background: var(--karte); border: 1px solid var(--linie); border-radius: 14px; padding: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; background: none; border: 0; padding: 0; }
+.kpis div { background: var(--karte); border: 1px solid var(--linie); border-left: 5px solid var(--akzent); border-radius: 12px; padding: 10px 12px; }
+.kpis b { display: block; font-size: 22px; } .kpis span { font-size: 13px; color: #6b6157; }
+.zwei, .drei { display: grid; gap: 14px; background: none; border: 0; padding: 0; }
+.zwei { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } .drei { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.zwei > div, .drei > div { background: var(--karte); border: 1px solid var(--linie); border-radius: 14px; padding: 14px; }
+svg.balken { width: 100%; height: 150px; display: block; }
+.achse { display: flex; font-size: 11px; color: #6b6157; } .achse span { flex: 1; text-align: center; white-space: nowrap; overflow: visible; } svg.balken rect { fill: var(--akzent); } svg.balken rect:hover { fill: var(--blau); }
+svg.balken text { font-size: 4px; fill: #6b6157; text-anchor: middle; }
+.karte-svg { width: 100%; max-height: 70vh; background: #EAF4E4; border-radius: 10px; } .karte-svg .feld { fill: none; stroke: #b9c9ad; stroke-width: 20; }
+.karte-svg circle { fill: rgba(243,146,4,.35); } .karte-svg .grenze { stroke: var(--blau); stroke-width: 15; stroke-dasharray: 80 60; } .karte-svg text { font-size: 180px; fill: var(--blau); }
+.tab { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--linie); white-space: nowrap; } th { position: sticky; top: 0; background: var(--akzent-hell); }
+.leer, .hinweis { color: #8a7f74; font-size: 13px; margin: 4px 0 0; } footer { font-size: 12px; color: #8a7f74; padding: 4px 4px 20px; }
+body.login { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+form.karte { background: var(--karte); padding: 22px; border-radius: 16px; border: 1px solid var(--linie); display: grid; gap: 12px; width: min(360px, 100%); }
+form.karte input { width: 100%; font-size: 17px; padding: 11px; border: 1px solid var(--linie); border-radius: 10px; margin-top: 4px; }
+form.karte button { font-size: 17px; padding: 12px; border: 0; border-radius: 10px; background: var(--akzent); color: #fff; font-weight: 600; }
+.fehler { color: #B3261E; margin: 0; }

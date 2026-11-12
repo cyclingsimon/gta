@@ -1,3 +1,4 @@
+import { Stats } from './stats';
 import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
@@ -32,7 +33,11 @@ const REGION: 'luzern' | 'nord' = /[?&]region=nord/.test(location.search) ? 'nor
 const DIR = REGION === 'nord' ? 'data/nord/' : 'data/';
 if (REGION === 'nord') Object.assign(AERIAL, { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 });
 const MOBILE = isTouchDevice();
-const QUALITY: 'echt' | 'leicht' = /[?&]q=leicht/.test(location.search) ? 'leicht' : /[?&]q=echt/.test(location.search) ? 'echt' : save.quality || (MOBILE ? 'leicht' : 'echt');
+const QUALITY_: 'echt' | 'leicht' = /[?&]q=leicht/.test(location.search) ? 'leicht' : /[?&]q=echt/.test(location.search) ? 'echt' : save.quality || (MOBILE ? 'leicht' : 'echt');
+const QUALITY = QUALITY_;
+// Anonyme Spielstatistik an den eigenen Server (Dashboard: stats/). In Tests aus, ausser mit ?stats
+const stats = new Stats({ v: VERSION, region: REGION, q: QUALITY }, 'stats/api.php', TEST && !/[?&]stats/.test(location.search));
+if (TEST) (window as any).__stats = stats;
 function writeSave() {
   try { save.pos = [car.x, car.z, car.heading]; save.region = REGION; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat-Modus */ }
 }
@@ -311,8 +316,8 @@ function setupFun(data: CityData) {
   }
   const hearts = chosen.slice(1).map((p) => snap([p[0], p[1]]));
   fun = new Fun(terrain, sites, stops, hearts, (REGION === 'nord' ? save.heartsN : save.hearts) || [],
-    (x, z) => { sfxPlay.boing(); comic(x, z, 2); },
-    (n, tot, first) => { if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
+    (x, z) => { sfxPlay.boing(); comic(x, z, 2); stats.tot.boings++; },
+    (n, tot, first) => { stats.tot.hearts++; stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
       const el = $('#hearts'); el.textContent = `♥ ${n}/${tot}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neue Lackierung freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
       toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
@@ -390,7 +395,7 @@ function startOffer() {
 function acceptOffer() {
   if (phase !== 'offer' || !current) return;
   $('#radio').classList.remove('show');
-  phase = 'toScene'; phaseTime = 0;
+  phase = 'toScene'; phaseTime = 0; stats.missionAccept(current.id, current.title);
   setTarget(current.at, '#F39204');
   if (propObj) scene.remove(propObj);
   propObj = current.prop();
@@ -435,7 +440,7 @@ function handover() {
     stars += 2;
   }
   const prev = save.best[current.id] || 0;
-  save.best[current.id] = Math.max(prev, stars);
+  save.best[current.id] = Math.max(prev, stars); stats.missionDone(current.id, stars);
   save.played++;
   writeSave();
   const ov = document.createElement('div'); ov.className = 'mg';
@@ -641,6 +646,7 @@ function menuItems() {
     { t: `Mitspieler: ${players.length} ${players.length > 1 ? '(letzten entfernen)' : '– Controller 2–4: A drücken'}`, f: () => removePlayer() },
     { t: `Grafik: ${QUALITY === 'echt' ? 'Echt (3D-Häuser swisstopo)' : 'Leicht (Handy, schneller)'} – wechseln lädt neu`, f: () => { save.quality = QUALITY === 'echt' ? 'leicht' : 'echt'; writeSave(); location.reload(); } },
     { t: 'Spielstand als Datei sichern', f: exportSave },
+    { t: `Spielstatistik senden: ${stats.enabled ? 'an' : 'aus'} (anonym, nur an diese Website)`, f: () => stats.setEnabled(!stats.enabled) },
     { t: 'Steuerung & Credits', f: () => $('#credits').classList.toggle('show') },
   ];
 }
@@ -734,7 +740,7 @@ function checkRegionEdge(dt: number) {
   edgeT += dt;
   if (edgeT < 1.5) return;
   edgeT = -1e9; // nur einmal
-  writeSave();
+  writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: other }); stats.flush(true);
   save.region = other; save.pos = [car.x, car.z, car.heading];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', other); } catch { /* privat */ }
   const u = new URL(location.href); u.searchParams.set('region', other); location.replace(u.toString());
@@ -775,7 +781,7 @@ function frame(now: number) {
         if (hitP(p.idx, 'camera')) { p.camMode = (p.camMode + 1) % 3; }
         if (hitP(p.idx, 'reset')) { placeCar(p.car.x, p.car.z, undefined, p.car); sfxPlay.reset(); }
       }
-      p.car.update(dt, ci, save.diff, (water) => { if (water) { sfxPlay.splash(); fun?.splash(p.car.x + p.car.fx * 3.5, p.car.z + p.car.fz * 3.5); comic(p.car.x, p.car.z, 4); } else sfxPlay.bump(); });
+      p.car.update(dt, ci, save.diff, (water) => { if (water) { stats.tot.splashes++; sfxPlay.splash(); fun?.splash(p.car.x + p.car.fx * 3.5, p.car.z + p.car.fz * 3.5); comic(p.car.x, p.car.z, 4); } else sfxPlay.bump(); });
     }
     // Ambulanzen schubsen sich sanft auseinander
     for (let a = 0; a < players.length; a++) for (let b = a + 1; b < players.length; b++) {
@@ -784,10 +790,11 @@ function frame(now: number) {
         if (!B.blocked(B.x + ux * push, B.z + uz * push, B.heading)) { B.x += ux * push; B.z += uz * push; }
         if (!A.blocked(A.x - ux * push, A.z - uz * push, A.heading)) { A.x -= ux * push; A.z -= uz * push; } }
     }
+    stats.players = players.length; if (fullReady) stats.tick(dt, playing ? players.map((p) => p.car.speed) : [], car.siren, [car.x, car.z]); // Mini-Spiele zählen als Spielzeit; Ladezeit nicht
     if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
-      if (hitP(0, 'horn')) { sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
+      if (hitP(0, 'horn')) { stats.tot.horns++; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
       if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 3; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
       if (hit('mute')) { save.muted = !isMuted(); setMuted(save.muted); toast(save.muted ? 'Ton aus' : 'Ton an', 1000); }
       if (hitP(0, 'reset')) { placeCar(car.x, car.z); sfxPlay.reset(); toast('Luksi hupt – Auto hüpft zurück auf die Strasse!', 1600); }
@@ -795,7 +802,7 @@ function frame(now: number) {
       if (hit('accept') && phase === 'offer') acceptOffer();
     }
     car.update(dt, c, save.diff, (water) => {
-      if (water) { sfxPlay.splash(); comic(car.x + car.fx * 3, car.z + car.fz * 3, 4); fun?.splash(car.x + car.fx * 3.5, car.z + car.fz * 3.5); if (hintTimer <= 0) { toast('Platsch! Da ist Wasser – nimm eine Brücke.', 1500); hintTimer = 4; } }
+      if (water) { stats.tot.splashes++; sfxPlay.splash(); comic(car.x + car.fx * 3, car.z + car.fz * 3, 4); fun?.splash(car.x + car.fx * 3.5, car.z + car.fz * 3.5); if (hintTimer <= 0) { toast('Platsch! Da ist Wasser – nimm eine Brücke.', 1500); hintTimer = 4; } }
       else { sfxPlay.bump(); comic(car.x + car.fx * 3, car.z + car.fz * 3, 1); }
     });
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }

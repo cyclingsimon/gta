@@ -5,3 +5,5 @@ Mehrspieler für bis zu 4 Personen mit Controllern im geteilten Bildschirm (Cont
 Hochladen: Inhalt dieses ZIP nach /www/luksi-rescue, «Überschreiben». Nichts von Hand löschen.
 Hinweis: Die Daten liegen jetzt komprimiert vor (*.gz). Alte unkomprimierte Dateien auf dem Server stören nicht.
 Grafik umschalten (Pause-Menü): «Echt» = swisstopo-3D-Häuser, «Leicht» = für Handys (Standard auf Touch-Geräten).
+
+Statistik: Das Spiel sendet anonyme Spielwerte (Spielzeit, Strecke, Einsätze) nur an diese Website, Auswertung unter /stats/ (Passwort). Abschalten: Pause-Menü → «Spielstatistik senden». Die Statistik-Datenbank (stats/data/) liegt nur auf dem Server – nie von Hand löschen.

@@ -1,6 +1,8 @@
 Luksi Rescue Luzern – Änderungen
 
-2026-11-12z  Züge im Norden, Brücken, Brunnen
+2026-11-12z  Züge im Norden, Brücken, Brunnen, Spielstatistik
+- Spielstatistik: Das Spiel meldet anonym an die eigene Website (stats/api.php), wie lange gespielt wird und was passiert – Spielzeit, gefahrene Strecke, Höchsttempo, Einsätze (angenommen/erledigt/Dauer), Sterne, Herzen, Hupen, Blaulicht, Kegel, Wasser, Regionswechsel, Position einmal pro Spielminute. Keine Namen, keine IP-Adressen, keine Drittanbieter. Abschaltbar im Pause-Menü
+- Dashboard unter /stats/ (mit Passwort): Kennzahlen, Spielzeit pro Tag, Sitzungsdauer, Tageszeit, Einsätze, Karte «Wo gefahren wird», Region/Version/Grafik/Gerät, letzte Sitzungen. Läuft unabhängig von der Spielversion; die Datenbank liegt nur auf dem Server und wird beim Überschreiben nicht angetastet
 - Region Nord: Züge fahren jetzt auch hier – S-Bahn Richtung Rothenburg über Emmenbrücke und IR Richtung Zürich am Rotsee vorbei nach Ebikon (Tunnelstücke unsichtbar)
 - Brücken, die in OpenStreetMap aus mehreren Stücken bestehen, haben jetzt ein gerades Deck zwischen den Brückenköpfen statt einer Delle über dem Fluss (Nord: Prüfung G8 11.2 % → 7.0 %)
 - Wagenbachbrunnen auf dem Bahnhofplatz mit Wasserstrahl, Fritschibrunnen auf dem Kapellplatz mit Fritschi-Figur
