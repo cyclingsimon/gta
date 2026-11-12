@@ -140,3 +140,11 @@ body.split #minimap, body.split #speed { display: none; }
 .album { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; margin: 0 0 12px; font-weight: 800; font-size: 18px; }
 .album span { background: #fff; border: 3px solid var(--ink); border-radius: 12px; padding: 3px 10px; }
 .album small { flex-basis: 100%; text-align: center; font-weight: 600; font-size: 14px; opacity: .8; }
+.thermo { width: 120px; max-height: 46vh; } svg.arm { width: 420px; max-width: 86vw; height: auto; max-height: 46vh; }
+.arm .seg { cursor: pointer; } .arm .seg.focus rect { stroke: #F39204; stroke-width: 4; opacity: .95; }
+.card.done { opacity: .55; outline: 3px solid #7ED957; }
+.badges { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px; }
+.badges small { flex-basis: 100%; }
+.badges span { font-size: 22px; padding: 2px 6px !important; display: inline-flex; flex-direction: column; align-items: center; min-width: 74px; }
+.badges span em { font-size: 10px; font-style: normal; font-weight: 600; line-height: 1.1; text-align: center; max-width: 80px; }
+.badges span.off { filter: grayscale(1); opacity: .35; }

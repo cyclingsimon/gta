@@ -1,7 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
-2026-11-12z  Züge im Norden, Brücken, Brunnen, Spielstatistik
-- Spielstatistik: Das Spiel meldet anonym an die eigene Website (stats/api.php), wie lange gespielt wird und was passiert – Spielzeit, gefahrene Strecke, Höchsttempo, Einsätze (angenommen/erledigt/Dauer), Sterne, Herzen, Hupen, Blaulicht, Kegel, Wasser, Regionswechsel, Position alle 30 Sekunden; gesendet wird alle 30 Sekunden Spielzeit. Keine Namen, keine IP-Adressen, keine Drittanbieter. Abschaltbar im Pause-Menü
+2026-11-12z  Züge im Norden, Brücken, Brunnen, Spielstatistik, neue Mini-Spiele, Abzeichen
+- 3 neue Mini-Spiele: «Fieber messen» (im grünen Bereich drücken), «Verband wickeln» (von oben nach unten), «Trösten» (zwei tröstende Dinge wählen – die Chili ist zu scharf). Eingesetzt bei Beule im Verkehrshaus, Velo-Sturz in Tribschen, Fieber im Schönbühl, Velo-Sturz in Ebikon, Emmen Center und neu «Fieber in Ebikon» (n9)
+- 12 Abzeichen (Pause-Menü → Sammelalbum): erster Einsatz, 10/50 Einsätze, alle Einsätze in Luzern, alle im Norden, alle mit 3 Sternen, 10/80 Herzen, beide Regionen besucht, 10/100 km, 100-mal gehupt. Neue Abzeichen werden mit einer Meldung gefeiert
+- Spielstatistik: Das Spiel meldet anonym an die eigene Website (stats/api.php), wie lange gespielt wird und was passiert – Spielzeit, gefahrene Strecke, Höchsttempo, Einsätze (angenommen/erledigt/Dauer), Sterne, Herzen, Hupen, Blaulicht, Kegel, Wasser, Regionswechsel, Position alle 30 Sekunden; gesendet wird alle 30 Sekunden Spielzeit. Keine Namen, keine IP-Adressen, keine Drittanbieter
 - Dashboard unter /stats/ (mit Passwort): Zeitraum chronologisch pro Monat, pro Jahr und insgesamt, Übersichtstabelle Monat/Jahr/Total, Kennzahlen, Spielzeit pro Tag, Sitzungsdauer, Tageszeit, Einsätze, Karte «Wo gefahren wird», Region/Version/Grafik/Gerät, letzte Sitzungen. Läuft unabhängig von der Spielversion; die Datenbank liegt nur auf dem Server und wird beim Überschreiben nicht angetastet
 - Region Nord: Züge fahren jetzt auch hier – S-Bahn Richtung Rothenburg über Emmenbrücke und IR Richtung Zürich am Rotsee vorbei nach Ebikon (Tunnelstücke unsichtbar)
 - Brücken, die in OpenStreetMap aus mehreren Stücken bestehen, haben jetzt ein gerades Deck zwischen den Brückenköpfen statt einer Delle über dem Fluss (Nord: Prüfung G8 11.2 % → 7.0 %)

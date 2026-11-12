@@ -12,14 +12,14 @@ import { Vehicle, textSprite, type Difficulty } from './vehicle';
 import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepadName } from './input';
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
-import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
+import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
 export const VERSION = '2026-11-12z';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { region?: 'luzern' | 'nord'; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
+interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: 'luzern' | 'nord'; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -38,6 +38,31 @@ const QUALITY = QUALITY_;
 // Anonyme Spielstatistik an den eigenen Server (Dashboard: stats/). In Tests aus, ausser mit ?stats
 const stats = new Stats({ v: VERSION, region: REGION, q: QUALITY }, 'stats/api.php', TEST && !/[?&]stats/.test(location.search));
 if (TEST) (window as any).__stats = stats;
+save.seen = [...new Set([...(save.seen || []), REGION])];
+
+// ---------------- Abzeichen (bleiben im Spielstand, beide Regionen zusammen) ----------------
+const LUZERN_IDS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18'];
+const NORD_IDS = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9'];
+const heartsAll = () => (save.hearts || []).length + (save.heartsN || []).length;
+const BADGES: [string, string, string, () => boolean][] = [
+  ['erster', '🚑', 'Erster Einsatz', () => save.played >= 1],
+  ['zehn', '🔟', '10 Einsätze', () => save.played >= 10],
+  ['fuenfzig', '🏅', '50 Einsätze', () => save.played >= 50],
+  ['luzern', '🏙️', 'Alle Einsätze in Luzern', () => LUZERN_IDS.every((k) => save.best[k] >= 1)],
+  ['nord', '🚆', 'Alle Einsätze im Norden', () => NORD_IDS.every((k) => save.best[k] >= 1)],
+  ['drei', '🌟', 'Alle Einsätze mit 3 Sternen', () => [...LUZERN_IDS, ...NORD_IDS].every((k) => save.best[k] >= 3)],
+  ['herz10', '💗', '10 Luksi-Herzen', () => heartsAll() >= 10],
+  ['herz80', '💖', 'Alle 80 Luksi-Herzen', () => heartsAll() >= 80],
+  ['beide', '🗺️', 'Luzern und Norden besucht', () => (save.seen || []).length >= 2],
+  ['km10', '🛣️', '10 km gefahren', () => (save.km || 0) >= 10000],
+  ['km100', '🏁', '100 km gefahren', () => (save.km || 0) >= 100000],
+  ['hupe', '📯', '100-mal gehupt', () => (save.horns || 0) >= 100],
+];
+function checkBadges(quiet = false) {
+  const got = new Set(save.badges || []); let neu = 0;
+  for (const [id, ic, name, ok] of BADGES) if (!got.has(id) && ok()) { got.add(id); neu++; if (!quiet) setTimeout(() => { toast(`${ic} Neues Abzeichen: ${name}!`, 4000); sfxPlay.star(2); }, 1200 + neu * 1500); stats.event('badge', { m: id }); }
+  if (neu) { save.badges = [...got]; writeSave(); }
+}
 function writeSave() {
   try { save.pos = [car.x, car.z, car.heading]; save.region = REGION; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat-Modus */ }
 }
@@ -241,10 +266,10 @@ function setupMissions() {
     { id: 'm10', title: 'Gestolpert im Schappe-Center', radio: 'Im Schappe-Center in Kriens ist ein Kind auf der Treppe gestolpert. Ein Pflaster bitte!', place: 'Schappe-Center', at: schappe, game: plasterGame, transport: false, prop: propKid, thanks: 'Pflaster drauf – und weiter geht\'s. Danke!' },
     { id: 'm11', title: 'Kätzchen in Littau', radio: 'Beim Gasshof in Littau miaut ein Kätzchen hoch oben im Baum.', place: 'Littau, Gasshof', at: gasshof, game: catGame, transport: false, prop: propCat, thanks: 'Das Kätzchen ist wieder bei seiner Familie!' },
     { id: 'm12', title: 'Bauchweh im Zug', radio: 'Am Bahnhof Horw hat ein Kind nach der Zugfahrt Bauchweh.', place: 'Horw Bahnhof', at: horwBhf, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es wieder. Gute Reise!' },
-    { id: 'm13', title: 'Beule im Verkehrshaus', radio: 'Im Verkehrshaus hat sich ein Kind beim Flugzeug den Kopf angeschlagen – eine kleine Beule.', place: 'Verkehrshaus', at: vhs, game: plasterGame, transport: true, prop: propKid, thanks: 'Kühlbeutel drauf – und gleich zurück zu den Lokomotiven. Danke!' },
+    { id: 'm13', title: 'Beule im Verkehrshaus', radio: 'Im Verkehrshaus hat sich ein Kind beim Flugzeug den Kopf angeschlagen und weint – eine kleine Beule.', place: 'Verkehrshaus', at: vhs, game: comfortGame, transport: true, prop: propKid, thanks: 'Kühlbeutel drauf – und gleich zurück zu den Lokomotiven. Danke!' },
     { id: 'm14', title: 'Wespenstich am See', radio: 'Bei der Seeburg ist ein Kind beim Picknick von einer Wespe gestochen worden.', place: 'Seeburg', at: seeburg, game: waterGame, transport: false, prop: propKid, thanks: 'Kühlen hilft – der Stich tut schon fast nicht mehr weh. Merci!' },
-    { id: 'm15', title: 'Velo-Sturz in Tribschen', radio: 'Beim Schlössli Wartegg ist jemand mit dem Velo gestürzt. Der Ellbogen ist aufgeschürft.', place: 'Wartegg', at: wartegg, game: plasterGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt!' },
-    { id: 'm16', title: 'Bauchweh im Schönbühl', radio: 'Im Shopping-Center Schönbühl hat ein Kind zu viele Gummibärchen gegessen.', place: 'Schönbühl', at: schoenbuehl, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es wieder. Nächstes Mal ein paar weniger!' },
+    { id: 'm15', title: 'Velo-Sturz in Tribschen', radio: 'Beim Schlössli Wartegg ist jemand mit dem Velo gestürzt. Der Arm braucht einen Verband.', place: 'Wartegg', at: wartegg, game: bandageGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt!' },
+    { id: 'm16', title: 'Fieber im Schönbühl', radio: 'Im Shopping-Center Schönbühl fühlt sich ein Kind ganz heiss an. Bitte Fieber messen!', place: 'Schönbühl', at: schoenbuehl, game: thermoGame, transport: true, prop: propKid, thanks: 'Im Kinderspital gibt es Tee und ein kühles Tuch. Gute Besserung!' },
     { id: 'm17', title: 'Katze in Kastanienbaum', radio: 'Bei der Schiffstation Kastanienbaum sitzt eine Katze im Baum und traut sich nicht runter.', place: 'Kastanienbaum', at: kastanien, game: catGame, transport: false, prop: propCat, thanks: 'Die Katze ist unten und schnurrt. Danke, Luksi!' },
     { id: 'm18', title: 'Müde beim Löwen', radio: 'Beim Löwendenkmal ist eine Touristin vom vielen Treppensteigen ganz schwindlig.', place: 'Löwendenkmal', at: snap([205, -735]), game: waterGame, transport: true, prop: propTourist, thanks: 'Ein Schluck Wasser, und der Löwe schläft weiter. Merci!' },
     { id: 'm8', title: 'Zu viele Würstchen', radio: 'Auf der Allmend hat ein Fussballfan zu viele Würstchen gegessen und hat Bauchweh.', place: 'Allmend', at: allmend, game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Kamillentee geht es schon besser. Hopp Luzern!' },
@@ -257,9 +282,10 @@ function setupMissionsNord() {
   missions = [
     { id: 'n1', title: 'Bauchweh am Bahnhof', radio: 'Am Bahnhof Emmenbrücke hat ein Kind nach der Zugfahrt Bauchweh.', place: 'Emmenbrücke Bahnhof', at: stop('Emmenbrücke Bahnhof', [-1929, -2086]), game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es schon besser. Danke, Luksi!' },
     { id: 'n2', title: 'Sonnenstich am Rotsee', radio: 'Am Rotsee hat ein Ruderer zu lange in der Sonne trainiert und ist ganz schwindlig.', place: 'Rotsee', at: stop('Maihofmatte-Rotsee', [325, -1545]), game: waterGame, transport: true, prop: propTourist, thanks: 'Schatten und Wasser – schon besser. Merci!' },
-    { id: 'n3', title: 'Velo-Sturz in Ebikon', radio: 'Beim Bahnhof Ebikon ist ein Kind mit dem Velo gestürzt. Das Knie ist aufgeschürft.', place: 'Ebikon Bahnhof', at: stop('Ebikon Bahnhof', [2684, -3626]), game: plasterGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt!' },
+    { id: 'n3', title: 'Velo-Sturz in Ebikon', radio: 'Beim Bahnhof Ebikon ist ein Kind mit dem Velo gestürzt. Der Arm braucht einen Verband.', place: 'Ebikon Bahnhof', at: stop('Ebikon Bahnhof', [2684, -3626]), game: bandageGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt!' },
     { id: 'n4', title: 'Katze in Adligenswil', radio: 'Im Dorf Adligenswil sitzt eine Katze ganz oben im Baum und miaut.', place: 'Adligenswil Dorf', at: stop('Adligenswil Dorf', [4279, -2075]), game: catGame, transport: false, prop: propCat, thanks: 'Die Katze ist wieder unten. Adligenswil sagt Merci!' },
-    { id: 'n5', title: 'Gestolpert im Emmen Center', radio: 'Im Emmen Center ist ein Kind auf der Rolltreppe gestolpert. Ein Pflaster bitte!', place: 'Emmen Center', at: stop('Emmen Center', [-1515, -2328]), game: plasterGame, transport: false, prop: propKid, thanks: 'Pflaster drauf – und weiter geht\'s. Danke!' },
+    { id: 'n5', title: 'Erschreckt im Emmen Center', radio: 'Im Emmen Center hat sich ein Kind auf der Rolltreppe erschreckt und weint.', place: 'Emmen Center', at: stop('Emmen Center', [-1515, -2328]), game: comfortGame, transport: false, prop: propKid, thanks: 'Wieder fröhlich – und weiter geht\'s. Danke!' },
+    { id: 'n9', title: 'Fieber in Ebikon', radio: 'Beim Löwen in Ebikon hat ein Kind Fieber. Bitte messen und ins Kinderspital bringen.', place: 'Ebikon Löwen', at: stop('Ebikon Löwen', [2282, -3093]), game: thermoGame, transport: true, prop: propKid, thanks: 'Gute Besserung – und viel Tee!' },
     { id: 'n6', title: 'Sonnenstich in der Badi', radio: 'Im Schwimmbad Mooshüsli ist einem Kind vom vielen Sonnenbaden ganz heiss.', place: 'Schwimmbad Mooshüsli', at: stop('Schwimmbad Mooshüsli', [-1524, -3188]), game: waterGame, transport: true, prop: propKid, thanks: 'Schatten, Wasser und eine Pause – schon besser!' },
     { id: 'n7', title: 'Kätzchen in der Viscosistadt', radio: 'In der Viscosistadt miaut ein Kätzchen hoch oben im Baum.', place: 'Viscosistadt', at: stop('Viscosistadt', [-2230, -2329]), game: catGame, transport: false, prop: propCat, thanks: 'Das Kätzchen ist wieder bei seiner Familie!' },
     { id: 'n8', title: 'Zu viel Popcorn', radio: 'Bei den Flugzeugwerken in Emmen hat ein Kind beim Flugzeuge-Schauen zu viel Popcorn gegessen.', place: 'Emmen, Flugzeugwerke', at: stop('Flugzeugwerke', [152, -3854]), game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Kamillentee geht es wieder. Tschüss!' },
@@ -317,7 +343,7 @@ function setupFun(data: CityData) {
   const hearts = chosen.slice(1).map((p) => snap([p[0], p[1]]));
   fun = new Fun(terrain, sites, stops, hearts, (REGION === 'nord' ? save.heartsN : save.hearts) || [],
     (x, z) => { sfxPlay.boing(); comic(x, z, 2); stats.tot.boings++; },
-    (n, tot, first) => { stats.tot.hearts++; stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
+    (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
       const el = $('#hearts'); el.textContent = `♥ ${n}/${tot}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neue Lackierung freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
       toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
@@ -440,7 +466,7 @@ function handover() {
     stars += 2;
   }
   const prev = save.best[current.id] || 0;
-  save.best[current.id] = Math.max(prev, stars); stats.missionDone(current.id, stars);
+  save.best[current.id] = Math.max(prev, stars); stats.missionDone(current.id, stars); setTimeout(() => checkBadges(), 2500);
   save.played++;
   writeSave();
   const ov = document.createElement('div'); ov.className = 'mg';
@@ -646,7 +672,6 @@ function menuItems() {
     { t: `Mitspieler: ${players.length} ${players.length > 1 ? '(letzten entfernen)' : '– Controller 2–4: A drücken'}`, f: () => removePlayer() },
     { t: `Grafik: ${QUALITY === 'echt' ? 'Echt (3D-Häuser swisstopo)' : 'Leicht (Handy, schneller)'} – wechseln lädt neu`, f: () => { save.quality = QUALITY === 'echt' ? 'leicht' : 'echt'; writeSave(); location.reload(); } },
     { t: 'Spielstand als Datei sichern', f: exportSave },
-    { t: `Spielstatistik senden: ${stats.enabled ? 'an' : 'aus'} (anonym, nur an diese Website)`, f: () => stats.setEnabled(!stats.enabled) },
     { t: 'Steuerung & Credits', f: () => $('#credits').classList.toggle('show') },
   ];
 }
@@ -659,6 +684,8 @@ function renderMenu() {
     const nb = fun ? fun.heartCount : 0, tot = fun ? fun.heartTotal : 0;
     const hint = fun && nb < tot ? (() => { const h = fun!.nearestHeart(car.x, car.z); if (!h) return ''; const dist = Math.hypot(h[0] - car.x, h[1] - car.z); const dir = ['Norden', 'Nordosten', 'Osten', 'Südosten', 'Süden', 'Südwesten', 'Westen', 'Nordwesten'][Math.round(((Math.atan2(h[0] - car.x, -(h[1] - car.z)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8]; return `Nächstes Herz: ca. ${dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist / 50) * 50 + ' m'} Richtung ${dir}`; })() : nb === tot && tot ? 'Alle Herzen gefunden!' : '';
     d.innerHTML = `<span>★ ${totalStars()} Sterne</span><span>♥ ${nb}/${tot} Herzen</span><span>💥 ${fun ? fun.stats.boings + (traffic ? traffic.stats.bumps : 0) : 0} Boings</span>${hint ? `<small>${hint}</small>` : ''}`;
+    { const got = new Set(save.badges || []); const b = document.createElement('div'); b.className = 'badges';
+      b.innerHTML = `<small>Abzeichen ${got.size}/${BADGES.length}</small>` + BADGES.map(([id, ic, name]) => `<span class="${got.has(id) ? 'on' : 'off'}" title="${name}">${ic}<em>${name}</em></span>`).join(''); d.appendChild(b); }
     m.appendChild(d);
   }
   items.forEach((it, i) => {
@@ -726,6 +753,7 @@ function removePlayer() {
 // ---------------- Regionswechsel (Nachladen) ----------------
 // Luzern ↔ Nord überlappen sich zwischen z = −1100 und −550 (beide enthalten das Kinderspital). Wer über die Linie fährt,
 // fährt nach 1.5 s in der anderen Region weiter: Spielstand und Position bleiben, die Seite lädt die Daten der neuen Region.
+let badgeT = 0;
 const TEST_NOEDGE = /[?&]noedge/.test(location.search) || (TEST && !/[?&]edge/.test(location.search)); // Tests teleportieren frei
 let edgeT = 0, edgeWarned = false;
 function checkRegionEdge(dt: number) {
@@ -790,11 +818,12 @@ function frame(now: number) {
         if (!B.blocked(B.x + ux * push, B.z + uz * push, B.heading)) { B.x += ux * push; B.z += uz * push; }
         if (!A.blocked(A.x - ux * push, A.z - uz * push, A.heading)) { A.x -= ux * push; A.z -= uz * push; } }
     }
+    if (playing && fullReady) { save.km = (save.km || 0) + Math.abs(car.speed) * dt; badgeT += dt; if (badgeT > 30) { badgeT = 0; checkBadges(); writeSave(); } }
     stats.players = players.length; if (fullReady) stats.tick(dt, playing ? players.map((p) => p.car.speed) : [], car.siren, [car.x, car.z]); // Mini-Spiele zählen als Spielzeit; Ladezeit nicht
     if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
-      if (hitP(0, 'horn')) { stats.tot.horns++; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
+      if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
       if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 3; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
       if (hit('mute')) { save.muted = !isMuted(); setMuted(save.muted); toast(save.muted ? 'Ton aus' : 'Ton an', 1000); }
       if (hitP(0, 'reset')) { placeCar(car.x, car.z); sfxPlay.reset(); toast('Luksi hupt – Auto hüpft zurück auf die Strasse!', 1600); }

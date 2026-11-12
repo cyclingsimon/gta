@@ -1,6 +1,6 @@
 // Anonyme Spielstatistik an den eigenen Server (stats/api.php auf derselben Domain).
 // Gesendet werden: zufällige Geräte-ID, Spielversion, Region, Spielzeit, Strecke und Spielereignisse.
-// Keine Namen, keine IP-Auswertung, keine Drittanbieter. Abschaltbar im Pause-Menü (bleibt gespeichert).
+// Keine Namen, keine IP-Auswertung, keine Drittanbieter. Kein Schalter im Spiel (Entscheid Simon, 12.11.2026).
 
 const OFF_KEY = 'luksiStatsOff', DEV_KEY = 'luksiDev';
 const rid = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');

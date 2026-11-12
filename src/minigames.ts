@@ -176,3 +176,79 @@ export function waterGame(done: Done) {
     return finished;
   });
 }
+
+// ---------- 5: Fieber messen ----------
+export function thermoGame(done: Done) {
+  const { ov, body, msg } = shell('Fieber messen', 'Das Thermometer steigt und sinkt. Drück «Jetzt!» (A), wenn die Anzeige im grünen Bereich ist.');
+  body.innerHTML = `<svg viewBox="0 0 120 260" class="thermo">
+    <rect x="45" y="10" width="30" height="200" rx="15" fill="#fff" stroke="#3b302b" stroke-width="5"/>
+    <rect x="47" y="70" width="26" height="36" fill="#9BE07A" opacity=".8" class="zone"/>
+    <rect x="52" y="200" width="16" height="10" fill="#E94B3C" class="level"/>
+    <circle cx="60" cy="225" r="25" fill="#E94B3C" stroke="#3b302b" stroke-width="5"/>
+  </svg><div class="mg-buttons"><button class="b-ok">Jetzt!</button></div>`;
+  const level = body.querySelector('.level') as SVGRectElement;
+  let v = 0.1, dir = 1, hits = 0, finished = false, last = performance.now();
+  const zoneLo = 0.55, zoneHi = 0.73; // Anteil der Säulenhöhe (grüner Bereich)
+  const ok = () => {
+    if (finished) return;
+    if (v >= zoneLo - 0.05 && v <= zoneHi + 0.05) {
+      hits++; sfxPlay.star(0);
+      if (hits >= 2) { finished = true; finish(ov, msg, 'Gemessen! Etwas Fieber – Luksi weiss, was zu tun ist.', done); }
+      else msg.textContent = 'Gut! Zur Sicherheit noch einmal messen.';
+    } else { msg.textContent = v < zoneLo ? 'Etwas zu früh – warte, bis es im Grünen ist.' : 'Etwas zu spät – gleich kommt es wieder.'; sfxPlay.click(); }
+  };
+  (body.querySelector('.b-ok') as HTMLButtonElement).onclick = ok;
+  loop(() => {
+    const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+    v += dir * dt * 0.32; // gemächlich, damit auch kleine Kinder treffen if (v > 0.95) { v = 0.95; dir = -1; } if (v < 0.05) { v = 0.05; dir = 1; }
+    const h = v * 190; level.setAttribute('y', String(205 - h)); level.setAttribute('height', String(h + 5));
+    if (hit('confirm')) ok();
+    return finished;
+  });
+}
+
+// ---------- 6: Verband wickeln ----------
+export function bandageGame(done: Done) {
+  const { ov, body, msg } = shell('Verband wickeln', 'Wickle den Verband von oben nach unten: tippe auf die leuchtende Stelle (oder A).');
+  const n = 5;
+  body.innerHTML = `<svg viewBox="30 25 240 125" class="arm">
+    <path d="M40 60 L250 40 L262 110 L52 140 Z" fill="#F2C7A5" stroke="#3b302b" stroke-width="5"/>
+    ${Array.from({ length: n }, (_, i) => { const x = 80 + i * 32; return `<g class="seg" data-i="${i}"><rect x="${x}" y="${50 - i * 3}" width="30" height="${88 - i * 2}" rx="6" fill="#FFB347" opacity=".55"/></g>`; }).join('')}
+  </svg>`;
+  const svg = body.querySelector('svg')!;
+  let next = 0, finished = false;
+  const segs = Array.from(svg.querySelectorAll('.seg')) as SVGGElement[];
+  const paint = () => segs.forEach((s, i) => s.classList.toggle('focus', i === next));
+  const wrap = (i: number) => {
+    if (finished) return;
+    if (i !== next) { msg.textContent = 'Schön der Reihe nach – die leuchtende Stelle zuerst.'; sfxPlay.click(); return; }
+    const r = segs[i].querySelector('rect')!; r.setAttribute('fill', '#FFFFFF'); r.setAttribute('opacity', '1'); r.setAttribute('stroke', '#3b302b'); r.setAttribute('stroke-width', '3');
+    sfxPlay.pop(); next++; paint();
+    if (next >= n) { finished = true; finish(ov, msg, 'Der Verband sitzt perfekt!', done); }
+  };
+  segs.forEach((s, i) => s.addEventListener('click', () => wrap(i)));
+  paint();
+  loop(() => { if (hit('confirm')) wrap(next); return finished; });
+}
+
+// ---------- 7: Trösten ----------
+export function comfortGame(done: Done) {
+  const { ov, body, msg } = shell('Trösten', 'Das Kind hat sich erschreckt. Wähle zwei Dinge, die trösten.');
+  const opts = [['🧸', 'Teddybär', true], ['🌶️', 'Scharfe Chili', false], ['⭐', 'Mut-Kleber', true], ['📖', 'Geschichte', true]] as const;
+  body.classList.add('choice');
+  let focus = 0, got = 0, finished = false; const used = new Set<number>();
+  const els = opts.map(([ic, t], i) => { const b = document.createElement('button'); b.className = 'card wide'; b.innerHTML = `<span>${ic}</span><small>${t}</small>`; b.onclick = () => choose(i); body.appendChild(b); return b; });
+  const choose = (i: number) => {
+    if (finished || used.has(i)) return;
+    if (!opts[i][2]) { msg.textContent = 'Hihi, das ist zu scharf! Was tröstet besser?'; sfxPlay.click(); return; }
+    used.add(i); els[i].classList.add('done'); got++; sfxPlay.star(0);
+    if (got >= 2) { finished = true; finish(ov, msg, 'Das Kind lächelt wieder!', done); } else msg.textContent = 'Schön! Noch etwas?';
+  };
+  loop(() => {
+    if (hit('left')) focus = (focus + 3) % 4;
+    if (hit('right')) focus = (focus + 1) % 4;
+    if (hit('confirm')) choose(focus);
+    els.forEach((e, i) => e.classList.toggle('focus', i === focus));
+    return finished;
+  });
+}
