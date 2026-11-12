@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-12x  Jesuitenkirche mit Zwiebelhauben, Weinmarktbrunnen
+- Jesuitenkirche: die zwei Türme tragen jetzt Zwiebelhauben mit Laterne und goldener Spitze statt spitzer Pyramidendächer aus den 3D-Daten (Turmspitzen werden im Gebäude automatisch gefunden)
+- Weinmarktbrunnen: gotischer Brunnenstock mit Figurenkranz, bunter Bemalung und grüner Fiale auf achteckigem Trog
+- Rohdaten für Etappe 2 (Emmenbrücke, Ebikon, Adligenswil) geholt: Gelände, 841 Kacheln 3D-Häuser, Luftbild, OpenStreetMap, Buslinien. Noch nicht im Spiel
+
 2026-11-11w  Zentralbahn ab Luzern, Busse in einem Stück
 - Zentralbahn fährt jetzt die ganze Strecke ab Bahnhof Luzern: durch den Luzernertunnel unter der Allmend, über Kriens Mattenhof und Horw, durch den Tunnel Haltiwald bis zum Spielfeldrand (6.6 km statt 1.1 km)
 - Busse: je Wagenkasten eine Textur (Seite, Front mit Linienanzeige, Heck mit Kinderspital-Werbung) statt fünf Materialien

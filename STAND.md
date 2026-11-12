@@ -1,31 +1,33 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 11.11.2026 ca. 17:00, Version **2026-11-11s** – live auf https://gta.simon-infanger.ch/ (geprüft: ausgeliefertes JS enthält Version s). Heute live gegangen: q (13:50), r (15:00), s (16:50).
-Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo.
-Realismus-Aufgaben und Testkit: `docs/REALISMUS-KIT.md` (Projekt-Version ist aktueller).
+Stand: 12.11.2026 07:00, Version **2026-11-12x** – **LIVE** auf https://gta.simon-infanger.ch/ (von Claude per FileZilla hochgeladen; geprüft: ausgeliefertes `index-D4LTK10T.js` enthält Version x und den Weinmarktbrunnen). Live seit 11.11.: q, r, s, t, v, w; x am 12.11. ca. 06:57.
+Lokal auf dem PC: `Downloads\luksi-rescue\web-n` (Vollstand w), `web-x` (nur die in x geänderten Dateien: index.html, LIESMICH.txt, assets/). Vollpaket: `Luksi Rescue 2026-11-12x.zip`.
+Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
+Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 ## Spielfeld und Daten
-- Feld x −3800..2700, z −1100..6300 (seit q: Haldenstrasse, Verkehrshaus, Lido, Tribschen-Ost, Schönbühl, Horwer Halbinsel mit St. Niklausen/Kastanienbaum).
-- Geodaten werden über einen Browser geholt und gepackt (`window.PK`), Rückgabe in Base64-Stücken à 225 kB; `tools/geo/collect.py PREFIX N OUTDIR` setzt zusammen. Overpass nur overpass-api.de (CORS), grosse Abfragen in Bändern.
-- Gelände: swissALTI3D-GeoTIFF 2 m → `tools/geo/alti_extend.py`. Gebäude: 1652 b3dm-Kacheln → 14'289 Gebäude. Luftbild `data/swissimage_2m_x2700.jpg`.
-- OSM komplett neu (`data/osm_big.json`, `osm_props.json`, `osm_bus.json`, `beach.json`); alte Stände `*_x1150.json`.
-- city.json: Seefläche (östlich des Nadelwehrs, x > −345) mit `f:1` = flach gezeichnet.
+- Feld x −3800..2700, z −1100..6300. Geodaten nur über den eingebauten Browser auf Simons PC (`window.PK`, Base64-Stücke à 225 kB, `tools/geo/collect.py PREFIX N OUTDIR`). Overpass nur overpass-api.de, grosse Abfragen im Hintergrund.
+- `data/tunnels.json` (21 Gleistunnel). build_city: `rail` sichtbar, `railAll` für Zugstrecken. build_trains: `tun` = Tunnel-Intervalle. Zentralbahn Bahnhof → Spielfeldrand Süd (6.6 km).
+
+## Etappe 2 (Emmenbrücke, Ebikon, Adligenswil) – Rohdaten vollständig, noch nicht eingebaut
+Band x −3800..4600, z −3900..−1100 (LV95 E 2662–2670, N 1212–1215).
+- `data/e2/alti/EEEE-NNNN.i16`: 33 swissALTI3D-Kacheln, 500×500 int16 dm relativ 400 m, Kachel links oben (E·1000, (N+1)·1000).
+- `data/e2/b3dm/`: 841 neue swissBUILDINGS3D-Kacheln (x 1037..1089, y 1283..1311) + `wms_w.jpg`/`wms_o.jpg` (SWISSIMAGE 2 m, E 2662190–2666430 bzw. 2666430–2670670, N 1212590–1215560, je 2120×1485 px).
+- `data/e2/osm/osm_a.json`, `osm_b.json`: Overpass-Rohdaten (out geom) lat 47.059–47.089, lon 8.255–8.313 bzw. 8.313–8.370 (Gebäude, Strassen, Bahn, Landnutzung, Natur, Freizeit, Wasser, Amenity, Haltestellen, Barrieren). `osm_bus.json`: 110 Bus-/Trolleybus-Relationen mit Weggeometrie (Format wie data/osm_bus.json).
+- Nächster Schritt: Konverter Overpass-Rohformat → Format von osm_big.json; Gelände anstückeln; b3d für Band bauen; Nachladen (Streaming) als eigene Kachelgruppe, sonst Speicher > 2 GB.
 
 ## Spiel (Module)
-- `main.ts`: 18 Einsätze, Pedalos (`Boats`), 3 Kursschiff-Routen, Schilder Löwendenkmal/Verkehrshaus/Kastanienbaum, Test G3b.
-- `world.ts`: `withRows` (Altstadt-Pastellzeilen), Kapellbrücke mit Geranien und Laternen, Seebrücke-Fahnen, Terrassen, Verkehrshaus-Flugzeug und Lok, Spielplätze, Nadelwehr, Löwendenkmal, Museggmauer, Museggtürme in Stein, Zytturm-Uhr, Bänke, Strände; `chunkInstanced` (500-m-Zellen); See flach (`water-lake`).
+- `world.ts`: Altstadt-Pastellzeilen, Kapellbrücke, Fahnen, Terrassen, Verkehrshaus, Spielplätze, Nadelwehr, Löwendenkmal, Museggmauer + Zytturm-Uhr, Instanzen mit Vertex-Farben (`colorMerge`), `chunkInstanced` 1000 m, See flach.
+- Neu in x: `findSpires` sucht in swissBUILDINGS3D die zwei Turmspitzen der Jesuitenkirche, lässt die spitzen Dächer weg und setzt Zwiebelhauben (`ONIONS`). Weinmarktbrunnen als eigener Brunnenstock beim OSM-Brunnen (−233, −29) [Annahme: dieser OSM-Brunnen ist der Weinmarktbrunnen].
+- `fun.ts` Züge/Tunnel/Pedalos, `bus.ts` Busatlas, `vehicle.ts` Ambulanz.
+- `tests/look_spots.py prefix 'x,z,h,cam;…'`: Sichtprüfung; cam < 0 = freie Kamera (x, z, Höhe h; Blickziel codiert als −((dz+500)·1000 + (dx+500)), Blickhöhe h−28).
 
-## Tests (Version s, Software-Rendering)
-- qa.py G1–G13, G3b, P1 grün: P1 1.85 Mio. Dreiecke / 937 Draw Calls (Start), Schwanenplatz 2.32 Mio.
-- missions.py: alle 18 Einsätze (Version q, 54 Sterne) und 3 Einsätze (Version s) ok, Spielstand bleibt. fun.py ok.
-- Speicher «Echt»: Spitze 2.3 GB, nach Start 1.6 GB; «Leicht» 412 MB.
-- Echte fps auf der GTX 1080 nicht gemessen.
+## Tests (Version x, Software-Rendering)
+- qa.py G1–G13, G3b, P1 grün: 1.90 Mio. Dreiecke / 660 Draw Calls (Start), Ladezeit 40 s.
+- Sichtprüfung Jesuitenkirche (Zwiebelhauben sitzen auf den Türmen) und Weinmarkt (Brunnen sichtbar).
+- fun.py zuletzt Version v, missions.py zuletzt alle 18 (q). Speicher «Echt» Spitze 1.6 GB (w).
+- Echte fps auf GTX 1080 / Handy ungemessen.
 
-## Bekannte Grenzen
-- Echte fps/Handy ungemessen. Draw Calls gestiegen (937).
-- Neue Buslinien: Linienführung aus OSM-Teilstücken (Annahme).
-
-## Nächste Pakete
-1. Simon: spielen (Verkehrshaus, Kastanienbaum, Löwendenkmal, Museggmauer), F3 fps, Rückmeldung in Todoist
-2. Leistung: Speicherspitze senken, Draw Calls bündeln
-3. Weitere Stadt-Details; Etappe 2 (Emmenbrücke, Ebikon) nur mit Kachel-Streaming
+## Offen
+- Punkt 6 teilweise: Jesuitenkirche und Weinmarktbrunnen erledigt. Offen: Bahnhofplatz/Torbogen, KKL-Vorplatz (Europaplatz-Pflaster, Wagenbachbrunnen), hausgenaue Altstadtfarben (keine Fassadenfarb-Datenquelle; Annahme: bleibt zufällig-pastell).
+- Punkt 7: Etappe 2 einbauen (siehe oben) inkl. Nachladen.

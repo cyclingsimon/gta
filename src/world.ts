@@ -28,6 +28,8 @@ export function toon(color: THREE.ColorRepresentation, extra: Partial<THREE.Mesh
 const FACADES = ['#F3E3C3', '#EBC98A', '#E9AE8F', '#C8D3B0', '#CBD8DF', '#F4EFE6', '#F2DA94', '#E7C3A8', '#DCCFE0'];
 // Plätze mit bemalten Fassaden (Referenzfotos Weinmarkt, Hirschenplatz, Kornmarkt): x, z, Radius
 export const ERKER: number[][] = [];
+/** Zwiebelhauben (Jesuitenkirche): x, z, Traufhöhe, Radius, Spitze – ersetzt spitze swissBUILDINGS3D-Turmdächer */
+export const ONIONS: number[][] = [];
 const MUSEGG: [number, number][] = [[-245, -293], [-160, -335], [-342, -256], [-20, -386], [-522, -199], [-91, -366], [-421, -239], [-619, -168], [92, -368]];
 const PAINTED_SQUARES: [number, number, number][] = [[-224, -33, 38], [-265, -51, 34], [-174, -7, 30], [-61, -24, 22], [-413, -69, 30]];
 const ROOFS = ['#B5553C', '#A04A36', '#8A5A44', '#C0674A'];
@@ -761,7 +763,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       else if (style === 'stone' && kind !== 'jesuiten') hipRoof(B.tiles, lpos, b.p, top, roofC, 0.75);
     }
     const b3dTiles = new Map<string, { B: Record<string, Buf>; l: number[] }>();
-    ERKER.length = 0;
+    ERKER.length = 0; ONIONS.length = 0;
     if (b3d) await buildB3D(b3d, styles, b3dTiles, lpos, (p) => onProgress(p), terrain);
     await onProgress('Materialien …');
     const tex = facadeTextures();
@@ -776,6 +778,15 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         m4.compose(v.set(x, y + hh, z), q, sc.set(1, 1, 1)); cm.setMatrixAt(i, m4); cm.setColorAt(i, col.set(hash(x, z) < 0.6 ? '#5E8C78' : '#8A5A44'));
       });
       for (const im of [bm, cm]) { im.computeBoundingSphere(); im.name = 'erker'; group.add(im); }
+    }
+    for (const [x, z, y, r, top] of ONIONS) { // Zwiebelhauben mit Laterne und goldener Spitze
+      const H = Math.max(top - y, r * 2.2) + 1.5, R = r * 1.02;
+      const prof = [[0.92, 0], [0.92, 0.07], [1.08, 0.2], [1.12, 0.33], [0.98, 0.46], [0.6, 0.58], [0.26, 0.66], [0.2, 0.72], [0.34, 0.77], [0.3, 0.82], [0.14, 0.87], [0.07, 0.9], [0, 0.9]].map(([a, b]) => new THREE.Vector2(a * R, b * H));
+      const dome = new THREE.Mesh(new THREE.LatheGeometry(prof, 12), toon('#5F8F86'));
+      dome.position.set(x, y, z); dome.name = 'zwiebel';
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.18 * R, 0.14 * H, 6), toon('#D9B44A'));
+      tip.position.set(x, y + 0.97 * H, z);
+      group.add(dome, outline(dome), tip);
     }
     const mats: Record<string, THREE.Material> = {
       oldGreen: toon('#ffffff', { vertexColors: true, map: tex.oldGreen }),
@@ -1404,6 +1415,30 @@ function quarter(x: number, z: number): 'altstadt' | 'neustadt' | 'quai' | 'othe
 }
 
 /** swissBUILDINGS3D-Gebäude in die Material-Puffer schreiben */
+/** Findet die zwei höchsten Turmspitzen eines Gebäudes und die Traufe ihres Dachs (P in dm). */
+function findSpires(P: ArrayLike<number>, I: ArrayLike<number>, vS: number, iS: number, iC: number, ymax: number) {
+  const pts: number[][] = [];
+  for (let t = iS; t < iS + iC; t++) { const k = (vS + I[t]) * 3; const y = P[k + 1] / 10; if (y > ymax - 18) pts.push([P[k] / 10, y, P[k + 2] / 10]); }
+  pts.sort((a, b) => b[1] - a[1]);
+  const apex: number[][] = [];
+  for (const p of pts) { if (apex.every((a) => Math.hypot(a[0] - p[0], a[2] - p[2]) > 8)) apex.push(p); if (apex.length === 2) break; }
+  const out: { x: number; z: number; y: number; r: number; top: number }[] = [];
+  for (const a of apex) {
+    // Dachflächen rund um die Spitze: steile Dreiecke, deren Punkte nahe der Spitze liegen
+    let eave = a[1], r = 0;
+    for (let t = iS; t < iS + iC; t += 3) {
+      const V = [0, 1, 2].map((j) => { const k = (vS + I[t + j]) * 3; return [P[k] / 10, P[k + 1] / 10, P[k + 2] / 10]; });
+      if (!V.every((v) => Math.hypot(v[0] - a[0], v[2] - a[2]) < 6)) continue;
+      const ux = V[1][0] - V[0][0], uy = V[1][1] - V[0][1], uz = V[1][2] - V[0][2], vx = V[2][0] - V[0][0], vy = V[2][1] - V[0][1], vz = V[2][2] - V[0][2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz);
+      if (l < 1e-6 || Math.abs(ny) / l < 0.25 || !V.some((v) => v[1] > a[1] - 0.5)) continue;
+      for (const v of V) { eave = Math.min(eave, v[1]); r = Math.max(r, Math.hypot(v[0] - a[0], v[2] - a[2])); }
+    }
+    if (r > 1 && a[1] - eave > 2) out.push({ x: a[0], z: a[2], y: eave, r, top: a[1] });
+  }
+  return out.length === 2 ? out : null;
+}
+
 async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[], tiles: Map<string, { B: Record<string, { pos: number[]; nor: number[]; col: number[]; uv: number[] }>; l: number[] }>, _unused: number[], progress: (s: string) => Promise<void> | void, terrain?: Terrain) {
   // Raster für schnelle Zuordnung Gebäude ↔ OSM-Stil
   const cell = 40, grid = new Map<string, number[]>();
@@ -1494,6 +1529,8 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     }
     STYLE_COUNT[style] = (STYLE_COUNT[style] || 0) + 1;
     const tile = style === 'modern' || style === 'block' ? 3.6 : style === 'stone' ? 6 : style === 'hotel' ? 4.2 : 3.3, floorH = style === 'stone' ? 7 : style === 'gruenderzeit' || style === 'hotel' ? 3.6 : 3.2;
+    const spires = st && st.kind === 'jesuiten' ? findSpires(P, I, vS, iS, iC, ymax) : null;
+    if (spires) for (const q of spires) ONIONS.push([q.x, q.z, q.y, q.r, q.top]);
     for (let t = iS; t < iS + iC; t += 3) {
       const ids = [vS + I[t], vS + I[t + 1], vS + I[t + 2]];
       const V = ids.map((k) => [P[k * 3] / 10, P[k * 3 + 1] / 10, P[k * 3 + 2] / 10]);
@@ -1502,6 +1539,10 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
       const l = Math.hypot(nx, ny, nz); if (l < 1e-6) continue;
       nx /= l; ny /= l; nz /= l;
+      if (spires && Math.abs(ny) >= 0.25) { // spitzes Turmdach weglassen, dort sitzt die Zwiebelhaube
+        const mx = (V[0][0] + V[1][0] + V[2][0]) / 3, mz = (V[0][2] + V[1][2] + V[2][2]) / 3, my = Math.min(V[0][1], V[1][1], V[2][1]);
+        if (spires.some((q) => Math.hypot(mx - q.x, mz - q.z) < q.r + 0.6 && my >= q.y - 0.3)) continue;
+      }
       // Daten sind doppelseitig: Normale bei Dächern nach oben, bei Wänden vom Gebäudezentrum weg
       if (Math.abs(ny) >= 0.3) { if (ny < 0) { if (V[0][1] < ymin + 0.8) continue; nx = -nx; ny = -ny; nz = -nz; } }
       else { const mx = (V[0][0] + V[1][0] + V[2][0]) / 3 - cx, mz = (V[0][2] + V[1][2] + V[2][2]) / 3 - cz; if (mx * nx + mz * nz < 0) { nx = -nx; nz = -nz; ny = -ny; } }
@@ -1834,6 +1875,25 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
       if (i > 0 && j > 0 && i < mask.w && j < mask.h) mask.data[j * mask.w + i] = 2;
     });
     for (const im of [basin, water, col, ball]) { im.computeBoundingSphere(); im.name = 'fountains'; G.add(im); }
+    // Weinmarktbrunnen: gotischer Stock mit Figurenkranz und Fialen (Annahme: OSM-Brunnen am Weinmarkt)
+    const wm = P.fountains.find(([x, z]) => Math.hypot(x + 236, z + 22) < 25);
+    if (wm) {
+      const [x, z] = wm, y = terrain.height(x, z), W = new THREE.Group(); W.position.set(x, y, z); W.name = 'weinmarktbrunnen';
+      const add = (g: THREE.BufferGeometry, c: string, py: number, ol = false) => { const m = new THREE.Mesh(g, toon(c)); m.position.y = py; W.add(m); if (ol) W.add(outline(m)); return m; };
+      add(new THREE.CylinderGeometry(2.9, 3.1, 0.9, 8), '#B8AE9C', 0.45, true);
+      const wg2 = new THREE.CircleGeometry(2.7, 8); wg2.rotateX(-Math.PI / 2); add(wg2, '#5BB4E5', 0.8);
+      add(new THREE.CylinderGeometry(0.45, 0.55, 2.6, 8), '#A39A8B', 1.6, true);
+      add(new THREE.CylinderGeometry(1.0, 0.7, 0.5, 8), '#C8352E', 3.1, true);
+      for (let k = 0; k < 6; k++) { // Figurenkranz (Krieger, bunt)
+        const a = (k / 6) * Math.PI * 2, f = add(new THREE.CapsuleGeometry(0.2, 0.7, 3, 6), ['#3B6EA8', '#C8352E', '#D9A520'][k % 3], 3.85);
+        f.position.x = Math.cos(a) * 0.75; f.position.z = Math.sin(a) * 0.75;
+      }
+      add(new THREE.CylinderGeometry(0.35, 0.45, 1.8, 8), '#3B6EA8', 4.6, true);
+      add(new THREE.CylinderGeometry(0.6, 0.35, 0.4, 8), '#D9A520', 5.6);
+      add(new THREE.ConeGeometry(0.55, 2.4, 8), '#2E7D4F', 7.0, true);
+      add(new THREE.SphereGeometry(0.22, 8, 6), '#E3B53B', 8.3);
+      G.add(W);
+    }
   }
   // Bushaltestellen: blaues Schild
   if (P.stops.length) {

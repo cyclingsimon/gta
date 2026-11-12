@@ -13,7 +13,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame } from './minigames';
 
-export const VERSION = '2026-11-11w';
+export const VERSION = '2026-11-12x';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
