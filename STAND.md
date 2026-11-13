@@ -1,9 +1,18 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 18:15. Fertig: **2026-11-13j** = 13i (Skyline/Umfang aus dem Parallel-Chat übernommen) + Schnellreise + Gebiet A (Luzern–Sursee–Wolhusen, 9 neue Regionen a1–a9) + Kantonsstrassen-Paket (Kreisel, Ortstafeln, Wartelinien). Nicht hochgeladen (live: 13h laut Übergabe). Branch `claude/13i-gebiet-a` (Commit 40b6bd1), nicht in main.
+Stand: 13.11.2026 19:35. Fertig: **2026-11-13k** = 13j + echte 3D-Häuser Sursee (a1) und Wolhusen (a7), ländliche Gebäude (rural.py), Umland-Flickenteppich, Wegweiser. Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13k (13.11. abends, nicht hochgeladen)
+- Simon 18:29: «Kannst du 3d Modelle nachrüsten?» → swissBUILDINGS3D für Gebiet A. Kachelformel (aus tileset.json, Level 11): x = floor((lon − 5.95944)/0.00221329), y = floor((lat − 45.81765)/0.000968716); URL `https://3d.geo.admin.ch/ch.swisstopo.swissbuildings3d.3d/v1/20260520/11/{x}/{y}.b3dm`. Kachelbereiche je Region im Browser `TILER` (a1 941–976/1357–1410, a7 941–975/1245–1307, a8 974–1010/1245–1307, a9 1038–1069/1308–1358, a2 974–1012/1356–1410, a3 1010–1040/1356–1410, a4 941–975/1305–1358, a5 974–1012/1305–1358, a6 1010–1040/1285–1358).
+  - Übertragung: Browser `tileJob()` holt, `pack()`/`chunk()` à 250k, `collect.py`, dann `b3d_build.mjs` + `roofcolors.py` (in build_region_a.py eingebaut, wenn `data/a/b3dm_<id>` existiert). Kosten: ~1 Tool-Aufruf pro 190 kB → a1 61 Stücke (11.4 MB), a7 40 (7.4 MB). Simon gefragt, ob stattdessen Download nach «Downloads» + Ordnerzugriff ok ist (Antwort offen).
+  - Fertig: a1 Sursee 4632 Gebäude (6.2 MB), a7 Wolhusen 2676 (3.3 MB). Im Browser bereits geholt (Stand 19:30): a7, a8, a9 (laufend), Rest folgt. Spiel lädt b3d in A-Regionen optional (main.ts pB).
+- rural.py (Höhen/Typen nach Grundfläche und Dichte), Stile «barn»/«hall» in world.ts, Umland-Flickenteppich (nur Gebiet A), kein Seeband am Rand von A.
+- Wegweiser SSV 4.31 (`wegweiser()` in world.ts, Ortsliste `src/signPlaces.ts` aus `tools/geo/sign_places.py`): Luzern 92, Sursee 45, Ruswil 14.
+- Tests 13k (Software-Rendering, 19:00–19:35): smoke_a.py alle 9 Regionen, 8/8 Einsätze erreichbar, keine Fehler; Sichtprüfung Sursee und Wolhusen mit 3D-Häusern (sitzen auf dem Gelände), Scheunen Ruswil, Wegweiser Sursee. Nicht getestet: qa.py Luzern mit Wegweisern (92 Masten, wenig Geometrie), echte fps.
+- ZIP: `Luksi Rescue 2026-11-13k.zip`. Nicht hochgeladen.
 
 ## Version 13j (13.11. abends, nicht hochgeladen)
 - Simon: Variante A (ganzes Gebiet Luzern–Sursee–Wolhusen) nur mit Schnellreise; Vision: jedes Kind im Einzugsgebiet des Kinderspitals Zentralschweiz kann «nach Hause fahren». Arbeitsfokus bis Mo 06:00: 20 % Luzerner Kantonsstrassen realistischer, 30 % Kantonsstrassen allgemein, 45 % Umgebung erweitern, 5 % Optimierung/Gameplay. Hochladen nur nach Simons OK.

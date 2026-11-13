@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13k  Echte Häuser in Sursee, Scheunen, Wegweiser
+- Sursee mit echten 3D-Häusern aus swissBUILDINGS3D (4632 Gebäude, Dachformen und Dachfarben wie in echt); weitere Gegenden folgen
+- Gebiet A ohne 3D-Daten: Wohnhäuser niedriger (2 Geschosse statt 4), Holzscheunen mit flachem, breitem Dach, grosse Hallen mit Blechfassade, Schöpfe und Garagen klein (Annahme nach Grundfläche und Siedlungsdichte, OSM hat meist keine Höhe)
+- Umland am Feldrand als Flickenteppich aus Wiesen, Äckern und Wald statt einfarbig; kein Vierwaldstättersee mehr am Rand von Gebiet A
+- Wegweiser an Hauptstrassen (SSV 4.31): blaue Pfeilschilder zu den nächsten grösseren Orten mit Kilometern, an Verzweigungen (Luzern 92, Sursee 45)
+
 2026-11-13j  Gebiet A: Sursee, Sempach, Wolhusen, Ruswil, Malters, Rothenburg … und echte Kreisel
 - 9 neue Gegenden zwischen Luzern, Sursee und Wolhusen (Entscheid Simon «Variante A»), zusammen rund 290 km²: Sursee, Sempach und Nottwil, Hildisrieden und Rain, Buttisholz und Grosswangen, Ruswil, Neuenkirch und Hellbühl, Wolhusen, Malters, Rothenburg. Spielwelt jetzt 14 Gegenden, rund 440 km²
 - Echte Spitäler als Ziel: LUKS Sursee und LUKS Wolhusen (Lage aus OpenStreetMap), dazu das Spital in Nottwil; in den anderen Gegenden ein Rettungsposten beim Gemeindehaus des Hauptorts (erfunden, wie Meggen und Littau)

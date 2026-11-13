@@ -2,7 +2,7 @@
  "stand": "2026-11-13",
  "gesamt": {
   "km2": 442.0,
-  "gebaeude": 55431,
+  "gebaeude": 56234,
   "strassen_km": 2318,
   "wege_km": 2891
  },
@@ -39,7 +39,7 @@
   },
   "a1": {
    "km2": 32.5,
-   "gebaeude": 4120,
+   "gebaeude": 4632,
    "strassen_km": 187,
    "wege_km": 215
   },
@@ -75,7 +75,7 @@
   },
   "a7": {
    "km2": 36.5,
-   "gebaeude": 2347,
+   "gebaeude": 2638,
    "strassen_km": 150,
    "wege_km": 171
   },
