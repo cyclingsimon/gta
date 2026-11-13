@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 20:15. Fertig: **2026-11-13l** = 13k + swissBUILDINGS3D in allen 9 Regionen von Gebiet A (a1–a9). Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 13.11.2026 22:15. Fertig: **2026-11-13m** = 13l + Fussgängerstreifen-Signale SSV 4.11 + Test West↔a8. Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13m (13.11. spät, nicht hochgeladen)
+- world.ts: Fussgängerstreifen auf Hauptstrassen (OSM-Strasse mit L) erhalten beidseitig Signal SSV 4.11 (Name `fgsSignal`).
+- West-Daten (terrain, Luftbild, Horizont, Bus, Züge, Wald) vom Server gta.simon-infanger.ch über den Browser geholt → `public/data/west/` (identisch mit Server, nur nötig für Tests; liegen jetzt auch im ZIP). b3d/ground West weiterhin nur auf dem Server.
+- Test `tests/region_west_a8.py`: West → a8 Dialog «Willst du nach Malters fahren?», Wechsel mit Position (−8486, 1271), zurück a8 → West («Littau»), keine Fehler. Nord ↔ a9/a6 weiterhin ungetestet (Nord-Daten nicht lokal; gleicher Code).
+- ZIP `Luksi Rescue 2026-11-13m.zip`. Nicht hochgeladen.
 
 ## Version 13l (13.11. abends, nicht hochgeladen)
 - 3D-Häuser für alle A-Regionen per chunk()-Übertragung (Simon hat Download-Frage nicht beantwortet; Weg funktioniert, kostet aber ~1 Tool-Aufruf je 190 kB). Gebäude: a1 4632, a2 3366, a3 2215, a4 2848, a5 2924, a6 4169, a7 2676, a8 3737, a9 4179. Rohkacheln in `data/a/b3dm_<id>` (nicht im Repo).
