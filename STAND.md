@@ -1,7 +1,7 @@
 # Luksi Rescue Luzern – STAND
 
 Stand: 13.11.2026 07:55. **Live: 2026-11-13b** (von Claude per FileZilla hochgeladen, 13.11. ca. 07:50, Simon: «Lade 13b dann hoch»; geprüft: ausgelieferte JS enthält 13b, data/west, data/ost, aerial_hr, Schrift vorhanden, stats/config.php und stats/data/stats.sqlite liefern 403). 12z und 13a waren nie live. Lokal auf dem PC: `Downloads\luksi-rescue\web-13b` (Vollstand).
-Lokal auf dem PC: `Downloads\luksi-rescue\web-n` (Vollstand w), `web-x` (nur die in x geänderten Dateien). Vollpakete: `Luksi Rescue 2026-11-12x.zip`, ZIP 12z/13a liegen nur in Claudes Arbeitsumgebung bzw. im Chat.
+Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
