@@ -50,7 +50,9 @@ R = [('S-Bahn Littau', 'sbb', (190, 240), (-3801, -245)),
      ('S-Bahn Emmenbrücke', 'sbb', (160, 240), (-1640, -1101)),
      ('Zentralbahn Luzern–Horw', 'zb', (130, 330), (361, 6299))]
 if os.environ.get('LR') == 'nord':  # Region Nord: Strecken zwischen Spielfeldrändern (Kreuzungspunkte der Gleise mit dem Rand)
-    R = [('S-Bahn Rothenburg', 'sbb', (-1580, -552), (-2027, -3899)),
+    # OSM-Streckennummern (Abfrage 13.11.): 500 Rothenburg–Olten verlässt das Feld am Nordrand bei x ≈ −2026, 651 Seetalbahn bei x ≈ −1998
+    R = [('S-Bahn Rothenburg', 'sbb', (-1580, -552), (-2026, -3898)),
+         ('S-Bahn Seetal (Hochdorf)', 'sbb', (-1585, -552), (-1998, -3899)),
          ('IR Richtung Zürich', 'sbb', (-1578, -552), (2929, -3899))]
 if os.environ.get('LR') == 'ost':  # Region Ost: S-Bahn Luzern–Küssnacht via Meggen (Westrand bei Würzenbach → Nordostrand Richtung Merlischachen)
     R = [('S-Bahn Küssnacht', 'sbb', (2501, -157), (7499, -1655)), ('S-Bahn Luzern', 'sbb', (7499, -1655), (2501, -157))]

@@ -1,5 +1,20 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13c  Kantonsstrassen wie in echt, Bahnhofplatz und Europaplatz, neue Geschwindigkeiten, Region Süd (Nidwalden)
+- Kantons- und Hauptstrassen nach Schweizer Markierungsnorm (SN 640 850, Merkblätter Stadt Bern): Fahrstreifen aus OpenStreetMap (Anzahl, Velo- und Busstreifen, Trottoirs, Tempo; 884 Strassenstücke in Luzern), Leitlinien weiss 3 m Strich / 6 m Lücke innerorts, Sicherheitslinie ab 4 Streifen, Velostreifen gelb mit gelbem Velo-Zeichen, Busstreifen gelb mit «BUS», weisse Randlinien nur noch ausserorts (vorher überall), an Kreuzungen keine Längslinien. Annahme: ausserorts Leitlinie 6 m / 12 m. Fahrbahnbreite aus der Streifenzahl (3.1 m je Streifen, 1.5 m je Velostreifen)
+- Trottoirs: 12 cm hoch mit hellem Randstein, grauer Belag – an Hauptstrassen mit Trottoir-Angabe und bei 1419 separat erfassten Gehwegen, die neben einer Fahrstrasse liegen
+- Leitpfosten (weiss mit schwarzem Band) alle 50 m an Strassen ausserorts
+- Asphalt dunkler und mit Flicken und Fugen; Fuss- und Velowege grau statt beige/rötlich
+- Bahnhofplatz: Belag statt Luftbild, 12 Bus-Inseln mit Randstein, 10 Wartehallen mit Glasdach (OSM), Altes Bahnhofstor in Sandstein (echte Form aus swissBUILDINGS3D), Bahnhofhalle mit Glasfront
+- Europaplatz: heller Granitbelag, Wagenbachbrunnen am richtigen Ort mit echtem Beckenumriss und Fontänen (vorher eine Annahme direkt hinter dem Torbogen)
+- Luzerner Kantonsspital: Neubau Kinderspital/Frauenklinik (Haus 36, eröffnet Herbst 2026) mit weissem Betonraster und roten, orangen und gelben Fensterrahmen wie im Projekt «Les Terrasses»; Hochhaus Spitalzentrum (Haus 31) mit Sichtbeton und Fensterbändern
+- Geschwindigkeiten (Wunsch Simon): Einfach bis 90 km/h, Mittel bis 150 km/h, Schnell bis 269 km/h – jeweils mit Blaulicht. Ohne Blaulicht 70 / 120 / 200 km/h, weil in der Schweiz nur mit Blaulicht und Wechselklanghorn schneller als erlaubt gefahren werden darf (Art. 100 Ziff. 4 SVG, ASTRA-Merkblatt). Stufen heissen jetzt Einfach, Mittel, Schnell
+- Handy: Meldungen erscheinen klein oben statt gross in der Bildmitte, die Einsatz-Bestätigung bleibt kürzer stehen, der Blaulicht-Tipp (Tastatur) entfällt auf Touch-Geräten. Grund: Simon meldete, dass die Meldung beim Annehmen eines Einsatzes die Strasse verdeckte
+- Luzerner Bucht: 4 Kursschiffe (neu eines Richtung Tribschen/Horw) und 4 Motorboote, die ohne Halt Runden drehen; Routen mindestens 15 bis 20 m vom Ufer
+- Spielumfang im Pause-Menü (unter dem Sammelalbum): Regionen, Fläche, Gebäude, Strassen- und Wege-Kilometer (tools/geo/umfang.py)
+- Neue Region «Süd» (Hergiswil, Stansstad, Alpnachstad, Stans-Rand): Gelände, Häuser, Luftbild, Strassen, Buslinien, Zentralbahn Richtung Stans und Brünig, Kursschiffe auf dem Alpnachersee. Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe). 9 Einsätze (Glasi Hergiswil, Bahnhof Hergiswil, Badi Stansstad, Rotzloch, Länderpark, Burg Rotzberg, Alpnachstad, Stanserhorn-Bahn, Spielplatz Matt). Erreichbar: in Luzern bei Hergiswil Matt nach Süden fahren
+- Norden: Seetalbahn (Strecke 651 Richtung Hochdorf) als eigene S-Bahn; die bisherige «S-Bahn Rothenburg» fuhr in Wirklichkeit auf dieser Strecke
+
 2026-11-13b  Fotovergleich: bunte Altstadt, tieferer See, echter Wasserturm
 - Abgleich mit 20 Fotos von Wikimedia Commons (Kapellbrücke, Wasserturm, Weinmarkt, Kornmarkt, Schwanenplatz, Seebrücke, Haldenstrasse, Bahnhof, KKL) und gleichen Ansichten im Spiel
 - Altstadt-Häuser in den Farben der Fotos: Ocker, Terrakotta, Salbeigrau, Altrosa, Steingrau, Sonnengelb, Taubenblau, Crème (vorher fast alle crèmefarben). Die bemalten Häuser am Weinmarkt/Kornmarkt sind deutlich farbiger
