@@ -682,6 +682,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const pp = end ? r.p : r.p.slice().reverse(); const A = pp[pp.length - 2], B = pp[pp.length - 1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < mh + 2) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, nx = -uz, nz = ux, back = mh + 0.6, cx = B[0] - ux * back, cz = B[1] - uz * back, hw = r.w / 2 - 0.2;
         strokeLine(wartel, [[cx - nx * hw, cz - nz * hw], [cx + nx * hw, cz + nz * hw]], 0.36, 0.4, 0.5, 0.25); } }
+    // Höchstgeschwindigkeit (SSV 2.30): Signal 12 m nach einem Punkt, an dem das Tempo laut OSM wechselt, rechts in Fahrtrichtung
+    const vAt = new Map<string, Set<number>>(); for (const r of d.roads) if (r.L && r.v && !r.b) for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = nk(q); if (!vAt.has(k)) vAt.set(k, new Set()); vAt.get(k)!.add(r.v); }
+    const vSigns: number[][] = [];
+    for (const r of d.roads) { if (!r.L || !r.v || r.b || r.p.length < 2) continue;
+      for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
+        const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 14) continue;
+        const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.0; vSigns.push([A[0] + ux * 12 - uz * o, A[1] + uz * 12 + ux * o, Math.atan2(ux, uz), r.v]); } }
     const wegweiser: any[][] = [], arrows: number[][] = [], hsSigns: number[][] = [], leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
@@ -810,6 +817,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const ym = new THREE.Mesh(yg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ym.name = 'yellowLines'; group.add(ym); }
     if (decals.length) group.add(roadDecals(decals, terrain));
     if (arrows.length) group.add(roadDecals(arrows, terrain, true));
+    if (vSigns.length) { const texs = new Map<number, THREE.Texture>(); const pole: THREE.BufferGeometry[] = []; const byV = new Map<number, THREE.BufferGeometry[]>();
+      for (const [x, z, h, v] of vSigns) { let tx = texs.get(v); if (!tx) { tx = canvasTex(64, 64, (g) => { g.clearRect(0, 0, 64, 64); g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 31, 0, 7); g.fill(); g.fillStyle = '#D52B1E'; g.beginPath(); g.arc(32, 32, 30, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 22, 0, 7); g.fill(); g.fillStyle = '#1d1e1b'; g.font = 'bold 24px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(v), 32, 34); }, false); texs.set(v, tx); }
+        const y = terrain.height(x, z); const pgm = new THREE.PlaneGeometry(0.64, 0.64); pgm.rotateY(h + Math.PI); pgm.translate(x, y + 2.3, z); if (!byV.has(v)) byV.set(v, []); byV.get(v)!.push(pgm);
+        const pg = new THREE.CylinderGeometry(0.04, 0.04, 2.3, 6); pg.translate(x, y + 1.15, z); pole.push(pg); }
+      for (const [v, gs] of byV) { const m = new THREE.Mesh(mergeGeometries(gs)!, new THREE.MeshBasicMaterial({ map: texs.get(v)!, transparent: true, side: THREE.DoubleSide })); m.name = 'tempo'; group.add(m); }
+      group.add(new THREE.Mesh(mergeGeometries(pole)!, toon('#8A8F94'))); console.log('[bau] Tempo-Signale', vSigns.length); }
     if (wegweiser.length) { // je Schild eine kleine Canvas-Textur (Luzern ~30 Schilder)
       const steel = toon('#8A8F94'); const posts: THREE.BufferGeometry[] = [];
       for (const [x, z, h, txt] of wegweiser) { const lines = String(txt).split('|'); const H = 0.42 * lines.length + 0.2;

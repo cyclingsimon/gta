@@ -1,5 +1,8 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13f  Tempo-Signale
+- Runde Höchstgeschwindigkeits-Signale (SSV 2.30) 12 m nach jedem Punkt, an dem das Tempo laut OpenStreetMap wechselt, rechts in Fahrtrichtung (Luzern 35 Wechselpunkte)
+
 2026-11-13e  Wegweiser, Wartelinien, Bushalte-Markierung
 - Blaue Vorwegweiser 35 m vor Knoten an Kantonsstrassen mit den Zielen aus OpenStreetMap (z. B. «Horw · Allmend · Strassenverkehrsamt» auf der Luzernerstrasse Kriens) (OSM kennt Ziele an 69 Strassenstücken; ein Schild steht nur dort, wo das Stück vor einem Knoten mindestens 35 m lang ist)
 - Wartelinien (unterbrochene weisse Querlinie) wo eine Nebenstrasse ohne Ampel auf eine Hauptstrasse trifft (SSV 6.13)
