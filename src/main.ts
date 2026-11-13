@@ -1,4 +1,5 @@
 import { openTravel } from './travel';
+import { REGIONS_A } from './regionsA';
 import { Stats } from './stats';
 import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
@@ -20,7 +21,7 @@ const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: 'luzern' | 'nord' | 'ost' | 'west' | 'sued'; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
+interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -30,17 +31,22 @@ function loadSave(): Save {
 let save = loadSave();
 // Regionen: «luzern» (Stadt, Kriens, Horw, Verkehrshaus) und «nord» (Emmenbrücke, Rotsee, Ebikon, Adligenswil, Etappe 2).
 // Gewechselt wird am Nordrand per Neuladen (eigene Daten in data/nord/, Speicher bleibt klein).
-const REGION: 'luzern' | 'nord' | 'ost' | 'west' | 'sued' = /[?&]region=nord/.test(location.search) ? 'nord' : /[?&]region=sued/.test(location.search) ? 'sued' : /[?&]region=ost/.test(location.search) ? 'ost' : /[?&]region=west/.test(location.search) ? 'west' : /[?&]region=luzern/.test(location.search) ? 'luzern' : save.region || 'luzern';
+// 13i: dazu Gebiet A (a1–a9, src/regionsA.ts). Unbekannte/nicht gebaute Region → Luzern.
+const KNOWN_REGIONS = ['luzern', 'nord', 'ost', 'west', 'sued', ...Object.keys(REGIONS_A)];
+const REGION: string = ((q) => KNOWN_REGIONS.includes(q || '') ? q! : KNOWN_REGIONS.includes(save.region || '') ? save.region! : 'luzern')(new URLSearchParams(location.search).get('region'));
+const RA = REGIONS_A[REGION]; // Gebiet-A-Region oder undefined
 const DIR = REGION === 'luzern' ? 'data/' : `data/${REGION}/`;
 /** Ost hat kein Kinderspital: Einsätze enden beim (erfundenen) Rettungsposten Meggen beim Gemeindehaus */
-const HOSP = REGION === 'ost' || REGION === 'west' ? 'Rettungsposten' : REGION === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
-const RP = REGION === 'ost' || REGION === 'west'; // Ost/West: Ziel ist ein (erfundener) Rettungsposten statt des Kinderspitals
-const SP = REGION === 'sued'; // Süd: Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe)
-const TO_H = RP ? 'zum Rettungsposten' : SP ? 'ins Spital Nidwalden' : 'ins Kinderspital', AT_H = RP ? 'am Rettungsposten' : SP ? 'im Spital Nidwalden' : 'im Kinderspital';
+const HOSP = RA ? (RA.hosp.kind === 'spital' ? RA.hosp.label : 'Rettungsposten') : REGION === 'ost' || REGION === 'west' ? 'Rettungsposten' : REGION === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
+const RP = RA ? RA.hosp.kind === 'rp' : REGION === 'ost' || REGION === 'west'; // Ost/West: Ziel ist ein (erfundener) Rettungsposten statt des Kinderspitals
+const SP = RA ? RA.hosp.kind === 'spital' : REGION === 'sued';
+const SPN = RA && RA.hosp.kind === 'spital' ? RA.hosp.label : 'Spital Nidwalden'; // Süd: Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe)
+const TO_H = RP ? 'zum Rettungsposten' : SP ? `ins ${SPN}` : 'ins Kinderspital', AT_H = RP ? 'am Rettungsposten' : SP ? `im ${SPN}` : 'im Kinderspital';
 if (REGION === 'nord') Object.assign(AERIAL, { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 });
 if (REGION === 'ost') Object.assign(AERIAL, { E0: 2668400, E1: 2673700, N0: 1209000, N1: 1213700 });
 if (REGION === 'west') Object.assign(AERIAL, { E0: 2657400, E1: 2662600, N0: 1208400, N1: 1212900 });
 if (REGION === 'sued') Object.assign(AERIAL, { E0: 2662800, E1: 2671200, N0: 1200300, N1: 1205800 });
+if (RA) Object.assign(AERIAL, RA.aerial);
 const MOBILE = isTouchDevice();
 const QUALITY_: 'echt' | 'leicht' = /[?&]q=leicht/.test(location.search) ? 'leicht' : /[?&]q=echt/.test(location.search) ? 'echt' : save.quality || (MOBILE ? 'leicht' : 'echt');
 const QUALITY = QUALITY_;
@@ -319,6 +325,7 @@ function snap(p: [number, number], carOnly: boolean | 'main' = 'main'): [number,
 }
 
 function setupMissions() {
+  if (RA) { setupMissionsA(); return; }
   if (REGION === 'nord') { setupMissionsNord(); return; }
   if (REGION === 'ost') { setupMissionsOst(); return; }
   if (REGION === 'west') { setupMissionsWest(); return; }
@@ -401,6 +408,15 @@ function setupMissionsWest() {
   ];
 }
 
+/** Gebiet A: Einsätze aus data/aN/missions.json (tools/geo/missions_a.py, echte OSM-Orte) */
+let MA: { missions: { id: string; title: string; radio: string; place: string; at: [number, number]; game: string; transport: boolean; prop: string; thanks: string }[] } | null = null;
+const missionsAP: Promise<any> | null = RA ? fetch(`${DIR}missions.json?v=${VERSION}`).then((r) => r.json()).catch(() => null) : null;
+function setupMissionsA() {
+  const G: Record<string, any> = { plaster: plasterGame, bandage: bandageGame, memory: memoryGame, water: waterGame, thermo: thermoGame, cat: catGame, comfort: comfortGame };
+  const PR: Record<string, any> = { kid: propKid, cat: propCat, bike: propBike, tourist: propTourist };
+  missions = (MA?.missions || []).map((m) => ({ id: m.id, title: m.title, radio: m.radio, place: m.place, at: snap(m.at, true), game: G[m.game] || comfortGame, transport: m.transport, prop: PR[m.prop] || propKid, thanks: m.thanks }));
+}
+
 function setupMissionsSued() {
   // Orte aus OpenStreetMap (Etappe 4: Hergiswil, Stansstad, Alpnachstad, Stans); jeweils an die nächste Fahrstrasse gesetzt
   const at = (p: [number, number]) => snap(p, true);
@@ -469,12 +485,12 @@ function setupFun(data: CityData) {
     chosen.push(pts.splice(bi, 1)[0]);
   }
   const hearts = chosen.slice(1).map((p) => snap([p[0], p[1]]));
-  fun = new Fun(terrain, sites, stops, hearts, (REGION === 'nord' ? save.heartsN : REGION === 'ost' ? save.heartsO : REGION === 'west' ? save.heartsW : REGION === 'sued' ? save.heartsS : save.hearts) || [],
+  fun = new Fun(terrain, sites, stops, hearts, (RA ? (save.heartsA || {})[REGION] : REGION === 'nord' ? save.heartsN : REGION === 'ost' ? save.heartsO : REGION === 'west' ? save.heartsW : REGION === 'sued' ? save.heartsS : save.hearts) || [],
     (x, z) => { sfxPlay.boing(); comic(x, z, 2); stats.tot.boings++; },
-    (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else if (REGION === 'ost') save.heartsO = fun!.heartsGot(); else if (REGION === 'west') save.heartsW = fun!.heartsGot(); else if (REGION === 'sued') save.heartsS = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
+    (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (RA) (save.heartsA ||= {})[REGION] = fun!.heartsGot(); else if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else if (REGION === 'ost') save.heartsO = fun!.heartsGot(); else if (REGION === 'west') save.heartsW = fun!.heartsGot(); else if (REGION === 'sued') save.heartsS = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
       const el = $('#hearts'); el.textContent = `♥ ${n}/${tot}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neue Lackierung freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
-      toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : REGION === 'ost' ? 'in Meggen und Würzenbach' : REGION === 'west' ? 'in Littau, Obernau und Blatten' : REGION === 'sued' ? 'in Hergiswil, Stansstad und Stans' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
+      toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${RA ? 'in ' + RA.name : REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : REGION === 'ost' ? 'in Meggen und Würzenbach' : REGION === 'west' ? 'in Littau, Obernau und Blatten' : REGION === 'sued' ? 'in Hergiswil, Stansstad und Stans' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
   $('#hearts').textContent = `♥ ${fun.heartCount}/${fun.heartTotal}`;
   scene.add(fun.group);
   // Tiere: Schwäne auf Wasser nahe Ufer (Stadt + Horwer Bucht), Kühe auf Weiden
@@ -483,8 +499,8 @@ function setupFun(data: CityData) {
   for (let k = 0; k < 4000 && swans.length < 46; k++) {
     const city = k % 3 !== 0;
     // Nord: Rotsee und Reuss bei Emmenbrücke; Luzern: Seebecken/Reuss und Horwer Bucht
-    const x = REGION === 'sued' ? -2500 + hsh(k, 1) * 6500 : REGION === 'west' ? -8400 + hsh(k, 1) * 4700 : REGION === 'ost' ? 2700 + hsh(k, 1) * 4600 : REGION === 'nord' ? (city ? -100 + hsh(k, 1) * 1300 : -3000 + hsh(k, 2) * 1500) : city ? -700 + hsh(k, 1) * 1500 : 200 + hsh(k, 2) * 950;
-    const z = REGION === 'sued' ? 6300 + hsh(k, 3) * 4400 : REGION === 'west' ? -1200 + hsh(k, 3) * 4100 : REGION === 'ost' ? 400 + hsh(k, 3) * 2050 : REGION === 'nord' ? (city ? -2900 + hsh(k, 3) * 1500 : -2400 + hsh(k, 4) * 1300) : city ? -500 + hsh(k, 3) * 1000 : 3600 + hsh(k, 4) * 2600;
+    const x = RA ? RA.b[0] + hsh(k, 1) * (RA.b[2] - RA.b[0]) : REGION === 'sued' ? -2500 + hsh(k, 1) * 6500 : REGION === 'west' ? -8400 + hsh(k, 1) * 4700 : REGION === 'ost' ? 2700 + hsh(k, 1) * 4600 : REGION === 'nord' ? (city ? -100 + hsh(k, 1) * 1300 : -3000 + hsh(k, 2) * 1500) : city ? -700 + hsh(k, 1) * 1500 : 200 + hsh(k, 2) * 950;
+    const z = RA ? RA.b[1] + hsh(k, 3) * (RA.b[3] - RA.b[1]) : REGION === 'sued' ? 6300 + hsh(k, 3) * 4400 : REGION === 'west' ? -1200 + hsh(k, 3) * 4100 : REGION === 'ost' ? 400 + hsh(k, 3) * 2050 : REGION === 'nord' ? (city ? -2900 + hsh(k, 3) * 1500 : -2400 + hsh(k, 4) * 1300) : city ? -500 + hsh(k, 3) * 1000 : 3600 + hsh(k, 4) * 2600;
     if (!isW(x, z)) continue;
     const shore = [[14, 0], [-14, 0], [0, 14], [0, -14]].some(([a, b]) => !isW(x + a, z + b));
     if (!shore || swans.some((q) => Math.hypot(q[0] - x, q[1] - z) < 9)) continue;
@@ -503,8 +519,8 @@ function setupFun(data: CityData) {
     // Süd: Kursschiffe Hergiswil–Stansstad, auf dem Alpnachersee und vor dem Bürgenstock (Wegpunkte auf Wasser geprüft, 12 m Uferabstand)
     if (REGION === 'sued') { ships = new Ships([[[600, 7300], [1300, 7350], [1900, 7650], [1400, 7700]], [[200, 9300], [-700, 9600], [-1500, 10200], [-900, 10000], [300, 9800], [1200, 9100]], [[1200, 6800], [2400, 6900], [3200, 7300], [2000, 7500]]]); scene.add(ships.group); }
     const bs: number[][] = []; const wet = (x: number, z: number) => world.mask.at(x, z) === 1;
-    for (let k = 0; k < 600 && bs.length < (REGION === 'ost' || REGION === 'sued' ? 14 : 8); k++) {
-      const x = REGION === 'sued' ? -2000 + hsh(k, 7) * 5500 : REGION === 'ost' ? 2700 + hsh(k, 7) * 4700 : -600 + hsh(k, 7) * 2200, z = REGION === 'sued' ? 6500 + hsh(11, k) * 4000 : REGION === 'ost' ? 600 + hsh(11, k) * 1850 : -2750 + hsh(11, k) * 1500; let ok = wet(x, z);
+    for (let k = 0; k < (RA ? 3000 : 600) && bs.length < (REGION === 'ost' || REGION === 'sued' ? 14 : 8); k++) {
+      const x = RA ? RA.b[0] + hsh(k, 7) * (RA.b[2] - RA.b[0]) : REGION === 'sued' ? -2000 + hsh(k, 7) * 5500 : REGION === 'ost' ? 2700 + hsh(k, 7) * 4700 : -600 + hsh(k, 7) * 2200, z = RA ? RA.b[1] + hsh(11, k) * (RA.b[3] - RA.b[1]) : REGION === 'sued' ? 6500 + hsh(11, k) * 4000 : REGION === 'ost' ? 600 + hsh(11, k) * 1850 : -2750 + hsh(11, k) * 1500; let ok = wet(x, z);
       for (let q = 0; q < 8 && ok; q++) ok = wet(x + Math.cos(q * 0.785) * 14, z + Math.sin(q * 0.785) * 14);
       if (ok && !bs.some((b) => Math.hypot(b[0] - x, b[1] - z) < 60)) bs.push([x, z, terrain.height(x, z) + 0.1]); }
     if (bs.length) { boats = new Boats(bs); scene.add(boats.group); }
@@ -626,7 +642,7 @@ function handover() {
   const reasons = current.transport
     ? [`✔ Einsatz erfüllt`, bumps <= 2 ? '✔ Sanft gefahren – der Patient hat nicht gewackelt' : `○ ${bumps} Rempler – nächstes Mal sanfter`, phaseTime <= parTime ? `✔ Zügig ${AT_H}` : `○ ${Math.round(phaseTime)} s – geht noch schneller`]
     : ['✔ Einsatz erfüllt', '✔ Tier gerettet', '✔ Bonus für Tierliebe'];
-  ov.innerHTML = `<div class="mg-card passed"><h2>Einsatz erfüllt!</h2><p class="mp-sub">${current.transport ? (RP ? 'Übergabe am Rettungsposten' : SP ? 'Übergabe im Spital Nidwalden' : 'Übergabe im Kinderspital') : 'Tier gerettet'}</p><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi">
+  ov.innerHTML = `<div class="mg-card passed"><h2>Einsatz erfüllt!</h2><p class="mp-sub">${current.transport ? (RP ? 'Übergabe am Rettungsposten' : SP ? `Übergabe im ${SPN}` : 'Übergabe im Kinderspital') : 'Tier gerettet'}</p><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi">
     <div class="stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${i * 0.35}s">★</span>`).join('')}</div>
     <p>${current.thanks}</p><ul class="reasons">${reasons.map((r) => `<li>${r}</li>`).join('')}</ul>
     <p class="small">Respekt: <b>${totalStars()} ★</b></p><button class="big" id="weiter">Weiterfahren <kbd>Enter</kbd>/<kbd>A</kbd></button></div>`;
@@ -641,7 +657,7 @@ function handover() {
 function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
-  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Nice City');
+  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (RA ? `Freie Fahrt in ${RA.name}` : REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Nice City');
   else if (phase === 'toScene') m.textContent = `${current.title}: zum ${current.place}`;
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
   else if (phase === 'toHospital') m.textContent = `${current.title}: ${TO_H}`;
@@ -809,7 +825,7 @@ function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
 let paused = true; // bis zum Start
 // Spielumfang (tools/geo/umfang.py → data/umfang.json): im Pause-Menü unter dem Sammelalbum
 let UMFANG: { gesamt: { km2: number; gebaeude: number; strassen_km: number; wege_km: number }; regionen: Record<string, unknown> } | null = null;
-const REGION_NAME: Record<string, string> = { luzern: 'Luzern', nord: 'Norden (Emmen, Ebikon)', ost: 'Meggen', west: 'Littau', sued: 'Nidwalden' };
+const REGION_NAME: Record<string, string> = { luzern: 'Luzern', nord: 'Norden (Emmen, Ebikon)', ost: 'Meggen', west: 'Littau', sued: 'Nidwalden', ...Object.fromEntries(Object.entries(REGIONS_A).map(([k, r]) => [k, r.name])) };
 fetch('data/umfang.json').then((r) => r.json()).then((j) => { UMFANG = j; showLoadUmfang(); }).catch(() => { /* ohne Anzeige */ });
 // 13i (Wunsch Simon): Schon im Ladebild sagen, wie gross die Welt ist – darum dauert das Laden
 function showLoadUmfang() {
@@ -950,11 +966,26 @@ let badgeT = 0;
 let stageBP: Promise<void> | null = null;
 const TEST_NOEDGE = /[?&]noedge/.test(location.search) || (TEST && !/[?&]edge/.test(location.search)); // Tests teleportieren frei
 let edgeWarned = false;
+/** Felder aller Regionen (Spiel-Meter) – für den Wechsel am Rand und die Schnellreise */
+const REG_BOUNDS: Record<string, [number, number, number, number]> = { luzern: [-3800, -1100, 2700, 6300], nord: [-3800, -3900, 4600, -550], ost: [2500, -2000, 7500, 2500], west: [-8500, -1300, -3600, 3000], sued: [-3000, 6100, 4600, 11000],
+  ...Object.fromEntries(Object.entries(REGIONS_A).map(([k, r]) => [k, r.b])) };
+function edgeNeighbor(): string | null {
+  const B = REG_BOUNDS[REGION]; if (!B || car.speed < 1) return null;
+  const M = 60, fx = car.fx, fz = car.fz;
+  const outward = (car.x < B[0] + M && fx < -0.3) || (car.x > B[2] - M && fx > 0.3) || (car.z < B[1] + M && fz < -0.3) || (car.z > B[3] - M && fz > 0.3);
+  if (!outward) return null;
+  for (const [k, b] of Object.entries(REG_BOUNDS)) {
+    if (k === REGION || !(RA || REGIONS_A[k])) continue; // Wechsel zwischen den alten Regionen regeln die Linien oben
+    if (car.x > b[0] + 10 && car.x < b[2] - 10 && car.z > b[1] + 10 && car.z < b[3] - 10) return k;
+  }
+  return null;
+}
 function checkRegionEdge(dt: number) {
   // Luzern → Nord: z < −1000 (nicht ganz im Westen); Luzern → Ost: x > 2660 (Seeburg/Würzenbach, nicht an Einsatzorten); Nord/Ost → Luzern zurück
-  let other: 'luzern' | 'nord' | 'ost' | 'west' | 'sued' = 'luzern', out = false;
+  let other: string = 'luzern', out = false;
   const nearMission = missions.some((m) => Math.hypot(m.at[0] - car.x, m.at[1] - car.z) < 120);
-  if (REGION === 'luzern') {
+  if (RA) { /* Gebiet A: nur die allgemeine Regel unten */ }
+  else if (REGION === 'luzern') {
     if (car.z < -1000 && car.x > -3700 && car.x < 2400) { other = 'nord'; out = true; }
     else if (car.x > 2660 && car.z > -1000 && car.z < 2450 && !nearMission) { other = 'ost'; out = true; }
     else if (car.x < -3720 && car.z > -1000 && car.z < 2950 && !nearMission) { other = 'west'; out = true; }
@@ -963,17 +994,20 @@ function checkRegionEdge(dt: number) {
   else if (REGION === 'nord') out = car.z > -650;
   else if (REGION === 'ost') out = car.x < 2560;
   else if (REGION === 'sued') out = car.z < 6170 && car.x > -2950 && car.x < 2650;
-  else out = car.x > -3660;
-  const OTHER_NAME = other === 'nord' ? 'Emmenbrücke' : other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau und Blatten' : other === 'sued' ? 'Hergiswil und Stansstad' : 'Luzern';
+  else if (REGION === 'west') out = car.x > -3660;
+  // 13i Gebiet A: am Feldrand (60 m) in Fahrtrichtung nach aussen → Nachbarregion, deren Feld den Punkt enthält (Felder überlappen 100–300 m)
+  if (!out) { const g = edgeNeighbor(); if (g) { other = g; out = true; } }
+  const OTHER_NAME = REGIONS_A[other] ? REGIONS_A[other].name : other === 'nord' ? 'Emmenbrücke' : other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau und Blatten' : other === 'sued' ? 'Hergiswil und Stansstad' : 'Luzern';
   if (!out) { edgeWarned = false; return; }
+  if (REGION !== 'luzern' && !RA && !REGIONS_A[other] && other !== 'luzern') return;
   if (phase !== 'free' && phase !== 'offer' || players.length > 1) {
-    if (!edgeWarned) toast(players.length > 1 ? 'Zu zweit geht es hier nicht weiter – die Karte endet hier.' : REGION === 'luzern' ? `Nach ${OTHER_NAME} geht es nach dem Einsatz weiter.` : 'Zurück nach Luzern geht es nach dem Einsatz weiter.', 2600);
+    if (!edgeWarned) toast(players.length > 1 ? 'Zu zweit geht es hier nicht weiter – die Karte endet hier.' : (REGION === 'luzern' || RA || REGIONS_A[other]) ? `Nach ${OTHER_NAME} geht es nach dem Einsatz weiter.` : 'Zurück nach Luzern geht es nach dem Einsatz weiter.', 2600);
     edgeWarned = true; return;
   }
   // 13h (Simon): Wechsel nur nach Bestätigung per Knopfdruck
   if (edgeWarned || document.querySelector('.mg')) return;
   edgeWarned = true;
-  const ZIEL = REGION === 'luzern' ? (other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau, Obernau und Blatten' : other === 'sued' ? 'Hergiswil, Stansstad und Stans' : 'Emmenbrücke, Ebikon und Adligenswil') : 'Luzern';
+  const ZIEL = REGIONS_A[other] ? REGIONS_A[other].name : other !== 'luzern' && REGION !== 'luzern' ? REGION_NAME[other] : REGION === 'luzern' ? (other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau, Obernau und Blatten' : other === 'sued' ? 'Hergiswil, Stansstad und Stans' : 'Emmenbrücke, Ebikon und Adligenswil') : 'Luzern';
   for (const p of players) p.car.speed = 0;
   const ov = document.createElement('div'); ov.className = 'mg';
   ov.innerHTML = `<div class="mg-card ask"><h2>Neue Gegend!</h2><p class="mg-hint">Willst du nach <b>${ZIEL}</b> fahren?</p>
@@ -1157,7 +1191,7 @@ async function boot() {
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
-  status.textContent = `Lade ${REGION_NAME[REGION]} …`;
+  status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;
   const echt = QUALITY === 'echt';
   // alles gleichzeitig anfordern; Stufe B (3D-Häuser, feiner Boden) wird erst nach dem Start fertig gebaut
   const pCity = getJSON('city.json'), pTmeta = getJSON('terrain.json'), pTraw = getBuf('terrain.bin');
@@ -1197,7 +1231,9 @@ async function boot() {
   if (REGION === 'ost') world.hospital = { x: 4990, z: 470, name: 'Rettungsposten Meggen' };
   if (REGION === 'west') world.hospital = { x: -3752, z: 173, name: 'Rettungsposten Littau' };
   if (REGION === 'sued') world.hospital = { x: 3753, z: 10146, name: 'Spital Nidwalden' };
+  if (RA) world.hospital = { x: RA.hosp.x, z: RA.hosp.z, name: RA.hosp.label };
   hospitalBay = snap([world.hospital.x, world.hospital.z]);
+  if (missionsAP) MA = await missionsAP;
   setupMissions();
   setupFun(data);
   if (save.evening) setEvening(true);
@@ -1230,7 +1266,7 @@ async function boot() {
   }
   // Wegweiser an der Regionsgrenze (Hauptstrassen, die die Wechsel-Linie kreuzen)
   // Linien: [Achse 'z'|'x', Wert, Text, nur wo die andere Koordinate in [a, b] liegt]
-  const lines: [string, number, string, number, number][] = REGION === 'luzern' ? [['z', -1000, '⬆ Emmenbrücke · Ebikon', -3700, 2400], ['x', 2660, '➡ Meggen', -1000, 2450], ['x', -3720, '⬅ Littau · Blatten', -1000, 2950], ['z', 6230, '⬇ Hergiswil · Stansstad', -2900, 2650]]
+  const lines: [string, number, string, number, number][] = RA ? [] : REGION === 'luzern' ? [['z', -1000, '⬆ Emmenbrücke · Ebikon', -3700, 2400], ['x', 2660, '➡ Meggen', -1000, 2450], ['x', -3720, '⬅ Littau · Blatten', -1000, 2950], ['z', 6230, '⬇ Hergiswil · Stansstad', -2900, 2650]]
     : REGION === 'nord' ? [['z', -650, '⬇ Luzern · Kinderspital', -1e9, 1e9]] : REGION === 'west' ? [['x', -3660, '➡ Luzern · Kinderspital', -1e9, 1e9]] : REGION === 'sued' ? [['z', 6170, '⬆ Luzern · Kinderspital', -2950, 2650]] : [['x', 2560, '⬅ Luzern · Kinderspital', -1e9, 1e9]];
   for (const [ax, lv, txt, a0, a1] of lines) { const put: number[][] = [];
     for (const r of data.roads as any[]) { if (!['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) continue;
@@ -1308,7 +1344,7 @@ function start() {
   setTimeout(() => $('#start').remove(), 600);
   paused = false;
   if (travelArrived) { toast(`🗺️ Angekommen: ${travelArrived}!`, 3000); travelArrived = ''; return; }
-  toast(REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Der Rettungsposten ist in Littau Dorf.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
+  toast(RA ? RA.welcome : REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Der Rettungsposten ist in Littau Dorf.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
 }
 $('#start-btn').onclick = start;
 setupTouch();

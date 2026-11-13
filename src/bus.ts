@@ -205,6 +205,7 @@ export class Buses {
   }
 
   private spawn(pls: BusPlayer[], initial: boolean) {
+    if (!this.lines.length) return; // 13i: Regionen ohne Buslinien
     // Linien bevorzugen, deren Weg nahe einem Spieler verläuft
     for (let k = 0; k < 40; k++) {
       const li = Math.floor(this.rnd() * this.lines.length), l = this.lines[li], C = this.cum[li];

@@ -17,6 +17,13 @@ except ImportError: pass
 for f in glob.glob('data/e2/alti/*.i16') + glob.glob('data/e3/alti/*.i16') + glob.glob('data/e4/alti/*.i16'):
     E, N = [int(v) for v in os.path.basename(f)[:-4].split('-')]
     put(E * 1000, (N + 1) * 1000, np.fromfile(f, '<i2').reshape(500, 500).astype(np.float32) / 10 + 400)
+# Gebiet A (13i): Kacheln im Browser auf 4 m gemittelt (250×250, dm relativ 400 m) → auf 2 m interpoliert
+from scipy import ndimage as _nd
+for f in glob.glob('data/a/alti4/*.i16'):
+    E, N = [int(v) for v in os.path.basename(f)[:-4].split('-')]
+    a4 = np.fromfile(f, '<i2').reshape(250, 250).astype(np.float32) / 10 + 400
+    a2 = _nd.zoom(np.pad(a4, 1, mode='edge'), 2, order=1)[1:501, 1:501]
+    put(E * 1000, (N + 1) * 1000, a2)
 def lv95v(x, z):
     import math
     lat = 47.0517 - z / 110574; lon = 8.3077 + x / (math.cos(47.0517 * math.pi / 180) * 111320)

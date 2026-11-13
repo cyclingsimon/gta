@@ -1,6 +1,8 @@
 // 13i Schnellreise (Wunsch Simon 13.11.): Karte der Spielwelt, Ziel wählen, kurzer Zeitraffer, Ankunft.
 // Regionen werden weiterhin einzeln geladen; Reise in eine andere Region = Neuladen mit Zielort.
 
+import { REGIONS_A } from './regionsA';
+
 export type RegionId = 'luzern' | 'nord' | 'ost' | 'west' | 'sued';
 export interface TravelRegion { id: RegionId | string; name: string; b: [number, number, number, number]; ready: boolean }
 export interface TravelDest { id: string; name: string; sub: string; icon: string; region: string; to: 'hosp' | [number, number]; ready: boolean }
@@ -12,6 +14,7 @@ export const REGIONS: TravelRegion[] = [
   { id: 'ost', name: 'Meggen', b: [2500, -2000, 7500, 2500], ready: true },
   { id: 'west', name: 'Littau', b: [-8500, -1300, -3600, 3000], ready: true },
   { id: 'sued', name: 'Nidwalden', b: [-3000, 6100, 4600, 11000], ready: true },
+  ...Object.entries(REGIONS_A).map(([id, r]) => ({ id, name: r.name, b: r.b, ready: true })),
 ];
 
 /** Ziele: Spitäler und Ortszentren. 'hosp' = Übergabeplatz des Spitals/Rettungspostens der Region. */
@@ -22,9 +25,11 @@ export const DESTS: TravelDest[] = [
   { id: 'emmen', name: 'Emmenbrücke', sub: 'Bahnhof', icon: '🚉', region: 'nord', to: [-1929, -2086], ready: true },
   { id: 'meggen', name: 'Meggen', sub: 'Rettungsposten', icon: '🚑', region: 'ost', to: 'hosp', ready: true },
   { id: 'littau', name: 'Littau', sub: 'Rettungsposten', icon: '🚑', region: 'west', to: 'hosp', ready: true },
-  // Ausbau «Gebiet A» (geplant): erscheinen grau mit «kommt bald», bis die Region gebaut ist
-  { id: 'wolhusen', name: 'Spital Wolhusen', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-wolhusen', to: 'hosp', ready: false },
-  { id: 'sursee', name: 'Spital Sursee', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-sursee', to: 'hosp', ready: false },
+  // Gebiet A (13i): Spitäler (LUKS Sursee, LUKS Wolhusen) und Rettungsposten der gebauten Regionen
+  ...Object.entries(REGIONS_A).map(([id, r]) => ({ id, name: r.hosp.kind === 'spital' ? r.hosp.label : r.name, sub: r.hosp.kind === 'spital' ? 'LUKS' : r.hosp.label, icon: r.hosp.kind === 'spital' ? '🏥' : '🚑', region: id, to: 'hosp' as const, ready: true })),
+  // noch nicht gebaut: grau mit «kommt bald»
+  ...(Object.values(REGIONS_A).some((r) => /Wolhusen/.test(r.hosp.label)) ? [] : [{ id: 'wolhusen', name: 'Spital Wolhusen', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-wolhusen', to: 'hosp' as const, ready: false }]),
+  ...(Object.values(REGIONS_A).some((r) => /Sursee/.test(r.hosp.label)) ? [] : [{ id: 'sursee', name: 'Spital Sursee', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-sursee', to: 'hosp' as const, ready: false }]),
 ];
 /** Lage der noch nicht gebauten Ziele auf der Karte (ungefähr, Annahme ±1 km) */
 const SOON_AT: Record<string, [number, number]> = { wolhusen: [-17700, -800], sursee: [-15550, -13550] };
@@ -48,6 +53,7 @@ const destAt = (d: TravelDest, h: TravelHost): [number, number] => {
   const r = REGIONS.find((q) => q.id === d.region);
   // grobe Lage der Spitäler anderer Regionen für die Karte (Annahme, nur Anzeige)
   const HOSP_GUESS: Record<string, [number, number]> = { luzern: [-547, -840], sued: [3753, 10146], ost: [4990, 470], west: [-3752, 173], nord: [-547, -840] };
+  if (REGIONS_A[d.region]) return [REGIONS_A[d.region].hosp.x, REGIONS_A[d.region].hosp.z];
   return HOSP_GUESS[d.region] || (r ? [(r.b[0] + r.b[2]) / 2, (r.b[1] + r.b[3]) / 2] : [0, 0]);
 };
 

@@ -7,7 +7,9 @@ from shapely.geometry import LineString, Point
 from shapely.strtree import STRtree
 KX, KZ = math.cos(math.radians(47.0517)) * 111320, 110574
 L = lambda g: (round((g['lon'] - 8.3077) * KX, 2), round(-(g['lat'] - 47.0517) * KZ, 2))
-ways = [e for e in json.load(open('data/e4/osm/strassen.json'))['elements'] if e.get('geometry')]
+import glob as _g
+RAW = [f for p in os.environ.get('LR_OSMRAW', '').split(',') if p for f in sorted(_g.glob(p))]  # Gebiet A: Hauptstrassen aus den eigenen Rohdaten
+ways = [e for f in RAW for e in json.load(open(f))['elements'] if e.get('geometry') and e['type'] == 'way' and e.get('tags', {}).get('highway', '').split('_')[0] in ('trunk', 'primary', 'secondary', 'tertiary')] if RAW else [e for e in json.load(open('data/e4/osm/strassen.json'))['elements'] if e.get('geometry')]
 geoms = [LineString([L(g) for g in e['geometry'] if g]) for e in ways]
 tree = STRtree(geoms)
 MAIN = ('trunk', 'primary', 'secondary', 'tertiary', 'trunk_link', 'primary_link', 'secondary_link')

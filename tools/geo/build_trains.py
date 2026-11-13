@@ -61,12 +61,30 @@ if os.environ.get('LR') == 'west':  # Region West: S-Bahn Luzern–Littau–Malt
 if os.environ.get('LR') == 'sued':  # Region Süd: Zentralbahn Luzern–Hergiswil, dort Richtung Stans/Engelberg und Brünig (Alpnachstad)
     R = [('Zentralbahn Stans', 'zb', (305, 6101), (4599, 10387)), ('Zentralbahn Luzern', 'zb', (4599, 10387), (305, 6101)),
          ('Zentralbahn Brünig', 'zb', (303, 6101), (-2317, 10999)), ('Zentralbahn Luzern', 'zb', (-2317, 10999), (303, 6101))]
+if os.environ.get('LR', '').startswith('a'):  # Gebiet A (13i): Strecken automatisch zwischen den Punkten, wo Gleise den Feldrand kreuzen
+    from shapely.geometry import box as _box
+    X0, Z0, X1, Z1 = c['meta']['bounds']; edge = _box(X0 + 1, Z0 + 1, X1 - 1, Z1 - 1).exterior
+    xs = []
+    for r in c.get('rail', []):
+        if len(r) < 2: continue
+        g = LineString(r).intersection(edge)
+        for q in ([g] if g.geom_type == 'Point' else list(getattr(g, 'geoms', []))):
+            if q.geom_type == 'Point' and not any(math.dist((q.x, q.y), x) < 80 for x in xs): xs.append((round(q.x, 1), round(q.y, 1)))
+    R, used = [], []
+    pairs = sorted(((math.dist(p, q), p, q) for i, p in enumerate(xs) for q in xs[i + 1:]), reverse=True)
+    for _, p, q in pairs:
+        r = route(p, q)
+        if not r or r[1] < 1500 or math.dist(r[0][0], p) > 40 or math.dist(r[0][-1], q) > 40: continue
+        mid = r[0][len(r[0]) // 2]
+        if any(min(math.dist(mid, u) for u in uu) < 30 for uu in used): continue
+        used.append(r[0]); R += [('S-Bahn', 'sbb', p, q), ('S-Bahn', 'sbb', q, p)]
+        if len(R) >= 4: break
 out = []
 for name, kind, a, b in R:
     r = route(a, b)
     if not r: print('keine Strecke', name); continue
     pts, L = r
-    gaps = max(math.dist(p, q) for p, q in zip(pts, pts[1:]))
+    gaps = max([math.dist(p, q) for p, q in zip(pts, pts[1:])] or [0])
     print(f'{name:22} {kind} {L:6.0f} m  Punkte {len(pts)}  grösste Lücke {gaps:.0f} m  {pts[0]} → {pts[-1]}')
     # Tunnelabschnitte (OpenStreetMap tunnel=*) als Bogenlängen-Intervalle: dort sind die Wagen unsichtbar
     tun = []

@@ -42,7 +42,7 @@ def chain(rel):
 lines = []
 for r in d['rels']:
     t = r['t']; op = t.get('op') or t.get('operator') or ''; ref = t.get('ref') or ''
-    if op not in ('VBL', 'PAG', 'AAGR'): continue  # AAGR = Auto AG Rothenburg (Emmen, Region Nord)
+    if op not in ('VBL', 'PAG', 'AAGR') and not os.environ.get('LR', '').startswith('a'): continue  # Gebiet A: alle Betreiber (PostAuto, Rottal Auto, …)  # AAGR = Auto AG Rothenburg (Emmen, Region Nord)
     pts = chain(r)
     if not pts: continue
     length = sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
