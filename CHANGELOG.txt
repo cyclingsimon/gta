@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13d  Läden an den Kantonsstrassen, Längslinien vor Haltelinien
+- Wohn- und Geschäftsblöcke sowie Bürobauten an Kantonsstrassen innerorts (Gebäudemitte höchstens 24 m von der Strassenachse) haben im Erdgeschoss Schaufenster statt Wohnungsfenster
+- Vor jeder Haltelinie an einer Ampel 5 m ununterbrochene Linie zwischen den Fahrstreifen derselben Richtung (Normalien Stadt Bern 2.10.2, SSV 6.12)
+
 2026-11-13c  Kantonsstrassen wie in echt, Bahnhofplatz und Europaplatz, neue Geschwindigkeiten, Region Süd (Nidwalden)
 - Kantons- und Hauptstrassen nach Schweizer Markierungsnorm (SN 640 850, Merkblätter Stadt Bern): Fahrstreifen aus OpenStreetMap (Anzahl, Velo- und Busstreifen, Trottoirs, Tempo; 884 Strassenstücke in Luzern), Leitlinien weiss 3 m Strich / 6 m Lücke innerorts, Sicherheitslinie ab 4 Streifen, Velostreifen gelb mit gelbem Velo-Zeichen, Busstreifen gelb mit «BUS», weisse Randlinien nur noch ausserorts (vorher überall), an Kreuzungen keine Längslinien. Annahme: ausserorts Leitlinie 6 m / 12 m. Fahrbahnbreite aus der Streifenzahl (3.1 m je Streifen, 1.5 m je Velostreifen)
 - Trottoirs: 12 cm hoch mit hellem Randstein, grauer Belag – an Hauptstrassen mit Trottoir-Angabe und bei 1419 separat erfassten Gehwegen, die neben einer Fahrstrasse liegen
