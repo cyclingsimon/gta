@@ -1,5 +1,8 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13g  Schutz gegen Hänger
+- In einem Testlauf (Region Ost, 2. Einsatz) blieb das Spiel einmal stehen; beim Wiederholen lief alles normal, die Ursache ist nicht belegt. Vorsorglich sind die Winkel-Schleifen (Kamera, Navi-Pfeil, Verkehr, Tiere) jetzt begrenzt: Sie konnten bei einem sehr grossen oder unendlichen Winkelwert sehr lange oder endlos laufen (Annahme, nicht nachgewiesen)
+
 2026-11-13f  Tempo-Signale
 - Runde Höchstgeschwindigkeits-Signale (SSV 2.30) 12 m nach jedem Punkt, an dem das Tempo laut OpenStreetMap wechselt, rechts in Fahrtrichtung (Luzern 35 Wechselpunkte)
 

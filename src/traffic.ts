@@ -171,7 +171,7 @@ export class Traffic {
       const ax2 = nav.xs[c.a], az2 = nav.zs[c.a], ddx = (nav.xs[c.b] - ax2) / c.len, ddz = (nav.zs[c.b] - az2) / c.len;
       const nx = ax2 + ddx * c.s - ddz * c.off, nz = az2 + ddz * c.s + ddx * c.off;
       // weich drehen
-      const th = Math.atan2(ddx, ddz); let dh = th - c.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI;
+      const th = Math.atan2(ddx, ddz); let dh = th - c.h; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI)); if (!isFinite(dh)) dh = 0; /* Hänger-Schutz: begrenzt statt while */
       c.h += dh * Math.min(1, dt * 6);
       c.x = nx; c.z = nz;
       if (c.fly! > 0) { // Hüpf-Flug, danach sanft zurück auf die Spur

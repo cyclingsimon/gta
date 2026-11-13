@@ -172,7 +172,7 @@ export class Animals {
       s.vx += (tx - s.vx) * Math.min(1, dt * 2); s.vz += (tz - s.vz) * Math.min(1, dt * 2);
       const nx = s.x + s.vx * dt, nz = s.z + s.vz * dt;
       if (this.isWater(nx, nz)) { s.x = nx; s.z = nz; } else { s.vx *= -0.5; s.vz *= -0.5; }
-      if (Math.hypot(s.vx, s.vz) > 0.05) { const th = Math.atan2(s.vx, s.vz); let dh = th - s.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; s.h += dh * Math.min(1, dt * 3); }
+      if (Math.hypot(s.vx, s.vz) > 0.05) { const th = Math.atan2(s.vx, s.vz); let dh = th - s.h; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI)); if (!isFinite(dh)) dh = 0; /* Hänger-Schutz: begrenzt statt while */ s.h += dh * Math.min(1, dt * 3); }
       s.flee = Math.max(0, s.flee - dt);
     }
     this.swans.forEach((s, i) => { this.e.set(0, s.h, Math.sin(time * 2 + i) * 0.04); this.q.setFromEuler(this.e); this.m.compose(this.v.set(s.x, (this.flatLake ? Math.max(0.04, this.terrain.ground(s.x, s.z) + 0.06) : this.terrain.ground(s.x, s.z) + 0.1) + Math.sin(time * 1.5 + i) * 0.03, s.z), this.q, this.one); this.sm.setMatrixAt(i, this.m); });

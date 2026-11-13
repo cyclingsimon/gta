@@ -14,7 +14,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-13f';
+export const VERSION = '2026-11-13g';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -754,7 +754,7 @@ function updateRoute(dt: number) {
   arrow.position.set(car.x, car.y + 5.6, car.z);
   // zeigt immer Luftlinie zum Ziel, weich nachgeführt (kein Flackern)
   const want = Math.atan2(target[0] - car.x, target[1] - car.z);
-  let dA = want - arrow.rotation.y; while (dA > Math.PI) dA -= 2 * Math.PI; while (dA < -Math.PI) dA += 2 * Math.PI;
+  let dA = want - arrow.rotation.y; dA -= 2 * Math.PI * Math.round(dA / (2 * Math.PI)); if (!isFinite(dA)) dA = 0; /* Hänger-Schutz: begrenzt statt while */
   arrow.rotation.y += dA * Math.min(1, dt * 6);
   void aim;
   const dist = Math.hypot(target[0] - car.x, target[1] - car.z);
@@ -772,7 +772,7 @@ function autopilot(dt: number) {
   let acc = 0;
   for (let i = 1; i < route!.length; i++) { acc += Math.hypot(route![i][0] - route![i - 1][0], route![i][1] - route![i - 1][1]); if (acc > look) { aim = route![i]; break; } }
   const want = Math.atan2(aim[0] - car.x, aim[1] - car.z);
-  let d = want - car.heading; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  let d = want - car.heading; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (!isFinite(d)) d = 0; /* Hänger-Schutz: begrenzt statt while */
   const dist = target ? Math.hypot(target[0] - car.x, target[1] - car.z) : 99;
   const slow = Math.abs(d) > 0.5 || dist < 25;
   return { throttle: slow ? (car.speed < 4 ? 0.6 : 0) : 0.85, brake: (slow && car.speed > 7) || (dist < 12 && car.speed > 3) ? 1 : 0, steer: Math.max(-1, Math.min(1, -d * 2.5)) };
@@ -1060,7 +1060,7 @@ function frame(now: number) {
     for (const p of players) {
       updateCamera(dt, false, p);
       if (p.label) { p.label.visible = players.length > 1; p.label.position.set(p.car.x, p.car.y + 7.6, p.car.z); }
-      if (p.idx > 0) { p.arrow.visible = !!target; if (target) { p.arrow.position.set(p.car.x, p.car.y + 5.6, p.car.z); const w = Math.atan2(target[0] - p.car.x, target[1] - p.car.z); let dA = w - p.arrow.rotation.y; while (dA > Math.PI) dA -= 2 * Math.PI; while (dA < -Math.PI) dA += 2 * Math.PI; p.arrow.rotation.y += dA * Math.min(1, dt * 6); } }
+      if (p.idx > 0) { p.arrow.visible = !!target; if (target) { p.arrow.position.set(p.car.x, p.car.y + 5.6, p.car.z); const w = Math.atan2(target[0] - p.car.x, target[1] - p.car.z); let dA = w - p.arrow.rotation.y; dA -= 2 * Math.PI * Math.round(dA / (2 * Math.PI)); if (!isFinite(dA)) dA = 0; /* Hänger-Schutz: begrenzt statt while */ p.arrow.rotation.y += dA * Math.min(1, dt * 6); } }
       if (players.length > 1) { const dd = target ? Math.hypot(target[0] - p.car.x, target[1] - p.car.z) : 0; p.tag.textContent = `P${p.idx + 1} · ${Math.round(Math.abs(p.car.speed) * 3.6)} km/h${target ? ' · ' + (dd > 1000 ? (dd / 1000).toFixed(1) + ' km' : Math.round(dd / 10) * 10 + ' m') : ''}${p.car.siren ? ' 🚨' : ''}`; }
     }
     beacon.rotation.y += dt;
