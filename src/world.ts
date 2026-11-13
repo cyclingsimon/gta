@@ -662,6 +662,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const last = r.p[r.p.length - 1];
       capEnd(t.pos, t.col, last[0], last[1], r.w / 2, y, c);
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
+      if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5 && !r.b) edgeLines(dashes, trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
     const asphTex = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 1400, 0.16); noise(g, 128, 128, 500, 0.35, false); });
     const cobTex = canvasTex(128, 128, (g) => {
@@ -703,10 +704,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
       const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
-    const dd = drape(dashes, null, terrain, 11, true);
+    const dd = drape(dashes, null, terrain, 5, true);
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
     dg.computeVertexNormals();
-    group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6' })));
+    group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
   }
   // ---- Bahn ----
   {
@@ -1359,6 +1360,31 @@ function capEnd(pos: number[], col: number[], x1: number, z1: number, hw: number
   }
 }
 
+function trimLine(p: number[][], d: number): number[][] {
+  const cut = (q: number[][]) => { let left = d; const r = [q[0]]; let i = 0;
+    while (i < q.length - 1) { const L = Math.hypot(q[i + 1][0] - q[i][0], q[i + 1][1] - q[i][1]); if (L > left) { const t = left / L; r[0] = [q[i][0] + (q[i + 1][0] - q[i][0]) * t, q[i][1] + (q[i + 1][1] - q[i][1]) * t]; return [r[0], ...q.slice(i + 1)]; } left -= L; i++; }
+    return []; };
+  const a = cut(p); if (a.length < 2) return []; const b = cut(a.slice().reverse()); return b.length < 2 ? [] : b.reverse();
+}
+function edgeLines(out: number[], p: number[][], off: number, y: number) {
+  // durchgehender Streifen mit Gehrung: Normale je Punkt = Mittel der angrenzenden Segmentnormalen (begrenzt)
+  const n = p.length; if (n < 2) return;
+  const N: number[][] = [];
+  for (let i = 0; i < n; i++) {
+    const a = p[Math.max(0, i - 1)], b = p[Math.min(n - 1, i + 1)], c = p[i];
+    const d1 = i > 0 ? [c[0] - a[0], c[1] - a[1]] : [b[0] - c[0], b[1] - c[1]], d2 = i < n - 1 ? [b[0] - c[0], b[1] - c[1]] : d1;
+    const l1 = Math.hypot(d1[0], d1[1]) || 1, l2 = Math.hypot(d2[0], d2[1]) || 1;
+    const n1 = [-d1[1] / l1, d1[0] / l1], n2 = [-d2[1] / l2, d2[0] / l2];
+    let mx = n1[0] + n2[0], mz = n1[1] + n2[1]; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
+    const k = Math.min(1.6, 1 / Math.max(0.3, mx * n1[0] + mz * n1[1])); N.push([mx * k, mz * k]);
+  }
+  const hw = 0.08;
+  for (const sgn of [-1, 1]) for (let i = 0; i < n - 1; i++) {
+    const o1 = sgn * off, A = p[i], B = p[i + 1], NA = N[i], NB = N[i + 1];
+    const q = [[A[0] + NA[0] * (o1 - hw), A[1] + NA[1] * (o1 - hw)], [B[0] + NB[0] * (o1 - hw), B[1] + NB[1] * (o1 - hw)], [B[0] + NB[0] * (o1 + hw), B[1] + NB[1] * (o1 + hw)], [A[0] + NA[0] * (o1 + hw), A[1] + NA[1] * (o1 + hw)]];
+    for (const k of [0, 2, 1, 0, 3, 2]) out.push(q[k][0], y, q[k][1]);
+  }
+}
 function dashLine(out: number[], p: number[][], y: number) {
   let carry = 0;
   for (let i = 0; i < p.length - 1; i++) {
