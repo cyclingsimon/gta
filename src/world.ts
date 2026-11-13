@@ -709,7 +709,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           const cx = A[0] + ux * t, cz = A[1] + uz * t, nx = -uz, nz = ux, L = Math.max(1, r.L || 2), nb = r.o ? 0 : Math.floor(L / 2), lw = (r.w - 1.5 * ((r.cy?.[0] ? 1 : 0) + (r.cy?.[1] ? 1 : 0))) / L;
           const o0 = end ? -r.w / 2 + (r.cy?.[0] ? 1.5 : 0) + nb * lw : -r.w / 2 + (r.cy?.[0] ? 1.5 : 0), o1 = end ? r.w / 2 : -r.w / 2 + (r.cy?.[0] ? 1.5 : 0) + nb * lw; // end=1: Vorwärtsstreifen rechts; Start: Rückwärtsstreifen (Punktfolge umgekehrt → wieder rechts)
           const a0 = end ? o0 : -o1, a1 = end ? o1 : -o0; if (a1 - a0 < 1) continue;
-          strokeLine(dashes, [[cx + nx * a0, cz + nz * a0], [cx + nx * a1, cz + nz * a1]], y + 0.012, 0.5); }
+          strokeLine(dashes, [[cx + nx * a0, cz + nz * a0], [cx + nx * a1, cz + nz * a1]], y + 0.012, 0.5);
+          // vor der Haltelinie 5 m ununterbrochene Längslinie zwischen den Streifen derselben Richtung (Normalien Stadt Bern 2.10.2, SSV 6.12)
+          const nl = Math.round((a1 - a0) / lw); for (let k2 = 1; k2 < nl; k2++) { const o = a0 + k2 * lw; strokeLine(dashes, [[cx + nx * o, cz + nz * o], [cx - ux * 5 + nx * o, cz - uz * 5 + nz * o]], y + 0.012, 0.15); } }
         continue;
       }
       if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') continue; // eigene Holzbrücke

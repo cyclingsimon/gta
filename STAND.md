@@ -1,6 +1,6 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 07:55. **Live: 2026-11-13b** (von Claude per FileZilla hochgeladen, 13.11. ca. 07:50, Simon: «Lade 13b dann hoch»; geprüft: ausgelieferte JS enthält 13b, data/west, data/ost, aerial_hr, Schrift vorhanden, stats/config.php und stats/data/stats.sqlite liefern 403). 12z und 13a waren nie live. Lokal auf dem PC: `Downloads\luksi-rescue\web-13b` (Vollstand).
+Stand: 13.11.2026 12:15. Fertig: **2026-11-13c** (nicht hochgeladen). **Live: 2026-11-13b** (von Claude per FileZilla hochgeladen, 13.11. ca. 07:50, Simon: «Lade 13b dann hoch»; geprüft: ausgelieferte JS enthält 13b, data/west, data/ost, aerial_hr, Schrift vorhanden, stats/config.php und stats/data/stats.sqlite liefern 403). 12z und 13a waren nie live. Lokal auf dem PC: `Downloads\luksi-rescue\web-13b` (Vollstand).
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
@@ -14,7 +14,9 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Region Süd: `sh tools/geo/region_sued.sh` → `public/data/sued/` (Rohdaten `data/e4/`). Feld x −3000..4600, z 6100..11000. Wechsel Luzern → Süd bei z > 6230 (−2900 < x < 2650, nicht ≤ 120 m um Einsätze), zurück bei z < 6170. Ziel Spital Nidwalden (3753, 10146, echt, LUKS Gruppe). Einsätze s1–s9, Herzen `save.heartsS`.
 - Seetalbahn: Nord-Zugstrecken nach OSM-Streckennummer (500 Rothenburg bei x −2026, 651 Seetal bei x −1998 am Nordrand).
 - Spielumfang: `tools/geo/umfang.py` → `public/data/umfang.json` (nach jedem Regionsbau neu laufen lassen).
-- Tests 13c (Zwischenstand 09:50): qa Luzern grün (P1 2.13 Mio., P2 0.69), region_sued.py ok, qa Süd grün (P1 0.84), ui_check.py (Pause-Menü mit Umfang, Funk auf 800×380) ok.
+- Tests 13c (Software-Rendering, 13.11. 11:00–12:15, Stand des ZIP): qa.py ganz grün in allen 5 Regionen (Luzern P1 2.14 Mio. / P2 0.70, G10 112 % wegen ergänzter Laternen; Nord, Ost, West, Süd P1 0.84). missions.py: Luzern 18/18 (54★), Süd 9/9 (27★), jeweils nach Neuladen erhalten, keine Fehler. gdiff.py 0 Abweichungen. region_sued.py hin und zurück ok. ui_check.py: Pause-Menü zeigt Spielumfang, Funk auf 800×380.
+- Nicht getestet: echte fps (GTX 1080, Handy), Toasts auf echtem Android-Gerät (im Testmodus verschwinden Toasts sofort, nur CSS geprüft).
+- ZIP: `Luksi Rescue 2026-11-13c.zip` (87 MB, Vollpaket inkl. stats/config.php, ohne DB). Nicht hochgeladen.
 
 ## Version 13b (13.11. morgens)
 - Fotovergleich mit 20 Commons-Fotos (data/ref/, Titel in titles.json): Altstadt-Tönung in Fotofarben (linear, withRows Anteil 0.85/0.8), Wasserturm mit Stil «stone» + eigener Dachfarbe auch mit 3D-Daten, See #2F86A0, Fresnel 0.45.
