@@ -2634,7 +2634,9 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
       for (const [n, px, pz, rk] of places) { const dd = Math.hypot(px - x, pz - z) - rk * 250; if (dd < 1500 && (!best || dd < best[0])) best = [dd, n]; } return best?.[1]; };
     for (const r of d.roads) { if (!r.L || !r.v || r.b || r.p.length < 2) continue;
       for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
-        const inTown = r.v <= 50; if (!inTown && r.v < 70) continue; const other = [...vs].some((v) => inTown ? v >= 70 : v <= 50); if (!other) continue; // nur Übergang innerorts ↔ ausserorts (≥ 70)
+        // Grenze innerorts ↔ ausserorts: bei Städten (Rang 3) erst ab 70 km/h, bei Dörfern ab 60 km/h (Annahme: 60er-Zonen sind dort Ortseinfahrten)
+        let thr = 60; { let bd = 1e9; for (const [, px, pz, rk] of places) { const dd = Math.hypot(px - q[0], pz - q[1]); if (dd < bd) { bd = dd; thr = rk >= 3 ? 70 : 60; } } }
+        const inTown = r.v <= 50; if (!inTown && r.v < thr) continue; const other = [...vs].some((v) => inTown ? v >= thr : v <= 50); if (!other) continue;
         const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 8) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.3, x = A[0] + ux * 4 - uz * o, z = A[1] + uz * 4 + ux * o;
         const nm = nameAt(A[0], A[1]); if (!nm || tafeln.some((t) => Math.hypot(t[0] - x, t[1] - z) < 25)) continue;

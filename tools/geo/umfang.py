@@ -10,7 +10,7 @@ OLDB = {'nord': (-3800, -3900, 4600, -550), 'ost': (2500, -2000, 7500, 2500), 'w
 CAR = ('motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service', 'primary_link', 'secondary_link', 'tertiary_link', 'trunk_link', 'motorway_link')
 taken = None; tot = {'km2': 0, 'gebaeude': 0, 'strassen_km': 0, 'wege_km': 0}; per = {}
 for name, d in R:
-    if not os.path.exists(d + '/city.json'):
+    if not os.path.exists(d + '/city.json') or (name in OLDB and not os.path.exists(d + '/b3d.json')):  # alte Region ohne 3D-Daten hier: Werte behalten
         if name in OLD and name in OLDB:
             per[name] = OLD[name]; field = box(*OLDB[name])
             for k in tot: tot[k] += per[name][k]

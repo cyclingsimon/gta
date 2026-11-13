@@ -1458,6 +1458,7 @@ if (location.search.includes('test')) {
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     car: () => ({ x: car.x, z: car.z, heading: car.heading }),
+    speed: (v: number) => { car.speed = v; },
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
       return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }
         return { path: n.join('<'), p: [Math.round(h.point.x), Math.round(h.point.y * 10) / 10, Math.round(h.point.z)], d: Math.round(h.distance) }; }); },
