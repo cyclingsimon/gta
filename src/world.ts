@@ -843,7 +843,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     // Getrennte Puffer je Fassadentyp → je ein Material mit eigener Textur
     type Buf = { pos: number[]; nor: number[]; col: number[]; uv: number[] };
     const mk = (): Buf => ({ pos: [], nor: [], col: [], uv: [] });
-    const B: Record<string, Buf> = { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk() };
+    const B: Record<string, Buf> = { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk(), blockShop: mk(), modernShop: mk() };
     const lpos: number[] = [];
     const styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[] = [];
     for (const b of d.buildings) {
@@ -935,6 +935,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     const b3dTiles = new Map<string, { B: Record<string, Buf>; l: number[] }>();
     ERKER.length = 0; ONIONS.length = 0;
+    { // Läden im Erdgeschoss an Kantonsstrassen innerorts (Wohn-/Geschäftsblöcke, Bürobauten): Gebäudemitte ≤ 24 m von der Strassenachse
+      const g = new Map<string, number[][]>();
+      for (const r of d.roads) { if (!r.L || r.b || (r.v || 50) > 50) continue;
+        for (let i = 1; i < r.p.length; i++) { const [x1, z1] = r.p[i - 1], [x2, z2] = r.p[i]; const L = Math.hypot(x2 - x1, z2 - z1);
+          for (let t = 0; t <= L; t += 5) { const x = x1 + (x2 - x1) * t / (L || 1), z = z1 + (z2 - z1) * t / (L || 1); const k = Math.floor(x / 25) + ',' + Math.floor(z / 25); if (!g.has(k)) g.set(k, []); g.get(k)!.push([x, z]); } } }
+      SHOP_NEAR = (x, z) => { const i = Math.floor(x / 25), j = Math.floor(z / 25); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of g.get((i + a) + ',' + (j + b)) || []) if (Math.hypot(q[0] - x, q[1] - z) < 24) return true; return false; }; }
     if (b3d) await buildB3D(b3d, styles, b3dTiles, lpos, (p) => onProgress(p), terrain);
     await onProgress('Materialien …');
     const tex = facadeTextures();
@@ -974,8 +980,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       hotel: withShop(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
       luks: toon('#ffffff', { vertexColors: true, map: tex.luks }),
       luksTurm: toon('#ffffff', { vertexColors: true, map: tex.luksTurm }),
+      blockShop: withShop(toon('#ffffff', { vertexColors: true, map: tex.block }), tex.shopNeu),
+      modernShop: withShop(toon('#ffffff', { vertexColors: true, map: tex.modern }), tex.shopNeu),
     };
-    for (const k of ['oldGreen', 'oldRed', 'modern', 'block', 'stone', 'altstadt', 'painted', 'gruenderzeit', 'hotel', 'luks', 'luksTurm']) withNight(mats[k] as THREE.MeshToonMaterial);
+    for (const k of ['oldGreen', 'oldRed', 'modern', 'block', 'stone', 'altstadt', 'painted', 'gruenderzeit', 'hotel', 'luks', 'luksTurm', 'blockShop', 'modernShop']) withNight(mats[k] as THREE.MeshToonMaterial);
     const groups: [string, Record<string, Buf>, number[]][] = [['', B, lpos], ...[...b3dTiles].map(([k, t]) => [k, t.B, t.l] as [string, Record<string, Buf>, number[]])];
     for (const [tk, BB] of groups) for (const [k, buf] of Object.entries(BB)) {
       if (!buf.pos.length) continue;
@@ -1826,6 +1834,7 @@ function findSpires(P: ArrayLike<number>, I: ArrayLike<number>, vS: number, iS: 
   return out.length === 2 ? out : null;
 }
 
+let SHOP_NEAR: (x: number, z: number) => boolean = () => false;
 async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[], tiles: Map<string, { B: Record<string, { pos: number[]; nor: number[]; col: number[]; uv: number[] }>; l: number[] }>, _unused: number[], progress: (s: string) => Promise<void> | void, terrain?: Terrain) {
   // Raster für schnelle Zuordnung Gebäude ↔ OSM-Stil
   const cell = 40, grid = new Map<string, number[]>();
@@ -1843,7 +1852,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
   const tileOf = (cx: number, cz: number) => {
     const k = Math.floor(cx / 400) + ',' + Math.floor(cz / 400);
     let t = tiles.get(k);
-    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk() }, l: [] }; tiles.set(k, t); }
+    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk(), blockShop: mk(), modernShop: mk() }, l: [] }; tiles.set(k, t); }
     return t;
   };
   for (const m of b.meta.buildings) {
@@ -1918,6 +1927,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     }
     STYLE_COUNT[style] = (STYLE_COUNT[style] || 0) + 1;
     const tile = style === 'luks' ? 2.5 : style === 'luksTurm' ? 4 : style === 'modern' || style === 'block' ? 3.6 : style === 'stone' ? 6 : style === 'hotel' ? 4.2 : 3.3, floorH = style === 'luks' ? 3.9 : style === 'stone' ? 7 : style === 'gruenderzeit' || style === 'hotel' || style === 'luksTurm' ? 3.6 : 3.2;
+    const shopNear = (style === 'block' || style === 'modern') && !(st && st.kind) && SHOP_NEAR(cx, cz);
     const spires = st && st.kind === 'jesuiten' ? findSpires(P, I, vS, iS, iC, ymax) : null;
     if (spires) for (const q of spires) ONIONS.push([q.x, q.z, q.y, q.r, q.top]);
     for (let t = iS; t < iS + iC; t += 3) {
@@ -1937,7 +1947,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       else { const mx = (V[0][0] + V[1][0] + V[2][0]) / 3 - cx, mz = (V[0][2] + V[1][2] + V[2][2]) / 3 - cz; if (mx * nx + mz * nz < 0) { nx = -nx; nz = -nz; ny = -ny; } }
       let buf, col: THREE.Color, uvf: (p: number[]) => [number, number];
       if (Math.abs(ny) < 0.3) {
-        buf = B[style]; col = facade;
+        buf = (style === 'block' || style === 'modern') && shopNear ? B[style + 'Shop'] : B[style]; col = facade;
         const tl = Math.hypot(nx, nz) || 1, tx = -nz / tl, tz = nx / tl;
         uvf = (p) => [(p[0] * tx + p[2] * tz) / tile, (p[1] - base) / floorH];
       } else if (ny > 0.96) {
