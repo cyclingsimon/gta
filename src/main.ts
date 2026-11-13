@@ -1200,7 +1200,7 @@ async function boot() {
   const pBus = opt(getJSON('bus.json'));
   const pTrains = opt(getJSON('trains.json'));
   const pGondola = REGION !== 'luzern' ? Promise.resolve(null) : opt(getJSON('gondola.json')); // Gondelbahn (Kriens–Pilatus) nur in Luzern
-  const pB = echt ? opt(Promise.all(RA ? [null, null, null, getJSON('ground.json'), getBuf('ground.bin')] : [getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null; // Gebiet A: keine 3D-Häuser (OSM-Gebäude), nur feiner Boden
+  const pB = echt ? opt(Promise.all(RA ? [opt(getJSON('b3d.json')), opt(getBuf('b3d.bin')), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')] : [getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null; // Gebiet A: 3D-Häuser nur, wo b3d vorhanden (sonst OSM-Gebäude)
   const data: CityData = await pCity;
   memLog('city'); status.textContent = 'Lade Gelände …'; loaderProgress(0.25);
   const tmeta = await pTmeta; let traw: ArrayBuffer = await pTraw;
@@ -1323,7 +1323,7 @@ async function stageB(pB: Promise<any>, data: CityData, props: any) {
     const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
     const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; const st = document.getElementById('load-status'); if (st) st.textContent = 'Echte Häuser: ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
     memLog('worldB'); swapWorld(nw); memLog('swapped');
-    ind.textContent = RA ? '✔ Gelände fertig' : '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
+    ind.textContent = RA && !b3d ? '✔ Gelände fertig' : '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
   } catch (e) { console.warn('Stufe B fehlgeschlagen, bleibe bei OSM-Häusern', e); ind.remove(); }
   enableShadows(scene);
   fullReady = true; (window as any).__luksiReady = true;
