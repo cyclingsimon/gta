@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13l  Echte 3D-Häuser in ganz Gebiet A
+- Alle 9 neuen Gegenden (Sursee, Sempach/Nottwil, Hildisrieden/Rain, Buttisholz, Ruswil, Neuenkirch/Hellbühl, Wolhusen, Malters, Rothenburg) mit echten Gebäudeformen aus swissBUILDINGS3D (zusammen rund 31 000 Häuser, Dachfarben aus dem Luftbild), wie in Luzern und den alten Gegenden. In der Grafikstufe «Leicht» bleiben die einfachen Häuser.
+- Spielwelt jetzt 442 km² mit rund 59 000 Gebäuden
+
 2026-11-13k  Echte Häuser in Sursee, Scheunen, Wegweiser
 - Sursee mit echten 3D-Häusern aus swissBUILDINGS3D (4632 Gebäude, Dachformen und Dachfarben wie in echt); weitere Gegenden folgen
 - Gebiet A ohne 3D-Daten: Wohnhäuser niedriger (2 Geschosse statt 4), Holzscheunen mit flachem, breitem Dach, grosse Hallen mit Blechfassade, Schöpfe und Garagen klein (Annahme nach Grundfläche und Siedlungsdichte, OSM hat meist keine Höhe)

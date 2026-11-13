@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 19:35. Fertig: **2026-11-13k** = 13j + echte 3D-Häuser Sursee (a1) und Wolhusen (a7), ländliche Gebäude (rural.py), Umland-Flickenteppich, Wegweiser. Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 13.11.2026 20:15. Fertig: **2026-11-13l** = 13k + swissBUILDINGS3D in allen 9 Regionen von Gebiet A (a1–a9). Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13l (13.11. abends, nicht hochgeladen)
+- 3D-Häuser für alle A-Regionen per chunk()-Übertragung (Simon hat Download-Frage nicht beantwortet; Weg funktioniert, kostet aber ~1 Tool-Aufruf je 190 kB). Gebäude: a1 4632, a2 3366, a3 2215, a4 2848, a5 2924, a6 4169, a7 2676, a8 3737, a9 4179. Rohkacheln in `data/a/b3dm_<id>` (nicht im Repo).
+- Höhen: b3d_build meldet «Geoid 0.00» (Kacheln offenbar schon orthometrisch); Sichtprüfung: Häuser stehen auf dem Gelände (a1, a2, a5, a7, a9).
+- Tests 13l (19:50–20:15): smoke_a.py (Leicht) alle 9 ok, 8/8 erreichbar, keine Fehler; Echt-Modus mit 3D-Häusern in a2–a9 geladen, keine Seitenfehler; Sichtprüfung Nottwil, Rothenburg, Ruswil. Nicht getestet: echte fps/Speicher auf GTX 1080 oder Handy mit den grösseren A-Regionen.
+- ZIP `Luksi Rescue 2026-11-13l.zip`. Nicht hochgeladen.
 
 ## Version 13k (13.11. abends, nicht hochgeladen)
 - Simon 18:29: «Kannst du 3d Modelle nachrüsten?» → swissBUILDINGS3D für Gebiet A. Kachelformel (aus tileset.json, Level 11): x = floor((lon − 5.95944)/0.00221329), y = floor((lat − 45.81765)/0.000968716); URL `https://3d.geo.admin.ch/ch.swisstopo.swissbuildings3d.3d/v1/20260520/11/{x}/{y}.b3dm`. Kachelbereiche je Region im Browser `TILER` (a1 941–976/1357–1410, a7 941–975/1245–1307, a8 974–1010/1245–1307, a9 1038–1069/1308–1358, a2 974–1012/1356–1410, a3 1010–1040/1356–1410, a4 941–975/1305–1358, a5 974–1012/1305–1358, a6 1010–1040/1285–1358).

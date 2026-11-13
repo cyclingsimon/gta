@@ -2,7 +2,7 @@
  "stand": "2026-11-13",
  "gesamt": {
   "km2": 442.0,
-  "gebaeude": 56234,
+  "gebaeude": 59243,
   "strassen_km": 2318,
   "wege_km": 2891
  },
@@ -45,31 +45,31 @@
   },
   "a2": {
    "km2": 34.8,
-   "gebaeude": 2731,
+   "gebaeude": 3026,
    "strassen_km": 138,
    "wege_km": 152
   },
   "a3": {
    "km2": 26.8,
-   "gebaeude": 1881,
+   "gebaeude": 2186,
    "strassen_km": 112,
    "wege_km": 111
   },
   "a4": {
    "km2": 31.4,
-   "gebaeude": 2353,
+   "gebaeude": 2719,
    "strassen_km": 110,
    "wege_km": 162
   },
   "a5": {
    "km2": 33.5,
-   "gebaeude": 2407,
+   "gebaeude": 2729,
    "strassen_km": 114,
    "wege_km": 149
   },
   "a6": {
    "km2": 35.4,
-   "gebaeude": 3011,
+   "gebaeude": 3574,
    "strassen_km": 166,
    "wege_km": 187
   },
@@ -81,13 +81,13 @@
   },
   "a8": {
    "km2": 37.3,
-   "gebaeude": 2923,
+   "gebaeude": 3503,
    "strassen_km": 165,
    "wege_km": 179
   },
   "a9": {
    "km2": 26.0,
-   "gebaeude": 3061,
+   "gebaeude": 3639,
    "strassen_km": 128,
    "wege_km": 174
   }
