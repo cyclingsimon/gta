@@ -1,5 +1,15 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13j  Gebiet A: Sursee, Sempach, Wolhusen, Ruswil, Malters, Rothenburg … und echte Kreisel
+- 9 neue Gegenden zwischen Luzern, Sursee und Wolhusen (Entscheid Simon «Variante A»), zusammen rund 290 km²: Sursee, Sempach und Nottwil, Hildisrieden und Rain, Buttisholz und Grosswangen, Ruswil, Neuenkirch und Hellbühl, Wolhusen, Malters, Rothenburg. Spielwelt jetzt 14 Gegenden, rund 440 km²
+- Echte Spitäler als Ziel: LUKS Sursee und LUKS Wolhusen (Lage aus OpenStreetMap), dazu das Spital in Nottwil; in den anderen Gegenden ein Rettungsposten beim Gemeindehaus des Hauptorts (erfunden, wie Meggen und Littau)
+- Je Gegend 8 Einsätze an echten Orten aus OpenStreetMap (Spielplätze, Schulhäuser, Bahnhöfe, Badis, Kirchen, Bauernhöfe, Sportplätze, Aussichtspunkte), 40 Luksi-Herzen, Buslinien (PostAuto u. a.), S-Bahn-Strecken
+- Gelände swissALTI3D (auf 4 m gemittelt), Luftbild SWISSIMAGE 2 m. Häuser stehen am echten Ort mit echtem Grundriss aus OpenStreetMap, aber mit Spiel-Fassaden und Spiel-Dächern (keine swissBUILDINGS3D-Formen in Gebiet A)
+- Wechsel zwischen den Gegenden am Feldrand wie bisher mit Bestätigung, ausserdem per Schnellreise (alle Spitäler und Rettungsposten auf der Karte)
+- Kreisel (Luzern 32, Norden 18, Süd 9, West 5, Gebiet A 40): Mittelinsel mit Rasen und Randstein, gepflästerter Innenring, Kunst-Stele oder Baum in der Mitte, Signale «Kreisverkehr» (SSV 2.41.1) und «Kein Vortritt» (3.02) an den Zufahrten, Tropfeninseln und Wartelinien an den Einfahrten
+- Mittelinseln an Fussgängerstreifen (OSM crossing:island) mit blauem Signal «Hindernis rechts umfahren» (2.37): Luzern 251, Norden 147
+- Ortstafeln: blaue Ortsbeginn-Tafel bzw. Ortsende-Tafel mit rotem Strich (SSV 4.27/4.28), wo das Tempo laut OpenStreetMap von ausserorts auf 50 wechselt
+
 2026-11-13i  Schnellreise, Luzerner Skyline, Spielumfang im Ladebild
 - Schnellreise (Wunsch Simon): Taste T oder Pausenmenü «🗺️ Schnellreise». Karte aller Gegenden, Ziel wählen (Kinderspital Luzern, Bahnhof Luzern, Spital Nidwalden, Emmenbrücke, Rettungsposten Meggen und Littau), kurze Zeitraffer-Fahrt auf der Karte, Ankunft. In eine andere Gegend lädt das Spiel neu und setzt die Ambulanz am Ziel ab. Ein laufender Einsatz wird dabei abgegeben (ohne Strafe). Zu zweit oder mitten in einem Mini-Spiel geht es nicht
 - Spital Wolhusen und Spital Sursee stehen grau mit «kommt bald» auf der Karte (Ausbau Gebiet A geplant)

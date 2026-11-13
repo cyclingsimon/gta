@@ -83,12 +83,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220620
   },
   "hosp": {
-   "label": "Rettungsposten Buttisholz",
+   "label": "Rettungsposten Grosswangen",
    "kind": "rp",
-   "x": -16074.4,
-   "z": -6926.5
+   "x": -19612.5,
+   "z": -8908.2
   },
-  "welcome": "Willkommen in Buttisholz! Der Rettungsposten Buttisholz ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Buttisholz! Der Rettungsposten Grosswangen ist auf der Karte blau markiert."
  },
  "a5": {
   "name": "Ruswil",
@@ -155,5 +155,49 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -1628.0
   },
   "welcome": "Willkommen in Wolhusen! Das Spital Wolhusen ist auf der Karte blau markiert."
+ },
+ "a8": {
+  "name": "Malters",
+  "b": [
+   -14500,
+   -3600,
+   -8400,
+   3000
+  ],
+  "aerial": {
+   "E0": 2651410,
+   "E1": 2657710,
+   "N0": 1208330,
+   "N1": 1215150
+  },
+  "hosp": {
+   "label": "Rettungsposten Malters",
+   "kind": "rp",
+   "x": -9438.6,
+   "z": 1468.4
+  },
+  "welcome": "Willkommen in Malters! Der Rettungsposten Malters ist auf der Karte blau markiert."
+ },
+ "a9": {
+  "name": "Rothenburg",
+  "b": [
+   -3700,
+   -9100,
+   1500,
+   -3700
+  ],
+  "aerial": {
+   "E0": 2662170,
+   "E1": 2667560,
+   "N0": 1215170,
+   "N1": 1220780
+  },
+  "hosp": {
+   "label": "Rettungsposten Rothenburg",
+   "kind": "rp",
+   "x": -2814.4,
+   "z": -4671.2
+  },
+  "welcome": "Willkommen in Rothenburg! Der Rettungsposten Rothenburg ist auf der Karte blau markiert."
  }
 };

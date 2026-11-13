@@ -19,10 +19,13 @@ def pos(e):
 inside = lambda p, m=250: X0 + m < p[0] < X1 - m and Z0 + m < p[1] < Z1 - m
 places = []  # (name, x, z, rang)
 RANK = {'town': 3, 'village': 2, 'suburb': 1, 'hamlet': 0}
+POP = {}  # Einwohnerzahl (OSM population), um den Hauptort zu wählen
 for e in els:
     t = e.get('tags', {})
     if e['type'] == 'node' and t.get('place') in RANK and t.get('name'):
         p = pos(e); places.append((t['name'], p[0], p[1], RANK[t['place']]))
+        try: POP[t['name']] = int(str(t.get('population', '0')).replace("'", '').split()[0])
+        except ValueError: pass
 def near_place(p, min_rank=0):
     c = [q for q in places if q[3] >= min_rank] or places
     return min(c, key=lambda q: math.dist(p, q[1:3]))[0] if c else RNAME.split()[0]
@@ -35,10 +38,10 @@ for e in els:
         if p and inside(p, 0): hosp = {'name': t['name'], 'label': 'Spital ' + near_place(p, 2), 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]
-    big.sort(key=lambda q: (-q[3], math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))
+    big.sort(key=lambda q: (-q[3], -POP.get(q[0], 0), math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))
     town = big[0] if big else (RNAME, (X0 + X1) / 2, (Z0 + Z1) / 2, 0)
     th = [pos(e) for e in els if e.get('tags', {}).get('amenity') == 'townhall' and pos(e)]
-    th = [p for p in th if math.dist(p, town[1:3]) < 1200]
+    th = [p for p in th if math.dist(p, town[1:3]) < 1200 and inside(p, 150)]
     p = min(th, key=lambda p: math.dist(p, town[1:3])) if th else town[1:3]
     hosp = {'name': f'Rettungsposten {town[0]}', 'label': f'Rettungsposten {town[0]}', 'x': round(p[0], 1), 'z': round(p[1], 1), 'kind': 'rp'}
 H = hosp['label']; TO = ('ins ' if hosp['kind'] == 'spital' else 'zum ') + H
@@ -51,7 +54,7 @@ def cat(t):
     if t.get('amenity') == 'place_of_worship': return 'kirche'
     if t.get('landuse') == 'farmyard': return 'hof'
     if t.get('leisure') in ('pitch', 'sports_centre') and t.get('sport') in ('soccer', 'multi', None): return 'sport'
-    if t.get('tourism') in ('viewpoint', 'attraction'): return 'aussicht'
+    if t.get('tourism') == 'viewpoint' and not t.get('military') and not t.get('historic'): return 'aussicht'
     return None
 cands = []
 for e in els:

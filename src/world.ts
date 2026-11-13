@@ -2571,7 +2571,8 @@ function signTex(kind: 'kreisel' | 'vortritt' | 'umfahren') {
 }
 function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, group: THREE.Group, vAt: Map<string, Set<number>>, nk: (q: number[]) => string) {
   const CAR = ['primary', 'secondary', 'tertiary', 'trunk', 'residential', 'unclassified', 'living_street', 'primary_link', 'secondary_link', 'tertiary_link', 'trunk_link'];
-  const roundSigns: number[][] = [], vortritt: number[][] = [], umfahren: number[][] = [];
+  const roundSigns: number[][] = [], vortritt: number[][] = [], umfahren: number[][] = [], dashGeo: THREE.BufferGeometry[] = [];
+  const islGeo: THREE.BufferGeometry[] = [];
   // --- Kreisel: Mittelinsel (Gras mit Randstein), gepflästerter überfahrbarer Innenring, Skulptur oder Baum; Signale an den Zufahrten ---
   const rbs = d.rbs || [];
   if (rbs.length) {
@@ -2596,14 +2597,21 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
           let acc = 0, k = pp.length - 1; while (k > 0 && acc + Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]) < 10) { acc += Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]); k--; }
           if (k < 1) continue; const A = pp[k - 1], Bq = pp[k], sl = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) || 1, ux = (Bq[0] - A[0]) / sl, uz = (Bq[1] - A[1]) / sl, t = Math.max(0, sl - (10 - acc));
           const o = rd.w / 2 + 0.9, x = A[0] + ux * t - uz * o, z = A[1] + uz * t + ux * o; if (Math.hypot(x - cx, z - cz) < r + 2) continue;
-          roundSigns.push([x, z, Math.atan2(ux, uz)]); if (rd.L) vortritt.push([x, z, Math.atan2(ux, uz)]); } }
+          roundSigns.push([x, z, Math.atan2(ux, uz)]); if (rd.L) vortritt.push([x, z, Math.atan2(ux, uz)]);
+          // Fahrbahnteiler (Tropfeninsel) bei zweispurigen Zufahrten und Wartelinie (SSV 6.13) über die Einfahrt
+          const P1 = pp[pp.length - 2], P2 = pp[pp.length - 1], L1 = Math.hypot(P2[0] - P1[0], P2[1] - P1[1]) || 1, vx = (P2[0] - P1[0]) / L1, vz = (P2[1] - P1[1]) / L1;
+          const ex = cx - vx * (r + 0.3), ez = cz - vz * (r + 0.3); // Ringrand auf der Zufahrtsachse
+          if (!rd.o && rd.w >= 5.5 && L1 > 10) { const ic = [ex - vx * 5, ez - vz * 5], hh = terrain.height(ic[0], ic[1]);
+            const tb = new THREE.BoxGeometry(1.3, 0.6, 7); tb.rotateY(Math.atan2(vx, vz)); tb.translate(ic[0], hh - 0.14, ic[1]); islGeo.push(tb);
+            umfahren.push([ex - vx * 8.8, ez - vz * 8.8, Math.atan2(vx, vz)]); }
+          const half = rd.o ? rd.w / 2 : rd.w / 2, o0 = rd.o ? -half + 0.3 : 0.9, o1 = half - 0.3; // rechte Hälfte (Einfahrt)
+          for (let o = o0; o + 0.5 <= o1; o += 0.75) { const px = ex - vz * (o + 0.25), pz = ez + vx * (o + 0.25); const d1 = new THREE.BoxGeometry(0.5, 0.04, 0.3); d1.rotateY(Math.atan2(vx, vz)); d1.translate(px, terrain.height(px, pz) + 0.42, pz); dashGeo.push(d1); } } }
     }
     const mk = (gs: THREE.BufferGeometry[], col: string, name: string) => { if (!gs.length) return; const m = new THREE.Mesh(mergeGeometries(gs)!, toon(col)); m.name = name; group.add(m); };
     mk(paving, '#A39E94', 'kreisel'); mk(curb, '#C9C5BB', 'kreisel'); mk(grass, '#76A957', 'kreisel');
     if (art.length) { const g = mergeGeometries(art.map((x) => x.toNonIndexed()))!; g.setAttribute('color', new THREE.Float32BufferAttribute(artCol, 3)); const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true })); m.name = 'kreisel'; group.add(m); }
   }
   // --- Mittelinseln an Fussgängerstreifen (gepflästert, Randstein) mit Signal «Hindernis rechts umfahren» an beiden Enden ---
-  const islGeo: THREE.BufferGeometry[] = [];
   if (props?.isl?.length) {
     const car = d.roads.filter((r) => CAR.includes(r.c) && !r.b && r.w >= 6);
     for (const [ix, iz] of props.isl) { let best: [number, number, number, number, number] | null = null;
@@ -2613,8 +2621,9 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
       if (!best) continue; const [, ux, uz, px, pz] = best; const h = terrain.height(px, pz);
       const b = new THREE.BoxGeometry(1.6, 0.6, 7); b.rotateY(Math.atan2(ux, uz)); b.translate(px, h - 0.14, pz); islGeo.push(b);
       for (const sd of [-1, 1]) umfahren.push([px + ux * 3.2 * sd, pz + uz * 3.2 * sd, Math.atan2(ux * sd, uz * sd)]); }
-    if (islGeo.length) { const m = new THREE.Mesh(mergeGeometries(islGeo)!, toon('#B8B3A8')); m.name = 'mittelinsel'; group.add(m); }
   }
+  if (islGeo.length) { const m = new THREE.Mesh(mergeGeometries(islGeo)!, toon('#B8B3A8')); m.name = 'mittelinsel'; group.add(m); }
+  if (dashGeo.length) { const m = new THREE.Mesh(mergeGeometries(dashGeo)!, new THREE.MeshBasicMaterial({ color: '#F5F1E6' })); m.name = 'kreisel-wartelinie'; group.add(m); }
   // Signale (Stange + Scheibe), je Art eine Instanz-Gruppe; Mittelinsel-Signal tief (1.0 m)
   const steel = toon('#8A8F94');
   const put = (list: number[][], tex: THREE.Texture, size: number, hgt: number, name: string) => { if (!list.length) return;

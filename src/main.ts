@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-13i';
+export const VERSION = '2026-11-13j';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1200,7 +1200,7 @@ async function boot() {
   const pBus = opt(getJSON('bus.json'));
   const pTrains = opt(getJSON('trains.json'));
   const pGondola = REGION !== 'luzern' ? Promise.resolve(null) : opt(getJSON('gondola.json')); // Gondelbahn (Kriens–Pilatus) nur in Luzern
-  const pB = echt ? opt(Promise.all([getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null;
+  const pB = echt ? opt(Promise.all(RA ? [null, null, null, getJSON('ground.json'), getBuf('ground.bin')] : [getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null; // Gebiet A: keine 3D-Häuser (OSM-Gebäude), nur feiner Boden
   const data: CityData = await pCity;
   memLog('city'); status.textContent = 'Lade Gelände …'; loaderProgress(0.25);
   const tmeta = await pTmeta; let traw: ArrayBuffer = await pTraw;
@@ -1294,7 +1294,7 @@ async function boot() {
   setMuted(save.muted);
   updateHud();
   // 13h (Simon): Erst losfahren lassen, wenn auch die echten Häuser stehen – kein Spielbild mehr, das noch hängt
-  if (stageBP) { status.textContent = 'Echte Häuser werden gebaut …'; loaderProgress(0.9); await stageBP; }
+  if (stageBP) { status.textContent = RA ? 'Gelände wird verfeinert …' : 'Echte Häuser werden gebaut …'; loaderProgress(0.9); await stageBP; }
   memLog('navTraffic'); status.textContent = ''; loaderDone();
   $('#start-btn').style.display = '';
   try { if (sessionStorage.getItem('luksiRegionSwitch')) { sessionStorage.removeItem('luksiRegionSwitch'); $('#start-btn').textContent = 'Weiterfahren ▶'; } } catch { /* privat */ }
@@ -1304,25 +1304,26 @@ async function boot() {
 
 /** Stufe B: echte 3D-Häuser (swisstopo) und feiner Boden im Hintergrund bauen, dann austauschen */
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
-  const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
+  const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
   try {
     const r = await pB; memLog('pB');
     if (!r) throw new Error('Daten fehlen');
     const [bm, bb, roof, gm, gb] = r;
-    b3dMeta = bm;
+    let b3d: any = undefined;
+    if (bm) { b3dMeta = bm;
     // Positionen: Int16 dm, bei rel=true relativ zum Gebäudemittelpunkt → absolut (dm) als Float32
     const raw16 = new Int16Array(bb, 0, bm.posBytes / 2);
     let pos: ArrayLike<number> = raw16;
     if (bm.rel) { const f = new Float32Array(raw16.length); for (const m of bm.buildings) { const vS = m[1], vC = m[2], cx = m[5] * 10, cz = m[6] * 10; for (let k = vS; k < vS + vC; k++) { f[k * 3] = raw16[k * 3] + cx; f[k * 3 + 1] = raw16[k * 3 + 1]; f[k * 3 + 2] = raw16[k * 3 + 2] + cz; } } pos = f; }
-    const b3d = { roof, meta: bm, pos, idx: new Uint16Array(bb, bm.posBytes + bm.pad, bm.idxCount), edges: new Uint16Array(bb, bm.posBytes + bm.pad + bm.idxCount * 2, bm.edgeCount) };
-    b3dData = b3d; roofData = roof;
+    b3d = { roof, meta: bm, pos, idx: new Uint16Array(bb, bm.posBytes + bm.pad, bm.idxCount), edges: new Uint16Array(bb, bm.posBytes + bm.pad + bm.idxCount * 2, bm.edgeCount) };
+    b3dData = b3d; roofData = roof; }
     const g16 = new Int16Array(gb, 0, gm.posBytes / 2);
     let gpos: ArrayLike<number> = g16;
     if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
     const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
     const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; const st = document.getElementById('load-status'); if (st) st.textContent = 'Echte Häuser: ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
     memLog('worldB'); swapWorld(nw); memLog('swapped');
-    ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
+    ind.textContent = RA ? '✔ Gelände fertig' : '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
   } catch (e) { console.warn('Stufe B fehlgeschlagen, bleibe bei OSM-Häusern', e); ind.remove(); }
   enableShadows(scene);
   fullReady = true; (window as any).__luksiReady = true;

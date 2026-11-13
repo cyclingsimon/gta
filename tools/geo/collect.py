@@ -11,7 +11,8 @@ for f in glob.glob('/tmp/claude-tool-results/*/*.txt') + glob.glob('/tmp/claude-
     try: items = json.loads(s); texts = [i.get('text', '') for i in items] if isinstance(items, list) else [s]
     except Exception: texts = [s]
     for t in texts:
-        for m in rx.finditer(t): parts[int(m.group(1))] = m.group(2)
+        m = rx.match(t.lstrip('"'))  # nur am Anfang des Ergebnisses (sonst Zufallstreffer in fremden Base64-Daten)
+        if m: parts[int(m.group(1))] = m.group(2)
 miss = [i for i in range(n) if i not in parts]
 if miss: print('FEHLEND', miss); sys.exit(1)
 raw = base64.b64decode(''.join(parts[i] for i in range(n)))
