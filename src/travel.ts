@@ -19,17 +19,17 @@ export const REGIONS: TravelRegion[] = [
 
 /** Ziele: Spitäler und Ortszentren. 'hosp' = Übergabeplatz des Spitals/Rettungspostens der Region. */
 export const DESTS: TravelDest[] = [
-  { id: 'kispi', name: 'Kinderspital Luzern', sub: 'Luzerner Kantonsspital', icon: '🏥', region: 'luzern', to: 'hosp', ready: true },
+  { id: 'kispi', name: 'Kinderspital Zentralschweiz', sub: 'LUKS Luzern', icon: '🏥', region: 'luzern', to: 'hosp', ready: true },
   { id: 'bhf', name: 'Bahnhof Luzern', sub: 'Torbogen und Europaplatz', icon: '🚉', region: 'luzern', to: [200, 190], ready: true },
   { id: 'stans', name: 'Spital Nidwalden', sub: 'Stans · LUKS Gruppe', icon: '🏥', region: 'sued', to: 'hosp', ready: true },
-  { id: 'emmen', name: 'Emmenbrücke', sub: 'Bahnhof', icon: '🚉', region: 'nord', to: [-1929, -2086], ready: true },
-  { id: 'meggen', name: 'Meggen', sub: 'Rettungsposten', icon: '🚑', region: 'ost', to: 'hosp', ready: true },
-  { id: 'littau', name: 'Littau', sub: 'Rettungsposten', icon: '🚑', region: 'west', to: 'hosp', ready: true },
+  { id: 'emmen', name: 'Bahnhof Emmenbrücke', sub: 'Emmen und Ebikon', icon: '🚉', region: 'nord', to: [-1929, -2086], ready: true },
+  { id: 'meggen', name: 'Bahnhof Meggen', sub: 'Meggen', icon: '🚉', region: 'ost', to: 'hosp', ready: true },
+  { id: 'littau', name: 'Bahnhof Littau', sub: 'Littau', icon: '🚉', region: 'west', to: 'hosp', ready: true },
   // Gebiet A (13i): Spitäler (LUKS Sursee, LUKS Wolhusen) und Rettungsposten der gebauten Regionen
-  ...Object.entries(REGIONS_A).map(([id, r]) => ({ id, name: r.hosp.kind === 'spital' ? r.hosp.label : r.name, sub: r.hosp.kind === 'spital' ? 'LUKS' : r.hosp.label, icon: r.hosp.kind === 'spital' ? '🏥' : '🚑', region: id, to: 'hosp' as const, ready: true })),
+  ...Object.entries(REGIONS_A).map(([id, r]) => ({ id, name: r.hosp.label, sub: r.name, icon: r.hosp.kind === 'spital' ? '🏥' : r.hosp.label.startsWith('Bahnhof') ? '🚉' : '🚏', region: id, to: 'hosp' as const, ready: true })),
   // noch nicht gebaut: grau mit «kommt bald»
-  ...(Object.values(REGIONS_A).some((r) => /Wolhusen/.test(r.hosp.label)) ? [] : [{ id: 'wolhusen', name: 'Spital Wolhusen', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-wolhusen', to: 'hosp' as const, ready: false }]),
-  ...(Object.values(REGIONS_A).some((r) => /Sursee/.test(r.hosp.label)) ? [] : [{ id: 'sursee', name: 'Spital Sursee', sub: 'LUKS · kommt bald', icon: '🏥', region: 'a-sursee', to: 'hosp' as const, ready: false }]),
+  ...(Object.values(REGIONS_A).some((r) => /Wolhusen/.test(r.hosp.label)) ? [] : [{ id: 'wolhusen', name: 'LUKS Wolhusen', sub: 'kommt bald', icon: '🏥', region: 'a-wolhusen', to: 'hosp' as const, ready: false }]),
+  ...(Object.values(REGIONS_A).some((r) => /Sursee/.test(r.hosp.label)) ? [] : [{ id: 'sursee', name: 'LUKS Sursee', sub: 'kommt bald', icon: '🏥', region: 'a-sursee', to: 'hosp' as const, ready: false }]),
 ];
 /** Lage der noch nicht gebauten Ziele auf der Karte (ungefähr, Annahme ±1 km) */
 const SOON_AT: Record<string, [number, number]> = { wolhusen: [-17700, -800], sursee: [-15550, -13550] };
@@ -52,7 +52,7 @@ const destAt = (d: TravelDest, h: TravelHost): [number, number] => {
   if (d.region === h.region) return h.hosp;
   const r = REGIONS.find((q) => q.id === d.region);
   // grobe Lage der Spitäler anderer Regionen für die Karte (Annahme, nur Anzeige)
-  const HOSP_GUESS: Record<string, [number, number]> = { luzern: [-547, -840], sued: [3753, 10146], ost: [4990, 470], west: [-3752, 173], nord: [-547, -840] };
+  const HOSP_GUESS: Record<string, [number, number]> = { luzern: [-547, -840], sued: [3753, 10146], ost: [5715, 171], west: [-3835, -145], nord: [-547, -840] };
   if (REGIONS_A[d.region]) return [REGIONS_A[d.region].hosp.x, REGIONS_A[d.region].hosp.z];
   return HOSP_GUESS[d.region] || (r ? [(r.b[0] + r.b[2]) / 2, (r.b[1] + r.b[3]) / 2] : [0, 0]);
 };
@@ -66,23 +66,40 @@ export function openTravel(ui: HTMLElement, h: TravelHost): HTMLElement {
   const W = 600, H = Math.round(W * (z1 - z0) / (x1 - x0));
   const px = (x: number) => ((x - x0) / (x1 - x0) * W).toFixed(1), pz = (z: number) => ((z - z0) / (z1 - z0) * H).toFixed(1);
   const here: [number, number] = [h.carX(), h.carZ()];
+  // 14o: Beschriftung ohne Überlappung (16 Gegenden): kurze Namen, gierig platziert (Spitäler zuerst), sonst nur beim Anwählen sichtbar
+  const short = (n: string) => n.replace(/^(Bahnhof|Haltestelle) /, '').replace(/ Station$/, '').split(/,| und /)[0].trim();
+  const boxes: [number, number, number, number][] = [];
+  const hit = (b: [number, number, number, number]) => boxes.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]);
+  const lab: { x: number; y: number; hid: boolean }[] = DESTS.map(() => ({ x: 0, y: 0, hid: true }));
+  DESTS.forEach((_, i) => boxes.push([+px(pts[i][0]) - 9, +pz(pts[i][1]) - 9, +px(pts[i][0]) + 9, +pz(pts[i][1]) + 9]));
+  const prio = DESTS.map((d, i) => i).sort((a, b) => (DESTS[a].icon === '🏥' ? 0 : 1) - (DESTS[b].icon === '🏥' ? 0 : 1) || a - b);
+  for (const i of prio) {
+    const cx = +px(pts[i][0]), cy = +pz(pts[i][1]), w = short(DESTS[i].name).length * 6.6 + 4;
+    for (const [dx, dy] of [[0, -14], [0, 22], [w / 2 + 12, 4], [-w / 2 - 12, 4]]) {
+      const b: [number, number, number, number] = [cx + dx - w / 2, cy + dy - 11, cx + dx + w / 2, cy + dy + 2];
+      if (b[0] < 2 || b[2] > W - 2 || b[1] < 2 || b[3] > H - 2 || hit(b)) continue;
+      boxes.push(b); lab[i] = { x: cx + dx, y: cy + dy, hid: false }; break;
+    }
+    if (lab[i].hid) lab[i] = { x: Math.min(Math.max(cx, w / 2 + 2), W - w / 2 - 2), y: cy > 20 ? cy - 14 : cy + 22, hid: true };
+  }
   const svg = `<svg class="tr-map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Karte der Spielwelt">
-    ${all.map((r) => `<rect class="tr-reg${r.id === h.region ? ' here' : ''}" x="${px(r.b[0])}" y="${pz(r.b[1])}" width="${(+px(r.b[2]) - +px(r.b[0])).toFixed(1)}" height="${(+pz(r.b[3]) - +pz(r.b[1])).toFixed(1)}"/>
-      <text class="tr-rn" x="${px((r.b[0] + r.b[2]) / 2)}" y="${(+pz(r.b[1]) + 16).toFixed(1)}">${r.name}</text>`).join('')}
-    ${DESTS.map((d, i) => `<g class="tr-pin${d.ready ? '' : ' soon'}" data-i="${i}"><circle cx="${px(pts[i][0])}" cy="${pz(pts[i][1])}" r="${d.icon === '🏥' ? 9 : 7}"/><text x="${px(pts[i][0])}" y="${(+pz(pts[i][1]) - 13).toFixed(1)}">${d.name}</text></g>`).join('')}
+    ${all.map((r) => `<rect class="tr-reg${r.id === h.region ? ' here' : ''}" x="${px(r.b[0])}" y="${pz(r.b[1])}" width="${(+px(r.b[2]) - +px(r.b[0])).toFixed(1)}" height="${(+pz(r.b[3]) - +pz(r.b[1])).toFixed(1)}"><title>${r.name}</title></rect>`).join('')}
+    ${DESTS.map((d, i) => `<g class="tr-pin${d.ready ? '' : ' soon'}" data-i="${i}"><circle cx="${px(pts[i][0])}" cy="${pz(pts[i][1])}" r="${d.icon === '🏥' ? 9 : 7}"/><text class="${lab[i].hid ? 'hid' : ''}" x="${lab[i].x.toFixed(1)}" y="${lab[i].y.toFixed(1)}">${short(d.name)}</text></g>`).join('')}
     <g class="tr-me"><circle cx="${px(here[0])}" cy="${pz(here[1])}" r="7"/></g>
     <g class="tr-amb" style="display:none"><circle r="10"/><text y="5">🚑</text></g>
   </svg>`;
+  // Liste: Kinderspital zuerst, dann nach Entfernung; «kommt bald» ans Ende
+  const order = DESTS.map((_, i) => i).sort((a, b) => (DESTS[a].id === 'kispi' ? -1 : 0) - (DESTS[b].id === 'kispi' ? -1 : 0) || (DESTS[a].ready ? 0 : 1) - (DESTS[b].ready ? 0 : 1) || dist(here, pts[a]) - dist(here, pts[b]));
   const ov = document.createElement('div'); ov.className = 'mg tr';
   ov.innerHTML = `<div class="mg-card tr-card"><h2>🗺️ Schnellreise</h2><p class="mg-hint">Wohin soll Luksi fahren?</p>
-    <div class="tr-body">${svg}<div class="tr-list">${DESTS.map((d, i) => `<button data-i="${i}" class="${d.ready ? '' : 'off'}"><span class="tr-ic">${d.icon}</span><b>${d.name}</b><small>${d.sub}</small><em>${!d.ready ? '' : dist(here, pts[i]) < 400 ? 'hier' : Math.max(1, Math.round(dist(here, pts[i]) / 1000)) + ' km'}</em></button>`).join('')}</div></div>
+    <div class="tr-body">${svg}<div class="tr-list">${order.map((i) => DESTS[i]).map((d, k) => { const i = order[k]; return `<button data-i="${i}" class="${d.ready ? '' : 'off'}"><span class="tr-ic">${d.icon}</span><b>${d.name}</b><small>${d.sub}</small><em>${!d.ready ? '' : dist(here, pts[i]) < 400 ? 'hier' : Math.max(1, Math.round(dist(here, pts[i]) / 1000)) + ' km'}</em></button>`; }).join('')}</div></div>
     <p class="tr-msg" aria-live="polite"></p>
     <div class="mg-buttons"><button id="tr-close">Zurück <kbd>Esc</kbd></button></div></div>`;
   ui.appendChild(ov);
   const btns = [...ov.querySelectorAll<HTMLButtonElement>('.tr-list button')];
   const msg = ov.querySelector('.tr-msg') as HTMLElement;
-  let focus = Math.max(0, DESTS.findIndex((d) => d.ready && d.region !== h.region)), busy = false;
-  const show = () => { btns.forEach((b, i) => b.classList.toggle('focus', i === focus)); ov.querySelectorAll('.tr-pin').forEach((g) => g.classList.toggle('focus', +(g as SVGElement).dataset.i! === focus)); btns[focus]?.scrollIntoView?.({ block: 'nearest' }); };
+  let focus = order.find((i) => DESTS[i].ready && DESTS[i].region !== h.region) ?? order[0], busy = false;
+  const show = () => { btns.forEach((b) => b.classList.toggle('focus', +b.dataset.i! === focus)); ov.querySelectorAll('.tr-pin').forEach((g) => g.classList.toggle('focus', +(g as SVGElement).dataset.i! === focus)); btns.find((b) => +b.dataset.i! === focus)?.scrollIntoView?.({ block: 'nearest' }); };
   const close = () => { if (busy) return; ov.remove(); h.onClose(); };
   const go = (i: number) => {
     if (busy) return;
@@ -104,12 +121,12 @@ export function openTravel(ui: HTMLElement, h: TravelHost): HTMLElement {
     };
     requestAnimationFrame(step);
   };
-  btns.forEach((b, i) => { b.onclick = () => go(i); b.onmouseenter = () => { focus = i; show(); }; });
+  btns.forEach((b) => { const i = +b.dataset.i!; b.onclick = () => go(i); b.onmouseenter = () => { focus = i; show(); }; });
   ov.querySelectorAll<SVGGElement>('.tr-pin').forEach((g) => { g.onclick = () => go(+g.dataset.i!); });
   (ov.querySelector('#tr-close') as HTMLButtonElement).onclick = close;
   (ov as any)._confirm = () => go(focus);
   (ov as any)._cancel = close;
-  (ov as any)._nav = (dir: 'up' | 'down' | 'left' | 'right') => { if (busy) return; focus = (focus + (dir === 'up' || dir === 'left' ? -1 : 1) + DESTS.length) % DESTS.length; show(); };
+  (ov as any)._nav = (dir: 'up' | 'down' | 'left' | 'right') => { if (busy) return; const k = order.indexOf(focus); focus = order[(k + (dir === 'up' || dir === 'left' ? -1 : 1) + order.length) % order.length]; show(); };
   show();
   return ov;
 }

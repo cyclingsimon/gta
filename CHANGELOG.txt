@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14p  Nur echte Spitäler, Bahnhöfe als Treffpunkte, übersichtliche Schnellreise
+- Ziele nur noch echt (Wunsch Simon): Kinderspital Zentralschweiz (LUKS Luzern), LUKS Sursee, LUKS Wolhusen, Spital Nidwalden. Das «Spital Nottwil» und alle erfundenen Rettungsposten sind weg
+- In Gegenden ohne Spital ist der Treffpunkt der Bahnhof (Nottwil, Malters, Buchrain, Küssnacht am Rigi, Emmenbrücke Kapf, Rothenburg Station, Meggen, Littau), wo keiner ist die Bushaltestelle im Dorf (Hildisrieden Post, Buttisholz Dorf, Sonnhöfli in Ruswil). Dort holen Mami und Papi das Kind ab
+- Schnellreise: Karte ohne überlappende Namen (kurze Namen, Beschriftung weicht aus, verdeckte Namen erscheinen beim Anwählen), Liste nach Entfernung sortiert, Bahnhöfe mit 🚉, Haltestellen mit 🚏
+
 2026-11-14o  Neue Gegend Küssnacht und Meierskappel · echte Busfarben
 - Neue Gegend «Küssnacht und Meierskappel» (rund 33 km², mit Immensee, Merlischachen, Haltikon und dem Küssnachtersee): 4313 echte 3D-Häuser, Gelände, Luftbild, 8 Einsätze an echten Orten (u. a. Bahnhof Immensee, Spielplatz Meierskappel), Rettungsposten Küssnacht (erfunden), 40 Luksi-Herzen, Busse von Auto AG Schwyz, ZVB und PostAuto, S-Bahn. Anschluss an Root (Küssnachterstrasse)
 - Busse: Fernbusse (Flixbus und ausländische Reisecars) fahren nicht mehr durch die Dörfer; nur noch Linienbusse

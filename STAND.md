@@ -1,9 +1,16 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 01:00. Fertig: **2026-11-14o** = 13n + Region a11 (Küssnacht, Meierskappel) + Busfilter/Betreiberfarben. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 01:00. Fertig: **2026-11-14p** = 14o + nur echte Spitäler / Bahnhöfe als Treffpunkte + Schnellreise-Karte. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14p (14.11. 00:30–01:30, nicht hochgeladen)
+- [Entscheid Simon 00:34/00:36] Nur echte Spitäler (LUKS Luzern/Kinderspital Zentralschweiz, LUKS Sursee, LUKS Wolhusen, Spital Nidwalden); keine erfundenen Rettungsposten; sonst Bahnhöfe als Schnellreise-Stationen. Quelle Rettungsdienst-Standorte LUKS: Luzern, Sursee, Wolhusen, Menziken (+ Satelliten ohne Namen) laut LUKS-Stelleninseraten.
+- `missions_a.py`: Spital nur, wenn OSM-Spital in Sursee/Wolhusen (Label «LUKS <Ort>»). Sonst Bahnhof aus Tabelle `BHF` (a2 Nottwil, a6 Rothenburg Station, a8 Malters, a9 Emmenbrücke Kapf, a10 Buchrain, a11 Küssnacht am Rigi), ohne Bahnhof Bushaltestelle (`HALT`/«<Ort> Dorf/Post»: a3 Hildisrieden Post, a4 Buttisholz Dorf, a5 Sonnhöfli [Rottalcenter lag ausserhalb]). kind bleibt 'rp' (= Treffpunkt). Einsätze aller A-Regionen neu erzeugt (Orte teils anders, weil «weit weg vom Ziel» gewählt wird).
+- `main.ts`: Texte «zum/zur <Treffpunkt>», «Übergabe am … – Mami und Papi sind da», Pause-Knopf 🚉; Ost → Bahnhof Meggen (5715, 171), West → Bahnhof Littau (−3835, −145) (OSM-Koordinaten, Overpass railway=station).
+- `travel.ts`: kurze Namen, Beschriftung mit Kollisionsprüfung (Spitäler zuerst, verdeckte Namen bei Fokus/Hover), Regionsnamen nur als Tooltip, Liste: Kinderspital zuerst, dann nach Entfernung; Kinderspital heisst «Kinderspital Zentralschweiz – LUKS Luzern».
+- Tests 14p: smoke_a a2, a3, a5, a11 ok (8/8, keine Fehler); Schnellreise-Karte PC 1280×720 und Handy 800×380 angesehen. Nicht getestet: Ost/West mit neuem Treffpunkt (Ost-Daten lokal unvollständig).
 
 ## Version 14o (14.11. nachts, nicht hochgeladen)
 - Region **a11 «Küssnacht und Meierskappel»** x 7300..12300, z −8600..−1800 (LV95 E 2673145–2678426, N 1213351–1220441), überlappt a10 (200 m) und Ost (200 m). b3dm x 1103–1134 / y 1289–1355 (923 Kacheln), 56 neue Höhenkacheln, Bus-Relationen eigens geholt (`data/a/raw/bus_a11.json`, AAGS/ZVB/PAG). Rettungsposten Küssnacht am Rigi [erfunden]. Küssnachtersee als OSM-Wasser (Seehöhe 434 m), keine globale Seefläche.

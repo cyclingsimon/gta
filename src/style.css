@@ -414,6 +414,9 @@ body.art-g3 .ic-heart { background-image: var(--g3-heart); }
 .tr-pin.soon circle { fill: #999; stroke-dasharray: 3 3; }
 .tr-pin.soon text { fill: #ddd; }
 .tr-pin.focus circle { fill: var(--pink, #FF4FA3); r: 12; }
+.tr-pin text.hid { display: none; }
+.tr-pin.focus text.hid, .tr-pin:hover text.hid { display: inline; }
+.tr-pin.focus text { fill: var(--sun, #FFD23F); }
 .tr-me circle { fill: #3FA9FF; stroke: #fff; stroke-width: 3; }
 .tr-amb circle { fill: var(--pink, #FF4FA3); stroke: #000; stroke-width: 2.5; }
 .tr-amb text { font-size: 13px; text-anchor: middle; }

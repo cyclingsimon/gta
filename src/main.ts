@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14o';
+export const VERSION = '2026-11-14p';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -36,12 +36,14 @@ const KNOWN_REGIONS = ['luzern', 'nord', 'ost', 'west', 'sued', ...Object.keys(R
 const REGION: string = ((q) => KNOWN_REGIONS.includes(q || '') ? q! : KNOWN_REGIONS.includes(save.region || '') ? save.region! : 'luzern')(new URLSearchParams(location.search).get('region'));
 const RA = REGIONS_A[REGION]; // Gebiet-A-Region oder undefined
 const DIR = REGION === 'luzern' ? 'data/' : `data/${REGION}/`;
-/** Ost hat kein Kinderspital: Einsätze enden beim (erfundenen) Rettungsposten Meggen beim Gemeindehaus */
-const HOSP = RA ? (RA.hosp.kind === 'spital' ? RA.hosp.label : 'Rettungsposten') : REGION === 'ost' || REGION === 'west' ? 'Rettungsposten' : REGION === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
-const RP = RA ? RA.hosp.kind === 'rp' : REGION === 'ost' || REGION === 'west'; // Ost/West: Ziel ist ein (erfundener) Rettungsposten statt des Kinderspitals
+/** 14o (Simon): nur echte LUKS-Standorte. Gegenden ohne Spital: Treffpunkt am Bahnhof (sonst Bushaltestelle), dort holen die Eltern ab. */
+const RPL = RA ? RA.hosp.label : REGION === 'ost' ? 'Bahnhof Meggen' : REGION === 'west' ? 'Bahnhof Littau' : '';
+const HOSP = RA ? RA.hosp.label : REGION === 'ost' || REGION === 'west' ? RPL : REGION === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
+const RP = RA ? RA.hosp.kind === 'rp' : REGION === 'ost' || REGION === 'west'; // Ost/West/Teile von Gebiet A: Treffpunkt statt Spital
+const HALT = RPL.startsWith('Haltestelle');
 const SP = RA ? RA.hosp.kind === 'spital' : REGION === 'sued';
 const SPN = RA && RA.hosp.kind === 'spital' ? RA.hosp.label : 'Spital Nidwalden'; // Süd: Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe)
-const TO_H = RP ? 'zum Rettungsposten' : SP ? `ins ${SPN}` : 'ins Kinderspital', AT_H = RP ? 'am Rettungsposten' : SP ? `im ${SPN}` : 'im Kinderspital';
+const TO_H = RP ? `${HALT ? 'zur' : 'zum'} ${RPL}` : SP ? `ins ${SPN}` : 'ins Kinderspital', AT_H = RP ? `${HALT ? 'an der' : 'am'} ${RPL}` : SP ? `im ${SPN}` : 'im Kinderspital';
 if (REGION === 'nord') Object.assign(AERIAL, { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 });
 if (REGION === 'ost') Object.assign(AERIAL, { E0: 2668400, E1: 2673700, N0: 1209000, N1: 1213700 });
 if (REGION === 'west') Object.assign(AERIAL, { E0: 2657400, E1: 2662600, N0: 1208400, N1: 1212900 });
@@ -642,7 +644,7 @@ function handover() {
   const reasons = current.transport
     ? [`✔ Einsatz erfüllt`, bumps <= 2 ? '✔ Sanft gefahren – der Patient hat nicht gewackelt' : `○ ${bumps} Rempler – nächstes Mal sanfter`, phaseTime <= parTime ? `✔ Zügig ${AT_H}` : `○ ${Math.round(phaseTime)} s – geht noch schneller`]
     : ['✔ Einsatz erfüllt', '✔ Tier gerettet', '✔ Bonus für Tierliebe'];
-  ov.innerHTML = `<div class="mg-card passed"><h2>Einsatz erfüllt!</h2><p class="mp-sub">${current.transport ? (RP ? 'Übergabe am Rettungsposten' : SP ? `Übergabe im ${SPN}` : 'Übergabe im Kinderspital') : 'Tier gerettet'}</p><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi">
+  ov.innerHTML = `<div class="mg-card passed"><h2>Einsatz erfüllt!</h2><p class="mp-sub">${current.transport ? (RP ? `Übergabe ${AT_H} – Mami und Papi sind da` : SP ? `Übergabe im ${SPN}` : 'Übergabe im Kinderspital') : 'Tier gerettet'}</p><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi">
     <div class="stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${i * 0.35}s">★</span>`).join('')}</div>
     <p>${current.thanks}</p><ul class="reasons">${reasons.map((r) => `<li>${r}</li>`).join('')}</ul>
     <p class="small">Respekt: <b>${totalStars()} ★</b></p><button class="big" id="weiter">Weiterfahren <kbd>Enter</kbd>/<kbd>A</kbd></button></div>`;
@@ -851,7 +853,7 @@ function menuRows(): MenuRow[] {
   const skinN = fun ? fun.heartCount : 0;
   const setSkin = (sk: string) => { save.skin = sk; for (const p of players) p.car.setSkin(sk); writeSave(); };
   const rows: MenuRow[] = [
-    { kind: 'main', btns: [{ t: '▶ Weiterfahren', f: () => setPause(false) }, { t: `🏥 Zum ${HOSP}`, f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } }, { t: '🗺️ Schnellreise', f: () => { setPause(false); openTravelMap(); } },
+    { kind: 'main', btns: [{ t: '▶ Weiterfahren', f: () => setPause(false) }, { t: RP ? `🚉 ${HALT ? 'Zur' : 'Zum'} ${HOSP}` : `🏥 Zum ${HOSP}`, f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } }, { t: '🗺️ Schnellreise', f: () => { setPause(false); openTravelMap(); } },
       ...(current && (phase === 'toScene' || phase === 'toHospital') ? [{ t: '✋ Einsatz abgeben', f: () => { abortMission(); setPause(false); } }] : [])] },
     { kind: 'opt', label: 'Fahren', note: { entdecken: 'Für Kinder bis 6: Navi-Linie, mit Blaulicht bis 90 km/h (ohne 70)', rettung: 'Bis etwa 12 Jahre: mit Blaulicht bis 150 km/h (ohne 120)', profi: 'Für Grössere: mit Blaulicht bis 269 km/h (ohne 200)' }[save.diff],
       btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Einfach', rettung: '🚑 Mittel', profi: '⚡ Schnell' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
@@ -1228,8 +1230,8 @@ async function boot() {
   { const t0 = performance.now(); nav = new NavGraph(data, world.mask); console.log('[bau] Navi', (performance.now() - t0).toFixed(0), 'ms'); }
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
   { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); scene.add(buses.buildWires()); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
-  if (REGION === 'ost') world.hospital = { x: 4990, z: 470, name: 'Rettungsposten Meggen' };
-  if (REGION === 'west') world.hospital = { x: -3752, z: 173, name: 'Rettungsposten Littau' };
+  if (REGION === 'ost') world.hospital = { x: 5715, z: 171, name: 'Bahnhof Meggen' };   // 14o: OSM-Bahnhof statt erfundener Rettungsposten
+  if (REGION === 'west') world.hospital = { x: -3835, z: -145, name: 'Bahnhof Littau' };
   if (REGION === 'sued') world.hospital = { x: 3753, z: 10146, name: 'Spital Nidwalden' };
   if (RA) world.hospital = { x: RA.hosp.x, z: RA.hosp.z, name: RA.hosp.label };
   hospitalBay = snap([world.hospital.x, world.hospital.z]);
@@ -1345,7 +1347,7 @@ function start() {
   setTimeout(() => $('#start').remove(), 600);
   paused = false;
   if (travelArrived) { toast(`🗺️ Angekommen: ${travelArrived}!`, 3000); travelArrived = ''; return; }
-  toast(RA ? RA.welcome : REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Der Rettungsposten ist in Littau Dorf.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
+  toast(RA ? RA.welcome : REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Treffpunkt ist der Bahnhof Meggen.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Treffpunkt ist der Bahnhof Littau.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
 }
 $('#start-btn').onclick = start;
 setupTouch();

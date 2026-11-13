@@ -17,12 +17,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1226150
   },
   "hosp": {
-   "label": "Spital Sursee",
+   "label": "LUKS Sursee",
    "kind": "spital",
    "x": -14436.4,
    "z": -12884.8
   },
-  "welcome": "Willkommen in Sursee! Das Spital Sursee ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Sursee! Das LUKS Sursee ist auf der Karte blau markiert."
  },
  "a2": {
   "name": "Sempach und Nottwil",
@@ -39,12 +39,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1226210
   },
   "hosp": {
-   "label": "Spital Nottwil",
-   "kind": "spital",
-   "x": -13337.1,
-   "z": -9969.2
+   "label": "Bahnhof Nottwil",
+   "kind": "rp",
+   "x": -12830.4,
+   "z": -9630.9
   },
-  "welcome": "Willkommen in Sempach und Nottwil! Das Spital Nottwil ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Sempach und Nottwil! Treffpunkt ist der Bahnhof Nottwil. Er ist auf der Karte blau markiert."
  },
  "a3": {
   "name": "Hildisrieden und Rain",
@@ -61,12 +61,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1226260
   },
   "hosp": {
-   "label": "Rettungsposten Hildisrieden",
+   "label": "Haltestelle Hildisrieden Post",
    "kind": "rp",
-   "x": -5921.5,
-   "z": -10738.7
+   "x": -5942.0,
+   "z": -10761.4
   },
-  "welcome": "Willkommen in Hildisrieden und Rain! Der Rettungsposten Hildisrieden ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Hildisrieden und Rain! Treffpunkt ist die Haltestelle Hildisrieden Post. Sie ist auf der Karte blau markiert."
  },
  "a4": {
   "name": "Buttisholz",
@@ -83,12 +83,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220620
   },
   "hosp": {
-   "label": "Rettungsposten Grosswangen",
+   "label": "Haltestelle Buttisholz Dorf",
    "kind": "rp",
-   "x": -19612.5,
-   "z": -8908.2
+   "x": -16267.5,
+   "z": -6905.2
   },
-  "welcome": "Willkommen in Buttisholz! Der Rettungsposten Grosswangen ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Buttisholz! Treffpunkt ist die Haltestelle Buttisholz Dorf. Sie ist auf der Karte blau markiert."
  },
  "a5": {
   "name": "Ruswil",
@@ -105,12 +105,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220680
   },
   "hosp": {
-   "label": "Rettungsposten Ruswil",
+   "label": "Haltestelle Sonnhöfli",
    "kind": "rp",
-   "x": -13802.6,
-   "z": -3630.5
+   "x": -14148.3,
+   "z": -3690.6
   },
-  "welcome": "Willkommen in Ruswil! Der Rettungsposten Ruswil ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Ruswil! Treffpunkt ist die Haltestelle Sonnhöfli. Sie ist auf der Karte blau markiert."
  },
  "a6": {
   "name": "Neuenkirch und Hellbühl",
@@ -127,12 +127,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220730
   },
   "hosp": {
-   "label": "Rettungsposten Neuenkirch",
+   "label": "Bahnhof Rothenburg Station",
    "kind": "rp",
-   "x": -7779.4,
-   "z": -5143.3
+   "x": -4560.3,
+   "z": -4138.5
   },
-  "welcome": "Willkommen in Neuenkirch und Hellbühl! Der Rettungsposten Neuenkirch ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Neuenkirch und Hellbühl! Treffpunkt ist der Bahnhof Rothenburg Station. Er ist auf der Karte blau markiert."
  },
  "a7": {
   "name": "Wolhusen",
@@ -149,12 +149,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1215090
   },
   "hosp": {
-   "label": "Spital Wolhusen",
+   "label": "LUKS Wolhusen",
    "kind": "spital",
    "x": -17712.4,
    "z": -1628.0
   },
-  "welcome": "Willkommen in Wolhusen! Das Spital Wolhusen ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Wolhusen! Das LUKS Wolhusen ist auf der Karte blau markiert."
  },
  "a8": {
   "name": "Malters",
@@ -171,12 +171,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1215150
   },
   "hosp": {
-   "label": "Rettungsposten Malters",
+   "label": "Bahnhof Malters",
    "kind": "rp",
-   "x": -9438.6,
-   "z": 1468.4
+   "x": -9535.6,
+   "z": 1456.1
   },
-  "welcome": "Willkommen in Malters! Der Rettungsposten Malters ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Malters! Treffpunkt ist der Bahnhof Malters. Er ist auf der Karte blau markiert."
  },
  "a9": {
   "name": "Rothenburg",
@@ -193,12 +193,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220780
   },
   "hosp": {
-   "label": "Rettungsposten Rothenburg",
+   "label": "Bahnhof Emmenbrücke Kapf",
    "kind": "rp",
-   "x": -2814.4,
-   "z": -4671.2
+   "x": -2618.0,
+   "z": -4326.8
   },
-  "welcome": "Willkommen in Rothenburg! Der Rettungsposten Rothenburg ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Rothenburg! Treffpunkt ist der Bahnhof Emmenbrücke Kapf. Er ist auf der Karte blau markiert."
  },
  "a10": {
   "name": "Root, Buchrain und Inwil",
@@ -215,12 +215,12 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220883
   },
   "hosp": {
-   "label": "Rettungsposten Buchrain",
+   "label": "Bahnhof Buchrain",
    "kind": "rp",
-   "x": 2949.1,
-   "z": -4742.2
+   "x": 3653.3,
+   "z": -4600.6
   },
-  "welcome": "Willkommen in Root, Buchrain und Inwil! Der Rettungsposten Buchrain ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Root, Buchrain und Inwil! Treffpunkt ist der Bahnhof Buchrain. Er ist auf der Karte blau markiert."
  },
  "a11": {
   "name": "Küssnacht und Meierskappel",
@@ -237,11 +237,11 @@ export const REGIONS_A: Record<string, RegionA> = {
    "N1": 1220441
   },
   "hosp": {
-   "label": "Rettungsposten Küssnacht am Rigi",
+   "label": "Bahnhof Küssnacht am Rigi",
    "kind": "rp",
-   "x": 10064.1,
-   "z": -3135.1
+   "x": 9547.4,
+   "z": -3523.1
   },
-  "welcome": "Willkommen in Küssnacht und Meierskappel! Der Rettungsposten Küssnacht am Rigi ist auf der Karte blau markiert."
+  "welcome": "Willkommen in Küssnacht und Meierskappel! Treffpunkt ist der Bahnhof Küssnacht am Rigi. Er ist auf der Karte blau markiert."
  }
 };

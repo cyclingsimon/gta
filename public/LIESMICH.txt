@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14o
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14p
+Neu in 14p: nur echte Spitäler; Bahnhöfe als Treffpunkte und Schnellreise-Stationen; Schnellreise-Karte übersichtlicher.
 Neu in 14o: neue Gegend Küssnacht und Meierskappel; nur noch Linienbusse, mit Betreibernamen.
 Neu in 13n: neue Gegend Root, Buchrain und Inwil; Busse in allen Gegenden rund um Sursee, Wolhusen und Rothenburg.
 Neu in 13m: Signale an Fussgängerstreifen der Hauptstrassen.

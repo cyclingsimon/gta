@@ -35,16 +35,36 @@ for e in els:
     t = e.get('tags', {})
     if t.get('amenity') == 'hospital' and t.get('name') and e['type'] in ('way', 'relation', 'node'):
         p = pos(e)
-        if p and inside(p, 0): hosp = {'name': t['name'], 'label': 'Spital ' + near_place(p, 2), 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
+        # 14o (Simon): nur die echten Akutspitäler zählen – LUKS Sursee, LUKS Wolhusen (Luzern, Nidwalden, Kinderspital in den alten Regionen).
+        # Andere OSM-Spitäler (z. B. Paraplegiker-Zentrum Nottwil) werden nicht Ziel; dort gilt ein Rettungsposten.
+        ort = near_place(p, 2) if p else ''
+        if p and inside(p, 0) and ort in ('Sursee', 'Wolhusen'): hosp = {'name': t['name'], 'label': 'LUKS ' + ort, 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
+# 14o (Simon): keine erfundenen Rettungsposten mehr. Ohne LUKS-Spital ist das Ziel der Bahnhof des Hauptorts (OSM railway=station/halt),
+# wo es keinen gibt, die Bushaltestelle im Dorfzentrum. Übergabe dort an die Eltern (Spieltext), Schnellreise-Station ebenda.
+HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter'}  # Hauptort des Regionsnamens (Buttisholz, Ruswil)
+BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi'}
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]
     big.sort(key=lambda q: (-q[3], -POP.get(q[0], 0), math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))
     town = big[0] if big else (RNAME, (X0 + X1) / 2, (Z0 + Z1) / 2, 0)
-    th = [pos(e) for e in els if e.get('tags', {}).get('amenity') == 'townhall' and pos(e)]
-    th = [p for p in th if math.dist(p, town[1:3]) < 1200 and inside(p, 150)]
-    p = min(th, key=lambda p: math.dist(p, town[1:3])) if th else town[1:3]
-    hosp = {'name': f'Rettungsposten {town[0]}', 'label': f'Rettungsposten {town[0]}', 'x': round(p[0], 1), 'z': round(p[1], 1), 'kind': 'rp'}
-H = hosp['label']; TO = ('ins ' if hosp['kind'] == 'spital' else 'zum ') + H
+    want = BHF.get(rid)
+    st = [(e.get('tags', {}).get('name'), pos(e)) for e in els if e.get('tags', {}).get('railway') in ('station', 'halt') and e.get('tags', {}).get('name') == want and pos(e)] if want else []
+    st = [q for q in st if inside(q[1], 50)]
+    if st:
+        n, p = st[0]; hosp = {'name': f'Bahnhof {n}', 'label': f'Bahnhof {n}', 'x': round(p[0], 1), 'z': round(p[1], 1), 'kind': 'rp'}
+    else:
+        bs = [(e.get('tags', {}).get('name'), pos(e)) for e in els if e.get('tags', {}).get('highway') == 'bus_stop' and e.get('tags', {}).get('name') and pos(e)]
+        bs = [q for q in bs if inside(q[1], 150)]
+        th = [pos(e) for e in els if e.get('tags', {}).get('amenity') == 'townhall' and pos(e)]
+        th = [p for p in th if math.dist(p, town[1:3]) < 1200 and inside(p, 150)]
+        c0 = min(th, key=lambda p: math.dist(p, town[1:3])) if th else town[1:3]
+        # bevorzugt «<Ort> Dorf/Post/Zentrum», sonst die Haltestelle am nächsten beim Gemeindehaus
+        main = [q for q in bs if q[0].startswith(town[0]) and any(k in q[0] for k in ('Dorf', 'Post', 'Zentrum')) and math.dist(q[1], c0) < 1500]
+        fix = [q for q in bs if q[0] == HALT.get(rid)]
+        n, p = min(fix or main or bs, key=lambda q: math.dist(q[1], c0)) if bs else (town[0], c0)
+        hosp = {'name': f'Haltestelle {n}', 'label': f'Haltestelle {n}', 'x': round(p[0], 1), 'z': round(p[1], 1), 'kind': 'rp'}
+H = hosp['label']; TO = ('ins ' if hosp['kind'] == 'spital' else 'zum ' if H.startswith('Bahnhof') else 'zur ') + H
+WELC = f'Das {H} ist' if hosp['kind'] == 'spital' else f'Treffpunkt ist der {H}. Er ist' if H.startswith('Bahnhof') else f'Treffpunkt ist die {H}. Sie ist'
 # --- Kandidaten ---
 def cat(t):
     if t.get('leisure') == 'playground': return 'spielplatz'
@@ -80,7 +100,7 @@ def text(k, p, nm):
         return dict(title='Sonnenstich in der Badi', place=pl, radio=f'In der {pl if pl.lower().startswith(("badi", "bad")) else "Badi " + pl} ist einem Kind vom vielen Sonnenbaden ganz heiss und schwindlig.', game='water', transport=False, prop='kid', thanks='Wasser trinken und ab in den Schatten. Merci!')
     if k == 'kirche':
         pl = f'Kirche {ort}'
-        return dict(title=f'Fieber in {ort}', place=pl, radio=f'Bei der Kirche in {ort} fühlt sich ein Kind ganz heiss an. Bitte Fieber messen und {TO} bringen.', game='thermo', transport=True, prop='kid', thanks=f'{"Im Spital" if hosp["kind"] == "spital" else "Am Rettungsposten"} gibt es Tee und ein kühles Tuch. Gute Besserung!')
+        return dict(title=f'Fieber in {ort}', place=pl, radio=f'Bei der Kirche in {ort} fühlt sich ein Kind ganz heiss an. Bitte Fieber messen und {TO} bringen.', game='thermo', transport=True, prop='kid', thanks=f'{"Im Spital gibt es Tee und ein kühles Tuch" if hosp["kind"] == "spital" else "Mami und Papi holen das Kind ab und machen Tee"}. Gute Besserung!')
     if k == 'hof':
         pl = f'Bauernhof bei {ort}'
         return dict(title=f'Katze in {ort}', place=pl, radio=f'Auf einem Bauernhof bei {ort} sitzt eine Katze ganz oben im Baum und miaut.', game='cat', transport=False, prop='cat', thanks='Die Katze ist wieder unten bei den Kühen. Danke, Luksi!')
@@ -106,7 +126,7 @@ for i, (k, p, nm) in enumerate(chosen):
     m = text(k, p, nm); m.update(id=f'{rid}m{i + 1}', at=[p[0], p[1]]); ms.append(m)
 towns = sorted({near_place(c[1], 1) for c in chosen} | {near_place((hosp['x'], hosp['z']), 2)})
 out = {'region': rid, 'name': RNAME, 'hosp': hosp, 'missions': ms,
-       'welcome': f'Willkommen in {RNAME}! {"Das " + H + " ist" if hosp["kind"] == "spital" else "Der " + H + " ist"} auf der Karte blau markiert.',
+       'welcome': f'Willkommen in {RNAME}! {WELC} auf der Karte blau markiert.',
        'heartsWhere': f'in {RNAME}'}
 json.dump(out, open(f'public/data/{rid}/missions.json', 'w'), ensure_ascii=False, indent=1)
 print(H, len(ms), 'Einsätze:', ', '.join(m['place'] for m in ms))
