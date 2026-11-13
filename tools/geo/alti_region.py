@@ -14,7 +14,7 @@ try:
     for f in glob.glob('data/alti2022/*.tif'):
         t = tifffile.TiffFile(f); e, n = t.pages[0].tags['ModelTiepointTag'].value[3:5]; put(e, n, t.asarray().astype(np.float32))
 except ImportError: pass
-for f in glob.glob('data/e2/alti/*.i16') + glob.glob('data/e3/alti/*.i16'):
+for f in glob.glob('data/e2/alti/*.i16') + glob.glob('data/e3/alti/*.i16') + glob.glob('data/e4/alti/*.i16'):
     E, N = [int(v) for v in os.path.basename(f)[:-4].split('-')]
     put(E * 1000, (N + 1) * 1000, np.fromfile(f, '<i2').reshape(500, 500).astype(np.float32) / 10 + 400)
 def lv95v(x, z):

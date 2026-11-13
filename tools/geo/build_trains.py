@@ -56,6 +56,9 @@ if os.environ.get('LR') == 'ost':  # Region Ost: S-Bahn Luzern–Küssnacht via 
     R = [('S-Bahn Küssnacht', 'sbb', (2501, -157), (7499, -1655)), ('S-Bahn Luzern', 'sbb', (7499, -1655), (2501, -157))]
 if os.environ.get('LR') == 'west':  # Region West: S-Bahn Luzern–Littau–Malters (Ostrand → Westrand entlang der Kleinen Emme)
     R = [('S-Bahn Malters', 'sbb', (-3601, -496), (-8499, 1228)), ('S-Bahn Luzern', 'sbb', (-8499, 1228), (-3601, -496))]
+if os.environ.get('LR') == 'sued':  # Region Süd: Zentralbahn Luzern–Hergiswil, dort Richtung Stans/Engelberg und Brünig (Alpnachstad)
+    R = [('Zentralbahn Stans', 'zb', (305, 6101), (4599, 10387)), ('Zentralbahn Luzern', 'zb', (4599, 10387), (305, 6101)),
+         ('Zentralbahn Brünig', 'zb', (303, 6101), (-2317, 10999)), ('Zentralbahn Luzern', 'zb', (-2317, 10999), (303, 6101))]
 out = []
 for name, kind, a, b in R:
     r = route(a, b)

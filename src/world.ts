@@ -5,12 +5,13 @@ import { Terrain, drape } from './terrain';
 export interface CityData {
   meta: { bounds: [number, number, number, number]; credits: string };
   buildings: { p: number[][]; h: number; n: string; t: string; roof: string; holes?: number[][][] }[];
-  roads: { p: number[][]; c: string; w: number; n: string; b: number }[];
+  roads: { p: number[][]; c: string; w: number; n: string; b: number; o?: number; tr?: number; L?: number; sw?: number[]; cy?: number[]; bu?: number[]; v?: number; ref?: string }[];
   water: { p: number[][]; holes: number[][][] }[];
   green: { p: number[][]; k: string }[];
   rail: number[][][];
   pois: Record<string, [number, number]>;
   plazas?: { p: number[][]; h: number[][][]; n: string }[];
+  busIslands?: number[][][]; bhfFill?: { p: number[][]; h: number[][][] }[]; shelters?: { p: number[][]; h: number }[]; wagenbach?: number[][] | null;
 }
 
 // ---------- Toon-Material ----------
@@ -237,7 +238,18 @@ function facadeTextures() {
     g.strokeStyle = '#8A8F94'; g.lineWidth = 2; for (let x = 4; x < 128; x += 9) { g.beginPath(); g.moveTo(x, 82); g.lineTo(x, 100); g.stroke(); }
     g.fillStyle = '#8A8F94'; g.fillRect(0, 80, 128, 3);                        // Handlauf
   });
-  return { block, shopAlt, shopNeu, oldGreen: old('#5E8C5A'), oldRed: old('#A9483B'), modern, stone, tiles, gravel, altstadt, painted, gruenderzeit, hotel };
+  // LUKS Kinderspital/Frauenklinik (Haus 36, eröffnet Herbst 2026): weisses Betonskelett im 1.25-m-Raster, Fensterfaschen in Rot, Orange, Gelb
+  // (Projektbeschrieb «Les Terrasses», Bollhalder Eberle + Burkard Meyer). Kachel = 2.5 m breit × 1 Geschoss
+  const luks = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 300, 0.05);
+    const cols = ['#D9412B', '#F08A1C', '#F5C02A', '#E35E22'];
+    for (let k = 0; k < 2; k++) { const x = 8 + k * 64; g.fillStyle = cols[k * 2 % 4]; g.fillRect(x, 18, 48, 84); g.fillStyle = cols[(k * 2 + 1) % 4]; g.fillRect(x + 4, 22, 6, 76);
+      glass(g, x + 12, 24, 32, 74); g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x + 27, 24, 2, 74); }
+    g.fillStyle = '#F4F2EC'; g.fillRect(0, 108, 128, 20); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(0, 108, 128, 2); });
+  // Haus 31 Spitalzentrum (1970er-Hochhaus, 67 m): Sichtbeton, durchgehende Fensterbänder
+  const luksTurm = canvasTex(128, 128, (g) => { g.fillStyle = '#E3E1DC'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 900, 0.1);
+    g.fillStyle = '#2E3A44'; g.fillRect(0, 40, 128, 50); for (let x = 0; x < 128; x += 32) { g.fillStyle = '#C9C6BF'; g.fillRect(x, 40, 4, 50); }
+    glass(g, 4, 44, 124, 42); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 44, 128, 6); });
+  return { block, shopAlt, shopNeu, oldGreen: old('#5E8C5A'), oldRed: old('#A9483B'), modern, stone, tiles, gravel, altstadt, painted, gruenderzeit, hotel, luks, luksTurm };
 }
 
 /** Walmdach über dem kleinsten umschliessenden Rechteck (nur bei rechteckähnlichen Grundrissen) */
@@ -431,8 +443,8 @@ export interface World {
 export const MINI_RES = 2;
 
 const ROAD_COL: Record<string, string> = {
-  motorway: '#7d828b', trunk: '#7d828b', primary: '#868a92', secondary: '#8c9098', tertiary: '#8f939b',
-  primary_link: '#868a92', secondary_link: '#8c9098', tertiary_link: '#8f939b',
+  motorway: '#5c6064', trunk: '#5c6064', primary: '#606367', secondary: '#64676b', tertiary: '#6a6d71', // Kantonsstrassen: dunkler Belag (Luftbild/Fotos)
+  primary_link: '#606367', secondary_link: '#64676b', tertiary_link: '#6a6d71',
   unclassified: '#959aa1', residential: '#979ba2', living_street: '#bdb5a8', service: '#a2a5ab',
   pedestrian: '#bfb7aa', footway: '#cdc6ba', path: '#d9c79f', cycleway: '#c7a68c', steps: '#cdbfa6', track: '#c9b48c',
 };
@@ -633,10 +645,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // ---- Strassen ----
   const roadsByName = new Map<string, number[][][]>();
   {
-    const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] };
+    const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] }, asphIsl = { pos: [] as number[], col: [] as number[] };
     const dashes: number[] = [];
     // Plätze als Pflasterfläche (OSM-Fussgängerflächen): statt Luftbild mit Dächern/Schatten liegt auf Kapellplatz, Weinmarkt, Europaplatz … Pflaster
     { const pc = new THREE.Color('#D9CFBF'); for (const pl of d.plazas || []) addFlat(cobble.pos, cobble.col, pl.p, pl.h || [], 0.29, pc); }
+    { const c = new THREE.Color('#5d6064'); for (const f of d.bhfFill || []) addFlat(asph.pos, asph.col, f.p, f.h, 0.31, c); } // Bahnhofplatz-Belag unter den Fahrbahnen
+    // Bus-Perrons am Bahnhofplatz (OSM highway=platform): 18 cm hohe Inseln, Randstein hell (Foto Bahnhofplatz)
+    { const top = new THREE.Color('#A3A29E'), curb = new THREE.Color('#C9C5BB');
+      for (const q of d.busIslands || []) { addFlat(asphIsl.pos, asphIsl.col, q, [], 0.53, top);
+        for (let i = 0; i < q.length; i++) { const A = q[i], B = q[(i + 1) % q.length];
+          asphIsl.pos.push(A[0], 0.35, A[1], B[0], 0.35, B[1], B[0], 0.53, B[1], A[0], 0.35, A[1], B[0], 0.53, B[1], A[0], 0.53, A[1]); for (let k = 0; k < 6; k++) asphIsl.col.push(curb.r, curb.g, curb.b); } } }
     // Brücken, die in OSM aus mehreren Wegstücken bestehen, als Kette behandeln: das Deck verläuft gerade zwischen den Kettenenden
     // (sonst sackt es an einer Stückgrenze mitten über dem Fluss auf Talhöhe ab)
     const brs = d.roads.filter((r) => r.b || r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke');
@@ -651,8 +669,27 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const [lA, pA] = walk(i, 0), [lB, pB] = walk(i, 1), L = blen(r.p), tot = lA + L + lB || 1;
       const HA = terrain.ground(pA[0], pA[1]), HB = terrain.ground(pB[0], pB[1]);
       terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, HA + (HB - HA) * lA / tot, HA + (HB - HA) * (lA + L) / tot); });
+    // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)
+    const nodeCnt = new Map<string, number>(); const nk = (q: number[]) => Math.round(q[0]) + ',' + Math.round(q[1]);
+    for (const r of d.roads) { if (['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c)) continue; for (const q of [r.p[0], r.p[r.p.length - 1]]) nodeCnt.set(nk(q), (nodeCnt.get(nk(q)) || 0) + 1);
+      for (let i = 1; i < r.p.length - 1; i++) nodeCnt.set(nk(r.p[i]), (nodeCnt.get(nk(r.p[i])) || 0) + 2); }
+    const leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
+      if (r.tr) { // Trottoir neben der Fahrbahn (tools/geo/roadtags.py): 12 cm erhöht, grauer Belag, Randstein beidseitig
+        const y = 0.47, c = new THREE.Color('#97968F'), curb = new THREE.Color('#BDB9AF'), w = Math.max(1.8, r.w);
+        ribbon(asphIsl.pos, asphIsl.col, r.p, w, y, c, true);
+        for (const sd of [-1, 1]) { const e = offsetLine(r.p, sd * w / 2);
+          for (let i = 0; i < e.length - 1; i++) { const A = e[i], B = e[i + 1]; asphIsl.pos.push(A[0], 0.33, A[1], B[0], 0.33, B[1], B[0], y, B[1], A[0], 0.33, A[1], B[0], y, B[1], A[0], y, A[1]); for (let k = 0; k < 6; k++) asphIsl.col.push(curb.r, curb.g, curb.b); } }
+        continue;
+      }
+      if (r.L && !r.b && r.n !== 'Kapellbrücke') { // Kantons- und Hauptstrassen mit OSM-Details: Markierung nach Schweizer Norm, Trottoirs mit Randstein
+        const c = new THREE.Color(ROAD_COL[r.c] || '#777'); const y = 0.35;
+        ribbon(asph.pos, asph.col, r.p, r.w, y, c, true); const last = r.p[r.p.length - 1]; capEnd(asph.pos, asph.col, last[0], last[1], r.w / 2, y, c);
+        const j0 = (nodeCnt.get(nk(r.p[0])) || 0) >= 3, j1 = (nodeCnt.get(nk(last)) || 0) >= 3;
+        mainMarkings(r, y + 0.012, dashes, yellow, sideW, decals, j0, j1, leitpf);
+        continue;
+      }
       if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') continue; // eigene Holzbrücke
       const c = new THREE.Color(ROAD_COL[r.c] || '#999');
       const y = (ROAD_LAYER[r.c] ?? 0.35) + (r.b ? 0.04 : 0);
@@ -664,7 +701,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
       if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5 && !r.b) edgeLines(dashes, trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
-    const asphTex = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 1400, 0.16); noise(g, 128, 128, 500, 0.35, false); });
+    // Belag: feines Korn, dunklere Flicken und Bitumen-Fugen (Fotos Luzerner Kantonsstrassen); 512 px auf 16 m
+    const asphTex = canvasTex(512, 512, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512);
+      const rnd = (() => { let a = 7; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+      for (let k = 0; k < 5; k++) { g.fillStyle = `rgba(0,0,0,${0.05 + rnd() * 0.06})`; const x = rnd() * 512, y = rnd() * 512, w = 40 + rnd() * 120, h = 30 + rnd() * 90; g.fillRect(x, y, w, h); g.fillRect(x - 512, y, w, h); g.fillRect(x, y - 512, w, h); }
+      g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 1.5;
+      for (let k = 0; k < 7; k++) { let x = rnd() * 512, y = rnd() * 512; g.beginPath(); g.moveTo(x, y); for (let q = 0; q < 6; q++) { x += (rnd() - 0.5) * 60; y += (rnd() - 0.3) * 50; g.lineTo(x, y); } g.stroke(); }
+      noise(g, 512, 512, 22000, 0.14); noise(g, 512, 512, 9000, 0.22, false); });
     const cobTex = canvasTex(128, 128, (g) => {
       g.fillStyle = '#e9e2d6'; g.fillRect(0, 0, 128, 128);
       for (let y = 0; y < 128; y += 16) for (let x = ((y / 16) % 2) * 8 - 8; x < 128; x += 16) {
@@ -673,7 +716,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(x + 4, y + 3.5, 6, 2);
       }
     });
-    for (const [t, tex, sc] of [[asph, asphTex, 6], [cobble, cobTex, 2.4]] as const) {
+    for (let i = 0; i < sideW.pos.length; i++) asph.pos.push(sideW.pos[i]); for (let i = 0; i < sideW.col.length; i++) asph.col.push(sideW.col[i]);
+    for (const [t, tex, sc] of [[asph, asphTex, 16], [cobble, cobTex, 2.4]] as const) {
       const dr = drape(t.pos, t.col, terrain, opts.coarse ? 14 : 8, true);
       const m = flatMesh(dr.pos, dr.col!, toon('#ffffff', { vertexColors: true, map: tex }));
       m.name = tex === asphTex ? 'roads-asphalt' : 'roads-cobble';
@@ -708,6 +752,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
     dg.computeVertexNormals();
     group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
+    if (yellow.length) { const yd = drape(yellow, null, terrain, 5, true); const yg = new THREE.BufferGeometry(); yg.setAttribute('position', new THREE.Float32BufferAttribute(yd.pos, 3)); yg.computeVertexNormals();
+      const ym = new THREE.Mesh(yg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ym.name = 'yellowLines'; group.add(ym); }
+    if (decals.length) group.add(roadDecals(decals, terrain));
+    if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
+      const pa = g.getAttribute('position'); for (let k = 0; k < pa.count; k++) { const yy = pa.getY(k); const dark = yy > 0.72 && yy < 0.92; ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = dark ? 0.08 : 0.95; } g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
+      const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
+      leitpf.forEach(([x, z], k) => { m4.makeTranslation(x, terrain.height(x, z), z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitpfosten'; group.add(chunkInstanced(im, 1000)); }
   }
   // ---- Bahn ----
   {
@@ -718,6 +769,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
   }
 
+  if (d.shelters?.length || d.wagenbach) group.add(bahnhofExtras(d, terrain));
   await onProgress('Häuser werden gebaut …');
   // ---- Gebäude ----
   let hospital = { x: -900, z: -700, name: 'Kinderspital' };
@@ -727,7 +779,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     // Getrennte Puffer je Fassadentyp → je ein Material mit eigener Textur
     type Buf = { pos: number[]; nor: number[]; col: number[]; uv: number[] };
     const mk = (): Buf => ({ pos: [], nor: [], col: [], uv: [] });
-    const B: Record<string, Buf> = { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk() };
+    const B: Record<string, Buf> = { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk() };
     const lpos: number[] = [];
     const styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[] = [];
     for (const b of d.buildings) {
@@ -744,6 +796,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         special.push({ b, kind });
         if (b3d) styles.push({ p: b.p, facade: new THREE.Color('#9C7A58'), roofC: new THREE.Color('#8C3B26'), style: 'stone', flat: false, kind });
         continue; }
+      if (kind === 'tor') { special.push({ b, kind }); // swissBUILDINGS3D enthält den Bogen (echte Form): nur Sandstein-Stil; ohne 3D-Daten eigenes Modell
+        if (b3d) styles.push({ p: b.p, facade: new THREE.Color('#D4C9B1'), roofC: new THREE.Color('#B9AD94'), style: 'stone', flat: false, kind }); continue; }
       if (kind) special.push({ b, kind });
 
       const [cx, cz] = centroid(b.p);
@@ -758,7 +812,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (kind === 'kkl') { h = Math.max(h, 24); facade = new THREE.Color('#9AA6B2'); roofC = new THREE.Color('#5E6670'); style = 'modern'; }
       if (kind === 'jesuiten') { h = Math.max(h, 26); facade = new THREE.Color('#F6F1E8'); roofC = new THREE.Color('#5F8F86'); style = 'stone'; }
       if (kind === 'hofkirche') { h = Math.max(h, 22); facade = new THREE.Color('#E8E0CF'); roofC = new THREE.Color('#7B6A5B'); style = 'stone'; }
-      if (kind === 'kispi') { facade = new THREE.Color('#FFE9B8'); roofC = new THREE.Color('#F39204'); hospital = { x: cx, z: cz, name: 'Kinderspital' }; style = 'modern'; }
+      if (kind === 'kispi') { facade = new THREE.Color('#FFFFFF'); roofC = new THREE.Color('#D8D6D0'); hospital = { x: cx, z: cz, name: 'Kinderspital' }; style = 'luks'; }
+      if (b.n === 'Bahnhof Luzern') { kind = 'bahnhof'; facade = new THREE.Color('#B8CBD4'); roofC = new THREE.Color('#7D8790'); style = 'modern'; } // Glasfront Bahnhofhalle (1991)
+      if (b.n.startsWith('Haus 31')) { kind = 'luksturm'; facade = new THREE.Color('#FFFFFF'); roofC = new THREE.Color('#9A9A96'); style = 'luksTurm'; }
       if (kind === 'tor') { h = Math.max(h, 11); facade = new THREE.Color('#E9E2D2'); style = 'stone'; }
       if (b.t === 'roof') { facade = new THREE.Color('#BFB8AC'); }
       if (style === 'modern' && !kind) facade = new THREE.Color(['#E6E2DA', '#D7DCE0', '#EADFC9', '#CFD6CC', '#E3D3C3'][Math.floor(r * 5)]);
@@ -852,8 +908,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       painted: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.8),
       gruenderzeit: withShop(toon('#ffffff', { vertexColors: true, map: tex.gruenderzeit }), tex.shopNeu),
       hotel: withShop(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
+      luks: toon('#ffffff', { vertexColors: true, map: tex.luks }),
+      luksTurm: toon('#ffffff', { vertexColors: true, map: tex.luksTurm }),
     };
-    for (const k of ['oldGreen', 'oldRed', 'modern', 'block', 'stone', 'altstadt', 'painted', 'gruenderzeit', 'hotel']) withNight(mats[k] as THREE.MeshToonMaterial);
+    for (const k of ['oldGreen', 'oldRed', 'modern', 'block', 'stone', 'altstadt', 'painted', 'gruenderzeit', 'hotel', 'luks', 'luksTurm']) withNight(mats[k] as THREE.MeshToonMaterial);
     const groups: [string, Record<string, Buf>, number[]][] = [['', B, lpos], ...[...b3dTiles].map(([k, t]) => [k, t.B, t.l] as [string, Record<string, Buf>, number[]])];
     for (const [tk, BB] of groups) for (const [k, buf] of Object.entries(BB)) {
       if (!buf.pos.length) continue;
@@ -885,6 +943,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // ---- Wahrzeichen ----
   for (const s of special) {
     const [cx, cz] = centroid(s.b.p);
+    if (s.kind === 'tor') { if (!b3d) group.add(torbogen(s.b.p, terrain)); landmarks.push({ name: 'Bahnhofstor', x: cx, z: cz }); continue; }
     if (b3d && ['wasserturm', 'kkl', 'jesuiten', 'hofkirche', 'tor', 'kispi'].includes(s.kind)) { if (s.kind === 'wasserturm') landmarks.push({ name: 'Wasserturm', x: cx, z: cz }); continue; }
     const G = new THREE.Group(); G.position.y = Math.min(...s.b.p.map(([x, z]) => terrain.ground(x, z))); group.add(G);
     if (s.kind === 'wasserturm') {
@@ -1389,6 +1448,162 @@ function edgeLines(out: number[], p: number[][], off: number, y: number) {
     for (const k of [0, 2, 1, 0, 3, 2]) out.push(q[k][0], y, q[k][1]);
   }
 }
+
+/** Bahnhofplatz: Wartehallen (OSM building=roof: Glasdach auf Stahlstützen) und Wagenbachbrunnen (Becken mit Wasserspielen) */
+function bahnhofExtras(d: CityData, terrain: Terrain) {
+  const G = new THREE.Group(); G.name = 'bahnhofplatz';
+  const steel = toon('#5B6168'), glass = new THREE.MeshLambertMaterial({ color: '#BFD6E2', transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+  const posts: THREE.BufferGeometry[] = [], roofs: THREE.BufferGeometry[] = [], frames: THREE.BufferGeometry[] = [];
+  for (const sh of d.shelters || []) {
+    const y0 = Math.min(...sh.p.map(([x, z]) => terrain.height(x, z))), H = Math.min(Math.max(sh.h, 3.2), 8);
+    const shape = new THREE.Shape(sh.p.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const rg = new THREE.ExtrudeGeometry(shape, { depth: 0.25, bevelEnabled: false }); rg.rotateX(-Math.PI / 2); rg.translate(0, y0 + H, 0); roofs.push(rg);
+    // Stützen alle ~8 m entlang des Umrisses, 0.6 m eingerückt
+    const [cx, cz] = centroid(sh.p);
+    for (let i = 0; i < sh.p.length; i++) { const A = sh.p[i], B = sh.p[(i + 1) % sh.p.length]; const L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      for (let t = 0; t < L; t += 8) { const x = A[0] + (B[0] - A[0]) * t / L, z = A[1] + (B[1] - A[1]) * t / L; const k = 0.6 / Math.max(1, Math.hypot(cx - x, cz - z));
+        const g = new THREE.CylinderGeometry(0.09, 0.09, H, 6); g.translate(x + (cx - x) * k, y0 + H / 2, z + (cz - z) * k); posts.push(g); } }
+    const eg = new THREE.EdgesGeometry(rg); frames.push(eg);
+  }
+  if (roofs.length) { G.add(new THREE.Mesh(mergeGeometries(roofs)!, glass)); G.add(new THREE.Mesh(mergeGeometries(posts)!, steel)); G.add(new THREE.LineSegments(mergeGeometries(frames)!, new THREE.LineBasicMaterial({ color: '#4A5058' }))); }
+  if (d.wagenbach) { // Wagenbachbrunnen auf dem Europaplatz: flaches Becken, Steinrand, Fontänen
+    const p = d.wagenbach, y0 = Math.min(...p.map(([x, z]) => terrain.height(x, z)));
+    const rim = new THREE.Shape(p.map(([x, z]) => new THREE.Vector2(x, -z)));
+    const rg = new THREE.ExtrudeGeometry(rim, { depth: 0.55, bevelEnabled: false }); rg.rotateX(-Math.PI / 2); rg.translate(0, y0, 0);
+    const rm = new THREE.Mesh(rg, toon('#B9B3A6')); G.add(rm, outline(rm));
+    const [cx, cz] = centroid(p); const inner = p.map(([x, z]) => new THREE.Vector2(cx + (x - cx) * 0.9, -(cz + (z - cz) * 0.9)));
+    const wg = new THREE.ShapeGeometry(new THREE.Shape(inner)); wg.rotateX(-Math.PI / 2); wg.translate(0, y0 + 0.58, 0);
+    G.add(new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ color: '#4FA3C7' })));
+    const jet = new THREE.MeshLambertMaterial({ color: '#E8F6FF', transparent: true, opacity: 0.7 });
+    for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; const j = new THREE.Mesh(new THREE.ConeGeometry(0.22, 2.2 + (k % 3) * 0.6, 6), jet);
+      j.position.set(cx + Math.cos(a) * 3, y0 + 1.6, cz + Math.sin(a) * 3); G.add(j); }
+  }
+  return G;
+}
+/** Altes Bahnhofstor Luzern (Rest des 1971 abgebrannten Bahnhofs, Neubarock, Sandstein; Figurengruppe «Zeitgeist» von R. Kissling oben).
+ *  Grundriss aus OSM (20.5 × 5.2 m), Masse geschätzt nach Foto (Commons «Torbogen Lucerne»): Bogen 7 m breit, Scheitel 11 m, Gesims 13 m, Attika bis 16 m. */
+function torbogen(p: number[][], terrain: Terrain) {
+  const G = new THREE.Group(); G.name = 'torbogen';
+  // Längsachse = längste Kante
+  let best = 0, ax = 1, az = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L > best) { best = L; ax = (b[0] - a[0]) / L; az = (b[1] - a[1]) / L; } }
+  const [cx, cz] = centroid(p); const W = Math.min(22, best), D = 5.2;
+  const y0 = Math.min(...p.map(([x, z]) => terrain.ground(x, z)));
+  G.position.set(cx, y0, cz); G.rotation.y = -Math.atan2(az, ax);
+  const stone = toon('#CFC4AC'), dark = toon('#B5A98F'), bronze = toon('#4E6B5A');
+  const sh = new THREE.Shape(); sh.moveTo(-W / 2, 0); sh.lineTo(W / 2, 0); sh.lineTo(W / 2, 13); sh.lineTo(-W / 2, 13); sh.lineTo(-W / 2, 0);
+  const hole = new THREE.Path(); hole.moveTo(-3.5, 0); hole.lineTo(-3.5, 7.5); hole.absarc(0, 7.5, 3.5, Math.PI, 0, true); hole.lineTo(3.5, 0); hole.lineTo(-3.5, 0); sh.holes.push(hole);
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: D, bevelEnabled: false, curveSegments: 16 }), stone); body.position.z = -D / 2; G.add(body, outline(body));
+  const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); G.add(b); return b; };
+  G.add(outline(box(W + 1, 0.9, D + 1, 0, 13.45, 0, dark)));            // Hauptgesims
+  G.add(outline(box(W - 4, 2.6, D - 0.6, 0, 15.2, 0, stone)));          // Attika
+  box(W - 3.4, 0.5, D - 0.2, 0, 16.7, 0, dark);
+  box(W + 0.4, 1.2, D + 0.4, 0, 0.6, 0, dark);                           // Sockel
+  for (const sz of [-1, 1]) for (const x of [-6.2, -4.6, 4.6, 6.2]) {     // Säulen vor beiden Seiten
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 10.6, 12), stone); c.position.set(x, 6.5, sz * (D / 2 + 0.45)); G.add(c);
+    box(1.2, 0.6, 1.2, x, 12.1, sz * (D / 2 + 0.45), dark); box(1.2, 1.0, 1.2, x, 1.2, sz * (D / 2 + 0.45), dark); }
+  box(1.4, 1.6, 0.5, 0, 10.6, D / 2 + 0.1, dark); box(1.4, 1.6, 0.5, 0, 10.6, -D / 2 - 0.1, dark); // Schlussstein
+  // Figurengruppe (vereinfacht): Sockel, Wagen und Figuren in Bronze-Grün
+  box(5, 1.2, 3, 0, 17.6, 0, dark);
+  const fig = new THREE.Mesh(new THREE.ConeGeometry(1.3, 4.2, 7), bronze); fig.position.set(0, 20.3, 0); G.add(fig);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), bronze); head.position.set(0, 22.7, 0); G.add(head);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 2.6, 0.35), bronze); arm.position.set(0.9, 22.8, 0); arm.rotation.z = -0.5; G.add(arm);
+  for (const sx of [-1.8, 1.8]) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.6, 6), bronze); f.position.set(sx, 19.5, 0.4); G.add(f); }
+  G.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return G;
+}
+/** Versetzte Linie (Gehrung, begrenzt) einer Polylinie; off > 0 = rechts in Punktfolge (x Ost, z Süd) */
+function offsetLine(p: number[][], off: number): number[][] {
+  const n = p.length, out: number[][] = [];
+  for (let i = 0; i < n; i++) {
+    const a = p[Math.max(0, i - 1)], b = p[Math.min(n - 1, i + 1)], c = p[i];
+    const d1 = i > 0 ? [c[0] - a[0], c[1] - a[1]] : [b[0] - c[0], b[1] - c[1]], d2 = i < n - 1 ? [b[0] - c[0], b[1] - c[1]] : d1;
+    const l1 = Math.hypot(d1[0], d1[1]) || 1, l2 = Math.hypot(d2[0], d2[1]) || 1;
+    const n1 = [-d1[1] / l1, d1[0] / l1], n2 = [-d2[1] / l2, d2[0] / l2];
+    let mx = n1[0] + n2[0], mz = n1[1] + n2[1]; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
+    const k = Math.min(1.6, 1 / Math.max(0.3, mx * n1[0] + mz * n1[1])); out.push([c[0] + mx * k * off, c[1] + mz * k * off]);
+  }
+  return out;
+}
+/** Linie (durchgezogen: gap = 0, sonst Strich/Lücke in m) als Dreiecke in out */
+function strokeLine(out: number[], p: number[][], y: number, width: number, dash = 0, gap = 0) {
+  const hw = width / 2; let s0 = 0;
+  for (let i = 0; i < p.length - 1; i++) {
+    const [x1, z1] = p[i], [x2, z2] = p[i + 1]; const len = Math.hypot(x2 - x1, z2 - z1); if (len < 0.01) continue;
+    const ux = (x2 - x1) / len, uz = (z2 - z1) / len, nx = -uz * hw, nz = ux * hw;
+    const quad = (a: number, b: number) => { const ax = x1 + ux * a, az = z1 + uz * a, bx = x1 + ux * b, bz = z1 + uz * b;
+      out.push(ax + nx, y, az + nz, bx - nx, y, bz - nz, ax - nx, y, az - nz, ax + nx, y, az + nz, bx + nx, y, bz + nz, bx - nx, y, bz - nz); };
+    if (!gap) { quad(0, len); continue; }
+    const per = dash + gap; let t = 0;
+    while (t < len) { const ph = (s0 + t) % per; if (ph < dash) { const e = Math.min(len, t + dash - ph); quad(t, e); t = e; } else t += per - ph; }
+    s0 += len;
+  }
+}
+/** Kantonsstrasse nach SN 640 850 / SSV: Leitlinien weiss 3/6 m innerorts (ausserorts 6/12 m, Annahme), Sicherheitslinie bei ≥ 4 Streifen,
+ *  Rad- und Busstreifen gelb mit Velo-/BUS-Zeichen, Randlinien nur ausserorts (Tempo > 50), Trottoir 2 m mit Randstein 12 cm. */
+function mainMarkings(r: CityData['roads'][0], y: number, white: number[], yellow: number[], walk: { pos: number[]; col: number[] }, decals: number[][], j0: boolean, j1: boolean, posts: number[][] = []) {
+  const W = r.w, L = Math.max(1, r.L || 2), cyL = r.cy?.[0] ? 1 : 0, cyR = r.cy?.[1] ? 1 : 0, out = (r.v || 50) > 50;
+  const lw = (W - 1.5 * (cyL + cyR)) / L, nb = r.o ? 0 : Math.floor(L / 2);
+  // an Knoten 6 m frei lassen
+  let p = r.p; { const tr = (q: number[][]) => { const t = trimLine(q.concat([q[q.length - 1]]), 6); return t.length >= 2 ? t : []; };
+    if (j0 && j1) p = trimLine(p, 6); else if (j0) { const t = tr(p.slice().reverse()); p = t.length ? t.reverse() : []; } else if (j1) p = tr(p); }
+  const dash = out ? 6 : 3, gap = out ? 12 : 6;
+  if (p.length >= 2) {
+    let x = -W / 2;
+    if (cyL) { x += 1.5; strokeLine(yellow, offsetLine(p, x), y, 0.15); }
+    for (let k = 1; k < L; k++) { const o = x + lw * k;
+      const busEdge = (r.bu?.[0] && k === 1) || (r.bu?.[1] && k === L - 1);
+      if (busEdge) strokeLine(yellow, offsetLine(p, o), y, 0.15);
+      else if (k === nb && nb > 0) { if (L >= 4) { strokeLine(white, offsetLine(p, o - 0.1), y, 0.12); strokeLine(white, offsetLine(p, o + 0.1), y, 0.12); } else strokeLine(white, offsetLine(p, o), y, 0.12, dash, gap); }
+      else strokeLine(white, offsetLine(p, o), y, 0.12, dash, gap); }
+    if (cyR) strokeLine(yellow, offsetLine(p, W / 2 - 1.5), y, 0.15);
+    if (out) { if (!cyL) strokeLine(white, offsetLine(p, -W / 2 + 0.3), y, 0.15); if (!cyR) strokeLine(white, offsetLine(p, W / 2 - 0.3), y, 0.15);
+      // Leitpfosten ausserorts (SN 640 822): weiss mit schwarzem Band, beidseitig etwa alle 50 m, 0.8 m neben dem Fahrbahnrand
+      for (const sd of [-1, 1]) { const e = offsetLine(p, sd * (W / 2 + 0.8)); let acc = 25;
+        for (let i = 1; i < e.length; i++) { const L = Math.hypot(e[i][0] - e[i - 1][0], e[i][1] - e[i - 1][1]); while (acc < L) { const t = acc / L; posts.push([e[i - 1][0] + (e[i][0] - e[i - 1][0]) * t, e[i - 1][1] + (e[i][1] - e[i - 1][1]) * t]); acc += 50; } acc -= L; } } }
+    // Zeichen: Velo in Radstreifen, BUS im Busstreifen, alle 45 m
+    let len = 0; for (let i = 1; i < p.length; i++) len += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+    for (let s = 12; s < len - 8; s += 45) { let acc = 0;
+      for (let i = 1; i < p.length; i++) { const sl = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (acc + sl < s) { acc += sl; continue; }
+        const t = (s - acc) / sl, ux = (p[i][0] - p[i - 1][0]) / sl, uz = (p[i][1] - p[i - 1][1]) / sl, cx = p[i - 1][0] + ux * sl * t, cz = p[i - 1][1] + uz * sl * t, nx = -uz, nz = ux;
+        if (cyR) decals.push([0, cx + nx * (W / 2 - 0.75), cz + nz * (W / 2 - 0.75), ux, uz]);
+        if (cyL) decals.push([0, cx - nx * (W / 2 - 0.75), cz - nz * (W / 2 - 0.75), -ux, -uz]);
+        if (r.bu?.[1]) { const o = W / 2 - 1.5 * cyR - lw / 2; decals.push([1, cx + nx * o, cz + nz * o, ux, uz]); }
+        if (r.bu?.[0]) { const o = W / 2 - 1.5 * cyL - lw / 2; decals.push([1, cx - nx * o, cz - nz * o, -ux, -uz]); }
+        break; } }
+  }
+  // Trottoirs: 2 m, 12 cm höher, Randstein hellgrau
+  const curbC = new THREE.Color('#B9B6AE'), swC = new THREE.Color('#8F9093');
+  for (const [sd, on] of [[-1, r.sw?.[0]], [1, r.sw?.[1]]] as [number, number | undefined][]) { if (!on) continue;
+    const e = offsetLine(r.p, sd * W / 2), e2 = offsetLine(r.p, sd * (W / 2 + 0.18)), o = offsetLine(r.p, sd * (W / 2 + 2.2));
+    for (let i = 0; i < r.p.length - 1; i++) {
+      const tri = (A: number[], B: number[], C: number[], ya: number, yb: number, yc: number, c: THREE.Color) => { walk.pos.push(A[0], ya, A[1], B[0], yb, B[1], C[0], yc, C[1]); for (let q = 0; q < 3; q++) walk.col.push(c.r, c.g, c.b); };
+      const yh = y + 0.12;
+      tri(e[i], e[i + 1], e[i + 1], y, y, yh, curbC); tri(e[i], e[i + 1], e[i], y, yh, yh, curbC); // Randstein-Stirnseite
+      tri(e[i], e2[i + 1], e[i + 1], yh, yh, yh, curbC); tri(e[i], e2[i], e2[i + 1], yh, yh, yh, curbC); // Randstein oben
+      tri(e2[i], o[i + 1], e2[i + 1], yh, yh, yh, swC); tri(e2[i], o[i], o[i + 1], yh, yh, yh, swC); // Trottoir
+    }
+  }
+}
+/** Gelbe Bodenzeichen (Velo, BUS) als flache Rechtecke 1.2 × 2.4 m bzw. 1.8 × 4 m, Textur aus Canvas */
+function roadDecals(list: number[][], terrain: Terrain) {
+  const tex = canvasTex(256, 128, (g) => {
+    g.clearRect(0, 0, 256, 128); g.strokeStyle = g.fillStyle = '#F2C21B'; g.lineWidth = 7; g.lineCap = 'round';
+    // Velo (Blick von oben, Fahrtrichtung = Bild-oben), in Feld 0..128
+    g.beginPath(); g.arc(64, 30, 18, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(64, 98, 18, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(64, 30); g.lineTo(52, 66); g.lineTo(76, 66); g.lineTo(64, 98); g.moveTo(52, 66); g.lineTo(64, 30); g.moveTo(40, 34); g.lineTo(88, 34); g.stroke();
+    g.font = 'bold 56px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.save(); g.translate(192, 64); g.rotate(-Math.PI / 2); g.scale(1.6, 1); g.fillText('BUS', 0, 4); g.restore();
+  }, false);
+  const pos: number[] = [], uv: number[] = [];
+  for (const [k, x, z, ux, uz] of list) {
+    const hw = k ? 1.0 : 0.6, hl = k ? 2.4 : 1.2, nx = -uz, nz = ux, u0 = k ? 0.5 : 0, u1 = k ? 1 : 0.5;
+    const P = [[x - nx * hw - ux * hl, z - nz * hw - uz * hl, u0, 0], [x + nx * hw - ux * hl, z + nz * hw - uz * hl, u1, 0], [x + nx * hw + ux * hl, z + nz * hw + uz * hl, u1, 1], [x - nx * hw + ux * hl, z - nz * hw + uz * hl, u0, 1]];
+    for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.37, pz); uv.push(u, v); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+  m.name = 'roadDecals'; return m;
+}
 function dashLine(out: number[], p: number[][], y: number) {
   let carry = 0;
   for (let i = 0; i < p.length - 1; i++) {
@@ -1532,7 +1747,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
   const tileOf = (cx: number, cz: number) => {
     const k = Math.floor(cx / 400) + ',' + Math.floor(cz / 400);
     let t = tiles.get(k);
-    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk() }, l: [] }; tiles.set(k, t); }
+    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk() }, l: [] }; tiles.set(k, t); }
     return t;
   };
   for (const m of b.meta.buildings) {
@@ -1548,7 +1763,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     const base = terrain ? Math.max(ymin, terrain.ground(cx, cz) - 0.2) : ymin;
     let style = st ? st.style : h > 27 ? 'block' : r > 0.5 ? 'oldGreen' : 'oldRed';
     let facade = st ? st.facade : new THREE.Color(FACADES[Math.floor(r * FACADES.length)]);
-    let roofTile = st && st.kind === 'kispi' ? new THREE.Color('#F39204') : st && !st.flat ? st.roofC : new THREE.Color(ROOFS[Math.floor(hash(cz, cx) * ROOFS.length)]);
+    let roofTile = st && st.kind === 'kispi' ? new THREE.Color('#D8D6D0') : st && !st.flat ? st.roofC : new THREE.Color(ROOFS[Math.floor(hash(cz, cx) * ROOFS.length)]);
     let slateRoof = false;
     // R7: Flachdach-Bauten ausserhalb der Altstadt sind fast immer Nachkriegsbauten (Referenz Pilatusstrasse)
     if (zone !== 'altstadt' && style !== 'stone' && style !== 'modern' && style !== 'block' && h > 7 && !(st && st.kind)) {
@@ -1566,7 +1781,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
         facade = new THREE.Color(style === 'block' ? ['#F1ECE2', '#EDE3CF', '#E6E8E3', '#F2E6D6', '#E9DFD0', '#DDE3E6', '#F0E2C8'][Math.floor(r * 7)] : ['#E6E4DF', '#D9D6CF', '#C9CCD0', '#EDE6D8', '#DCD3C4'][Math.floor(r * 5)]);
       }
     }
-    if (style !== 'stone' && style !== 'modern' && style !== 'block') {
+    if (style !== 'stone' && style !== 'modern' && style !== 'block' && style !== 'luks' && style !== 'luksTurm') {
       if (zone === 'altstadt') { const plaza = PAINTED_SQUARES.some(([px, pz, pr]) => Math.hypot(cx - px, cz - pz) < pr); style = plaza || r < 0.18 ? 'painted' : 'altstadt'; facade = new THREE.Color(['#F4EEE2', '#EFDDBA', '#E9C9A3', '#E6C8C0', '#DCE3CF', '#F2E2B4', '#E8D9C9'][Math.floor(hash(cz + 3, cx) * 7)]); }
       else if (zone === 'neustadt') { style = 'gruenderzeit'; facade = new THREE.Color(['#DCCFB4', '#D3C6AA', '#E4D9C3', '#CFC0A3', '#E8DCC6'][Math.floor(r * 5)]); slateRoof = hash(cx + 7, cz) < 0.45; }
       else if (zone === 'quai') { style = 'hotel'; facade = new THREE.Color(['#F3F0E8', '#F1E9D8', '#EEE7DA'][Math.floor(r * 3)]); slateRoof = hash(cx + 7, cz) < 0.6; }
@@ -1604,7 +1819,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       roofFlat = new THREE.Color().setHSL(hsl.h, Math.min(hsl.s * (green ? 1.2 : 0.6), green ? 0.38 : 0.18), Math.min(0.75, Math.max(0.42, hsl.l)));
     }
     STYLE_COUNT[style] = (STYLE_COUNT[style] || 0) + 1;
-    const tile = style === 'modern' || style === 'block' ? 3.6 : style === 'stone' ? 6 : style === 'hotel' ? 4.2 : 3.3, floorH = style === 'stone' ? 7 : style === 'gruenderzeit' || style === 'hotel' ? 3.6 : 3.2;
+    const tile = style === 'luks' ? 2.5 : style === 'luksTurm' ? 4 : style === 'modern' || style === 'block' ? 3.6 : style === 'stone' ? 6 : style === 'hotel' ? 4.2 : 3.3, floorH = style === 'luks' ? 3.9 : style === 'stone' ? 7 : style === 'gruenderzeit' || style === 'hotel' || style === 'luksTurm' ? 3.6 : 3.2;
     const spires = st && st.kind === 'jesuiten' ? findSpires(P, I, vS, iS, iC, ymax) : null;
     if (spires) for (const q of spires) ONIONS.push([q.x, q.z, q.y, q.r, q.top]);
     for (let t = iS; t < iS + iC; t += 3) {
@@ -1941,6 +2156,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
     (G as any).signalLamp = lamp; (G as any).signalPos = P.signals;
   }
   // Brunnen (instanziert): Steintrog, Wasser, bemalte Säule mit goldener Kugel wie die Altstadtbrunnen
+  P.fountains = P.fountains.filter(([x, z]) => Math.hypot(x - 203, z - 104) > 6); // Trinkbrunnen im Torbogen: verdeckt vom Modell
   if (P.fountains.length) {
     const n = P.fountains.length, o = new THREE.Object3D(), c = new THREE.Color();
     const basin = new THREE.InstancedMesh(new THREE.CylinderGeometry(1.6, 1.8, 0.7, 12), toon('#B8B0A2'), n);
@@ -1979,7 +2195,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
     }
     // Wagenbachbrunnen (Bahnhofplatz; Annahme: unbenannter OSM-Brunnen bei 47.05076/8.31038) und Fritschibrunnen (Kapellplatz)
     const special = (cx: number, cz: number, r: number) => P.fountains.find(([x, z]) => Math.hypot(x - cx, z - cz) < r);
-    const wb = special(203, 104, 15);
+    const wb = undefined as number[] | undefined; // früher Annahme (203, 104) = Brunnen unter dem Torbogen; der echte Wagenbachbrunnen (OSM-Umriss am Europaplatz) entsteht in bahnhofExtras
     if (wb) {
       const [x, z] = wb, y = terrain.height(x, z), W = new THREE.Group(); W.position.set(x, y, z); W.name = 'wagenbachbrunnen';
       const m = (g: THREE.BufferGeometry, c: string, py: number, ol = true, mat?: THREE.Material) => { const o = new THREE.Mesh(g, mat || toon(c)); o.position.y = py; W.add(o); if (ol) W.add(outline(o)); return o; };

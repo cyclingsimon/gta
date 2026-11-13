@@ -5,7 +5,12 @@ import type { Terrain } from './terrain';
 import type { Controls } from './input';
 
 export type Difficulty = 'entdecken' | 'rettung' | 'profi';
-const VMAX: Record<Difficulty, number> = { entdecken: 42, rettung: 52, profi: 64 }; // m/s: 151 / 187 / 230 km/h, mit Blaulicht +15 % (Wunsch Simon: viel schneller)
+// Höchstgeschwindigkeit in m/s MIT Blaulicht (Wunsch Simon 13.11.: Einfach ~90, Mittel ~150, Schnell ~269 km/h).
+// Ohne Blaulicht langsamer: in der Schweiz darf nur mit Blaulicht UND Wechselklanghorn von Geschwindigkeitsvorschriften
+// abgewichen werden (Art. 100 Ziff. 4 SVG, ASTRA-Merkblatt Blaulicht). Ohne Blaulicht 70 / 120 / 200 km/h [Entscheid Claude].
+const VMAX: Record<Difficulty, number> = { entdecken: 90 / 3.6, rettung: 150 / 3.6, profi: 269 / 3.6 };
+const VMAX_RUHIG: Record<Difficulty, number> = { entdecken: 70 / 3.6, rettung: 120 / 3.6, profi: 200 / 3.6 };
+const ACC: Record<Difficulty, number> = { entdecken: 16, rettung: 24, profi: 36 };
 
 function textSprite(text: string, bg: string, fg: string, w = 256, h = 96, font = 'bold 44px system-ui, sans-serif') {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -167,17 +172,17 @@ export class Vehicle {
 
   /** Rückgabe: true, wenn es in diesem Schritt einen Rempler gab */
   update(dt: number, c: Controls, diff: Difficulty, onBump: (hard: boolean) => void) {
-    const n = Math.min(8, Math.max(1, Math.ceil(Math.abs(this.speed) * dt / 0.7))); // Teilschritte: nie mehr als 0.7 m pro Schritt (keine Wände durchfahren)
+    const n = Math.min(12, Math.max(1, Math.ceil(Math.abs(this.speed) * dt / 0.7))); // Teilschritte: nie mehr als 0.7 m pro Schritt (keine Wände durchfahren)
     for (let i = 0; i < n; i++) this.step(dt / n, c, diff, onBump, i === n - 1);
   }
 
   private step(dt: number, c: Controls, diff: Difficulty, onBump: (hard: boolean) => void, render: boolean) {
     this.t += dt;
-    const vmax = VMAX[diff] * (this.siren ? 1.15 : 1);
+    const vmax = this.siren ? VMAX[diff] : VMAX_RUHIG[diff];
     // Längsdynamik
     if (c.throttle > 0) {
       if (this.speed < -0.3) this.speed += 20 * dt * c.throttle; // aus Rückwärts bremsen
-      else this.speed += (diff === 'profi' ? 30 : 24) * c.throttle * dt * (1 - Math.max(0, this.speed) / vmax) + (this.speed > vmax ? -6 * dt : 0);
+      else this.speed += ACC[diff] * c.throttle * dt * Math.max(0, 1 - Math.max(0, this.speed) / vmax) + (this.speed > vmax ? -6 * dt : 0);
     }
     if (c.brake > 0) {
       if (this.speed > 0.3) this.speed -= 24 * dt * c.brake;

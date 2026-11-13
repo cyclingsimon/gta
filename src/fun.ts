@@ -188,15 +188,33 @@ export class Animals {
 }
 
 // ---------------- Kursschiffe (SGV-Raddampfer) auf Seebecken und Horwer Bucht ----------------
+/** Kleines Motorboot (8 m): Rumpf mit Spitze, Kabine, Scheibe; ein Netz mit Vertex-Farben */
+function motorboat(hull: string) {
+  const parts: THREE.BufferGeometry[] = [];
+  const add = (g: THREE.BufferGeometry, col: string, x: number, y: number, z: number) => { const q = g.index ? g.toNonIndexed() : g; q.deleteAttribute('uv'); q.translate(x, y, z); const cc = new THREE.Color(col), n = q.getAttribute('position').count, ca = new Float32Array(n * 3); for (let k = 0; k < n; k++) { ca[k * 3] = cc.r; ca[k * 3 + 1] = cc.g; ca[k * 3 + 2] = cc.b; } q.setAttribute('color', new THREE.BufferAttribute(ca, 3)); parts.push(q); };
+  add(new THREE.BoxGeometry(6, 1.1, 2.6), hull, -0.6, 0.35, 0);
+  const bow = new THREE.CylinderGeometry(0, 1.3, 2.6, 3, 1); bow.rotateZ(-Math.PI / 2); bow.rotateX(Math.PI / 6); bow.scale(1, 0.85, 1); add(bow, hull, 3.6, 0.35, 0);
+  add(new THREE.BoxGeometry(6.2, 0.18, 2.7), '#3b302b', -0.6, 0.95, 0);
+  add(new THREE.BoxGeometry(2.2, 0.9, 2.0), '#F4F1E8', -0.4, 1.45, 0);
+  add(new THREE.BoxGeometry(0.1, 0.7, 1.8), '#7FB8D8', 0.75, 1.5, 0);
+  const g = mergeGeometries(parts)!; const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true })); m.castShadow = true;
+  const o = new THREE.Group(); o.add(m); return o;
+}
 export class Ships {
   group = new THREE.Group();
   private ships: { obj: THREE.Object3D; curve: THREE.CatmullRomCurve3; len: number; s: number; dwell: number; v: number }[] = [];
-  constructor(routes: number[][][]) {
+  constructor(routes: number[][][], small: number[][][] = []) {
     this.group.name = 'ships';
     routes.forEach((r, i) => {
       const curve = new THREE.CatmullRomCurve3(r.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal');
       const obj = steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]); this.group.add(obj);
       this.ships.push({ obj, curve, len: curve.getLength(), s: i * 0.37 % 1, dwell: 0, v: 5.5 });
+    });
+    // Motorboote (Simon 13.11.: mehr Schiffe in der Luzerner Bucht): fahren ohne Halt, schneller
+    small.forEach((r, i) => {
+      const curve = new THREE.CatmullRomCurve3(r.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal');
+      const obj = motorboat(['#FFFFFF', '#E94B3C', '#1F5FA8', '#F7C531'][i % 4]); this.group.add(obj);
+      this.ships.push({ obj, curve, len: curve.getLength(), s: (i * 0.53 + 0.2) % 1, dwell: 0, v: 9 + (i % 3) * 2 });
     });
     this.update(0);
   }
@@ -205,7 +223,7 @@ export class Ships {
   update(dt: number) {
     const p = new THREE.Vector3(), t = new THREE.Vector3();
     for (const sh of this.ships) {
-      if (sh.dwell > 0) sh.dwell -= dt; else { const before = sh.s; sh.s = (sh.s + sh.v * dt / sh.len) % 1; if (before > sh.s) sh.dwell = 25; } // am Start-Steg anlegen
+      if (sh.dwell > 0) sh.dwell -= dt; else { const before = sh.s; sh.s = (sh.s + sh.v * dt / sh.len) % 1; if (before > sh.s && sh.v < 8) sh.dwell = 15; } // am Start-Steg anlegen
       sh.curve.getPointAt(sh.s, p); sh.curve.getTangentAt(sh.s, t);
       sh.obj.position.set(p.x, Math.sin(performance.now() / 900) * 0.06, p.z); sh.obj.rotation.y = -Math.atan2(t.z, t.x);
     }

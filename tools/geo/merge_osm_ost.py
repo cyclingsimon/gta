@@ -5,14 +5,17 @@ from shapely.geometry import LineString, box
 import os as _os
 SPLIT = float(_os.environ.get('LR_SPLIT', '2600'))
 WEST = _os.environ.get('LR_SIDE') == 'west'  # Region West: neue Daten westlich der Linie
-E_ = box(SPLIT, -1e6, 1e6, 1e6); W_ = box(-1e6, -1e6, SPLIT, 1e6)
+AX = 1 if _os.environ.get('LR_SIDE') == 'south' else 0  # Region Süd: Trennlinie z = SPLIT, neue Daten südlich (z gross)
+E_ = box(SPLIT, -1e6, 1e6, 1e6) if AX == 0 else box(-1e6, SPLIT, 1e6, 1e6)
+W_ = box(-1e6, -1e6, SPLIT, 1e6) if AX == 0 else box(-1e6, -1e6, 1e6, SPLIT)
 if WEST: E_, W_ = W_, E_
 KX = math.cos(math.radians(47.0517)) * 111320
 LON_SPLIT = 8.3077 + SPLIT / KX
+LAT_SPLIT = 47.0517 - SPLIT / 110574
 OUT = _os.environ.get('LR_OUT', 'data/e3/merged_ost'); NEW = _os.environ.get('LR_NEW', 'data/e3/conv_ost')
 os.makedirs(OUT, exist_ok=True)
 new, old = json.load(open(NEW + '/osm_big.json')), json.load(open('data/osm_big.json'))
-def cx(p): return sum(q[0] for q in p) / len(p)
+def cx(p): return sum(q[AX] for q in p) / len(p)
 def cut_line(pts, half):
     g = LineString(pts).intersection(half)
     parts = [g] if isinstance(g, LineString) else list(getattr(g, 'geoms', []))
@@ -29,20 +32,22 @@ out['w'] = [w for w in new['w'] if side(wkey(w))] + [w for w in old['w'] if not 
 out['h'], out['poi'] = old.get('h', []), []
 def fx(w):
     while isinstance(w, (list, tuple)) and w and isinstance(w[0], (list, tuple)): w = w[0]
-    return w[0] if isinstance(w, (list, tuple)) and w and isinstance(w[0], (int, float)) else 0
+    return w[AX] if isinstance(w, (list, tuple)) and len(w) > AX and isinstance(w[AX], (int, float)) else 0
 out['wr'] = [w for w in new.get('wr', []) if side(fx(w))] + [w for w in old.get('wr', []) if not side(fx(w))]
 json.dump(out, open(OUT + '/osm_big.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 pn, po = json.load(open(NEW + '/osm_props.json')), json.load(open('data/osm_props.json'))
 ea = (lambda lon: lon < LON_SPLIT) if WEST else (lambda lon: lon >= LON_SPLIT)
-props = {'lamp': [q for q in pn['lamp'] if ea(q[1])] + [q for q in po['lamp'] if not ea(q[1])],
-         'tree': [q for q in pn['tree'] if ea(q[1])] + [q for q in po['tree'] if not ea(q[1])],
-         'sig': [q for q in pn['sig'] if ea(q['lon'])] + [q for q in po['sig'] if not ea(q['lon'])],
-         'row': [r for r in pn['row'] if ea(r[0][1])] + [r for r in po['row'] if not ea(r[0][1])],
-         'pier': [r for r in pn['pier'] if ea(r['g'][0][1])] + [r for r in po['pier'] if not ea(r['g'][0][1])]}
+if AX == 1: ea = lambda lat: lat <= LAT_SPLIT
+I = 1 - AX; SK = 'lat' if AX else 'lon'
+props = {'lamp': [q for q in pn['lamp'] if ea(q[I])] + [q for q in po['lamp'] if not ea(q[I])],
+         'tree': [q for q in pn['tree'] if ea(q[I])] + [q for q in po['tree'] if not ea(q[I])],
+         'sig': [q for q in pn['sig'] if ea(q[SK])] + [q for q in po['sig'] if not ea(q[SK])],
+         'row': [r for r in pn['row'] if ea(r[0][I])] + [r for r in po['row'] if not ea(r[0][I])],
+         'pier': [r for r in pn['pier'] if ea(r['g'][0][I])] + [r for r in po['pier'] if not ea(r['g'][0][I])]}
 json.dump(props, open(OUT + '/osm_props.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 json.dump(json.load(open(NEW + '/tunnels.json')) + json.load(open('data/tunnels.json')), open(OUT + '/tunnels.json', 'w'), separators=(',', ':'))
 bn, bo = json.load(open(NEW + '/beach.json')), json.load(open('data/beach.json'))
-json.dump({'beach': [b for b in bn['beach'] if side(cx(b))] + [b for b in bo['beach'] if not side(cx(b))], 'bench': [q for q in bn['bench'] if side(q[0])] + [q for q in bo['bench'] if not side(q[0])]},
+json.dump({'beach': [b for b in bn['beach'] if side(cx(b))] + [b for b in bo['beach'] if not side(cx(b))], 'bench': [q for q in bn['bench'] if side(q[AX])] + [q for q in bo['bench'] if not side(q[AX])]},
           open(OUT + '/beach.json', 'w'), separators=(',', ':'))
 # Busse: Overpass-Relationen (out geom) → {rels, ways, nodes} wie data/osm_bus.json
 raw = json.load(open(_os.environ.get('LR_BUSRAW', 'data/e3/osm/buso.json')))['elements']

@@ -22,3 +22,4 @@ cp public/data/horizon.json public/data/horizon.bin public/data/west/
 LR_TUN=data/e3/merged_west/tunnels.json python3 tools/geo/build_trains.py
 python3 tools/geo/crossings.py
 python3 tools/geo/plazas.py
+python3 tools/geo/roadtags.py public/data/west

@@ -1,0 +1,41 @@
+{
+ "stand": "2026-11-13",
+ "gesamt": {
+  "km2": 147.8,
+  "gebaeude": 30597,
+  "strassen_km": 1048,
+  "wege_km": 1391
+ },
+ "regionen": {
+  "luzern": {
+   "km2": 48.1,
+   "gebaeude": 14289,
+   "strassen_km": 448,
+   "wege_km": 625
+  },
+  "nord": {
+   "km2": 24.6,
+   "gebaeude": 8190,
+   "strassen_km": 269,
+   "wege_km": 339
+  },
+  "ost": {
+   "km2": 18.8,
+   "gebaeude": 2794,
+   "strassen_km": 90,
+   "wege_km": 120
+  },
+  "west": {
+   "km2": 20.2,
+   "gebaeude": 1504,
+   "strassen_km": 70,
+   "wege_km": 121
+  },
+  "sued": {
+   "km2": 36.1,
+   "gebaeude": 3820,
+   "strassen_km": 171,
+   "wege_km": 186
+  }
+ }
+}
