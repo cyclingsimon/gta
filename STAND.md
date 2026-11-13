@@ -1,9 +1,24 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 16:00. Fertig: **2026-11-13h** = 13g + GTA-Look «Great Tatü Ambulanz – Nice City» (Start-/Ladebild, Pause, HUD, Schriften), Luksi-Figur vom Ambulanzdach entfernt, Regionswechsel nur nach Bestätigung, Losfahren erst wenn die echten Häuser stehen. Nicht hochgeladen (live: 13b). Tests 13h siehe Abschnitt 13h. Ältere Tests: 13g qa Luzern grün, missions Ost 8/8; 13f qa Süd, missions Nord 9/9, West 7/7; 13c missions Luzern 18/18, Süd 9/9, qa alle Regionen.
+Stand: 13.11.2026 18:15. Fertig: **2026-11-13j** = 13i (Skyline/Umfang aus dem Parallel-Chat übernommen) + Schnellreise + Gebiet A (Luzern–Sursee–Wolhusen, 9 neue Regionen a1–a9) + Kantonsstrassen-Paket (Kreisel, Ortstafeln, Wartelinien). Nicht hochgeladen (live: 13h laut Übergabe). Branch `claude/13i-gebiet-a` (Commit 40b6bd1), nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13j (13.11. abends, nicht hochgeladen)
+- Simon: Variante A (ganzes Gebiet Luzern–Sursee–Wolhusen) nur mit Schnellreise; Vision: jedes Kind im Einzugsgebiet des Kinderspitals Zentralschweiz kann «nach Hause fahren». Arbeitsfokus bis Mo 06:00: 20 % Luzerner Kantonsstrassen realistischer, 30 % Kantonsstrassen allgemein, 45 % Umgebung erweitern, 5 % Optimierung/Gameplay. Hochladen nur nach Simons OK.
+- Branch wip-13i-skyline-umfang übernommen (Skyline-SVG, Umfang im Ladebild, CSS-Slots G1–G4).
+- **Schnellreise** (`src/travel.ts`): Taste T oder Pause-Menü «🗺️ Schnellreise», Karte mit Zielliste (Spitäler, Rettungsposten, Bahnhof, Orte), 1.8 s Zeitraffer. Laufender Einsatz wird ohne Strafe zurückgegeben. Nicht im Mehrspieler und nicht während Übergabe. Regionswechsel per Neuladen, Ziel über sessionStorage `luksiTravel`.
+- **Gebiet A** (`tools/geo/regions_a.py`, Daten `public/data/a1..a9`): a1 Sursee, a2 Sempach/Nottwil, a3 Hildisrieden/Rain, a4 Buttisholz, a5 Ruswil, a6 Neuenkirch/Hellbühl, a7 Wolhusen, a8 Malters, a9 Rothenburg. Bau: `build_region_a.py` (inkl. kreisel.py, missions_a.py), dann `regions_ts.py`, `umfang.py`, `dist.sh`.
+  - [Entscheid/Annahme] Häuser aus OSM-Grundrissen (nicht swissBUILDINGS3D – CDN-Laden im Browser wurde verweigert); Gelände swissALTI3D auf 4 m gemittelt (`data/a/alti4`), Luftbild SWISSIMAGE 2 m.
+  - Ziel je Region: OSM-Spital (Sursee, Wolhusen) sonst **erfundener** «Rettungsposten» beim Gemeindehaus des Hauptorts. Je 8 Einsätze nach OSM-Orten.
+  - Randwechsel zwischen Nachbarregionen (60-m-Randzone, Bestätigungsdialog wie 13h). Herzen je Region `save.heartsA[region]`.
+  - Rohdaten in `data/a/raw` und `data/a/alti4` (nicht im Repo, gross). Region-Daten `public/data/a*` ebenfalls nicht im Repo.
+- **Kantonsstrassen-Paket** (`world.ts kantonsPaket`, `tools/geo/kreisel.py`): Kreiselinsel (Pflaster, Randstein, Gras, Stele/Baum), Signale SSV 2.41.1 / 3.02 vor Kreiseln, Tropfeninseln mit 2.37, Wartelinien 6.13, Mittelinseln, Ortstafeln 4.27/4.28 (Schwelle 70 km/h bei grösseren Orten, sonst 60; Annahme). Luzern und die alten Regionen Nord/Ost/West/Süd: city.json/props.json mit Kreiseln/Inseln/Orten nachgepatcht.
+- Tests 13j (Software-Rendering, 13.11. 17:00–18:10): `tests/travel.py` PC und Handy ok; `tests/region_a.py` Wechsel a1↔a2 ok; `tests/smoke_a.py` alle 9 Regionen laden, je 8 Einsätze, alle per Navigation erreichbar, keine Fehler; Sichtprüfung Kreisel/Wartelinien in Sursee, Ortstafeln a1 = 11.
+  - **Nicht getestet:** Übergänge alte Regionen ↔ A (West→a8, Nord→a9/a6; Logik eingebaut, aber die 3D-Daten der alten Regionen fehlen lokal), echte fps, qa.py/missions.py für die alten Regionen mit 13j.
+  - Sichtbar unschön: OSM-Häuser in a2 bei Nottwil teils als hohe Glasblöcke (Stilzuteilung nach Fläche) – nächster Punkt.
+- ZIP: `Luksi Rescue 2026-11-13j.zip` (108 MB, Vollpaket ohne config.php). Nicht hochgeladen.
 
 ## Version 13h (13.11. nachmittags, nicht hochgeladen)
 - Simon 15:3x: GTA-Look mit kindlichem Twist; Wording «Great Tatü Ambulanz – Nice City» (Anspielung GTA/Vice City). Luksi-Figur auf der Ambulanz weg (vehicle.ts). Regionswechsel mit Knopfdruck bestätigen. Bei «Echt» war das Spiel nach dem Start noch blockiert (Stufe B baute nach dem Start) → Stufe B läuft jetzt im Ladebild, Startknopf erst danach.
