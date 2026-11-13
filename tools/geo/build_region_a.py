@@ -17,6 +17,9 @@ def run(cmd, **env):
 def bus_for(rid, x0, z0, x1, z1, out):
     """Overpass-Relationen (Bus/Zug, out geom) → {rels, ways, nodes} wie data/osm_bus.json (nur Buslinien)."""
     src = 'data/a/raw/bus.json'
+    if os.path.exists('data/a/raw/osm_bus_all.json'):  # 13n: Bus-Relationen ganz Gebiet A, schon im Format {rels, ways, nodes} (vorher ungenutzt → keine Busse in Gebiet A)
+        import shutil; shutil.copy('data/a/raw/osm_bus_all.json', out)
+        return len(json.load(open(out))['rels'])
     rels, ways, nodes = [], {}, {}
     if os.path.exists(src):
         for e in json.load(open(src))['elements']:

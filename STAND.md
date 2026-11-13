@@ -1,9 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 23:30. Fertig: **2026-11-13m** = 13l + Fussgängerstreifen-Signale SSV 4.11 + Test West↔a8 (ZIP an Simon, nicht hochgeladen). Danach nur Prüfungen, kein neues ZIP. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 00:45. Fertig: **2026-11-13n** = 13m + Region a10 (Root, Buchrain, Inwil) + Busse in Gebiet A. ZIP an Simon, nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13n (13.11./14.11. nachts, nicht hochgeladen)
+- [Entscheid Claude, gestützt auf Fokus Simon «45 % Umgebung»] Neue Region **a10 «Root, Buchrain und Inwil»**, Feld x 1300..7500, z −9100..−3700 (LV95 E 2667137–2673596, N 1215190–1220883), überlappt a9 (200 m) und Nord (200 m). Gleiche Pipeline wie Gebiet A (`build_region_a.py a10`), id `a10` → kein Spielcode nötig.
+  - Rohdaten im Browser: Overpass 4 Quadranten (`way(bbox);node(bbox)(if:count_tags()>0);relation[type=multipolygon](bbox);out geom;`), WMS SWISSIMAGE 3229×2846, 60 swissALTI3D-Kacheln (altiStart), 910 b3dm-Kacheln (x 1068–1106, y 1307–1359). Übertragung neu mit `packGz()` (ganzes Paket gzip, Höhen delta+byte-shuffle) → b3dm 53 + Rest 40 Aufrufe. `collect.py` entpackt gzip automatisch.
+  - Ergebnis: 5226 OSM-Gebäude / 5918 swissBUILDINGS3D, Rettungsposten Buchrain (2949, −4742) [erfunden], 8 Einsätze erreichbar, 43 Busläufe, S-Bahn durch Root/Gisikon.
+- **Fehler behoben: Gebiet A hatte keine Busse** (bus.json = [] in a1–a9). Ursache: `build_region_a.py` suchte `data/a/raw/bus.json`, vorhanden war `osm_bus_all.json` (schon im Zielformat). Jetzt genutzt; Busse neu: a1 38, a2 24, a3 14, a4 8, a5 21, a6 34, a7 10, a8 12, a9 54 Läufe.
+- `umfang.py`, `smoke_a.py` auf a1–a10. Spielumfang 473.8 km², 64 840 Gebäude.
+- Tests 13n: smoke_a a10 + a9 (Leicht) ok, 8/8 erreichbar, keine Fehler. `tests/region_a10.py`: Nord→a10 (Zugerstrasse), a10→Nord, a9→a10 (Inwilstrasse), a10→a9 alle ok. Sichtprüfung Buchrain/Root von oben ok. Nicht getestet: Busse in a1–a8 im Spiel angeschaut (nur Daten gezählt), fps/Speicher auf GTX 1080/Handy.
 
 ## Prüfungen nach 13m (13.11., 22:20–23:30, kein Spielcode geändert)
 - qa.py Luzern (Software-Rendering): alle Checks OK, P1 1.30 Mio. Dreiecke / 682 Draw Calls, P2 0.60 Mio., G7 18/18 Einsätze, Ladezeit 79 s, keine Seitenfehler. Die neuen Wegweiser/Signale sprengen das Budget nicht.

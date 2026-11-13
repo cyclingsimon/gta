@@ -16,6 +16,8 @@ for f in glob.glob('/tmp/claude-tool-results/*/*.txt') + glob.glob('/tmp/claude-
 miss = [i for i in range(n) if i not in parts]
 if miss: print('FEHLEND', miss); sys.exit(1)
 raw = base64.b64decode(''.join(parts[i] for i in range(n)))
+if raw[:2] == b'\x1f\x8b':  # packGz(): ganzes Paket gzip-komprimiert
+    import gzip; raw = gzip.decompress(raw)
 hl = struct.unpack('<I', raw[:4])[0]; hdr = json.loads(raw[4:4 + hl]); o = 4 + hl
 os.makedirs(out, exist_ok=True)
 for name, ln in hdr:

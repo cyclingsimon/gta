@@ -199,5 +199,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -4671.2
   },
   "welcome": "Willkommen in Rothenburg! Der Rettungsposten Rothenburg ist auf der Karte blau markiert."
+ },
+ "a10": {
+  "name": "Root, Buchrain und Inwil",
+  "b": [
+   1300,
+   -9100,
+   7500,
+   -3700
+  ],
+  "aerial": {
+   "E0": 2667137,
+   "E1": 2673596,
+   "N0": 1215190,
+   "N1": 1220883
+  },
+  "hosp": {
+   "label": "Rettungsposten Buchrain",
+   "kind": "rp",
+   "x": 2949.1,
+   "z": -4742.2
+  },
+  "welcome": "Willkommen in Root, Buchrain und Inwil! Der Rettungsposten Buchrain ist auf der Karte blau markiert."
  }
 };

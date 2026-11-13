@@ -1,7 +1,9 @@
 // generiert von tools/geo/sign_places.py: Orte (Name, x, z, Rang) für Wegweiser
 export const SIGN_PLACES: [string, number, number, number][] = [
   ["Adligenswil", 4592, -2083, 2],
+  ["Buchrain", 3000, -4689, 2],
   ["Buttisholz", -16246, -6884, 2],
+  ["Dierikon", 4671, -5004, 2],
   ["Ebikon", 2338, -3263, 3],
   ["Eich", -10511, -11038, 2],
   ["Emmen", -1802, -2603, 3],
@@ -10,11 +12,14 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Ennethorw", -206, 4612, 1],
   ["Ennetmoos", 2253, 10477, 2],
   ["Eschenbach", 779, -8992, 2],
+  ["Gisikon", 7050, -8248, 2],
   ["Grosswangen", -19612, -8908, 2],
   ["Hellbühl", -8383, -2107, 2],
   ["Hergiswil NW", 209, 7476, 2],
   ["Hildisrieden", -6145, -11020, 2],
+  ["Honau", 7501, -8742, 2],
   ["Horw", 234, 3671, 3],
+  ["Inwil", 3272, -7774, 2],
   ["Kastanienbaum", 2237, 4729, 2],
   ["Kehrsiten", 4548, 5706, 1],
   ["Kottwil", -19926, -12233, 2],
@@ -32,8 +37,10 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Oberdorf NW", 5908, 10409, 2],
   ["Oberkirch LU", -14605, -11496, 2],
   ["Obernau", -4104, 2167, 2],
+  ["Perlen", 3997, -6423, 2],
   ["Rain", -3887, -8571, 2],
   ["Reussbühl", -2468, -1258, 1],
+  ["Root", 6326, -7037, 2],
   ["Rothenburg", -2676, -4678, 2],
   ["Ruswil", -13764, -3565, 2],
   ["Römerswil LU", -4816, -12962, 2],
@@ -43,6 +50,7 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Stans", 4430, 10465, 3],
   ["Stansstad", 2250, 7957, 2],
   ["Sursee", -15239, -13361, 3],
+  ["Udligenswil", 6977, -4350, 2],
   ["Werthenstein", -15616, -406, 2],
   ["Wolhusen", -17834, -698, 2]
 ];
