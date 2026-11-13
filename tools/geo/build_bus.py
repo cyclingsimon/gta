@@ -1,5 +1,5 @@
 """OSM-Buslinien (VBL, PostAuto) → public/data/bus.json: echte Linienwege im Spielfeld, Haltestellen, Fahrzeugtyp."""
-import json, math, os
+import re, json, math, os
 OUT = 'public/data' + ('/' + os.environ['LR'] if os.environ.get('LR') else '')
 d = json.load(open(os.environ.get('LR_BUS', 'data/osm_bus.json')))
 props = json.load(open(OUT + '/props.json'))
@@ -43,6 +43,8 @@ lines = []
 for r in d['rels']:
     t = r['t']; op = t.get('op') or t.get('operator') or ''; ref = t.get('ref') or ''
     if op not in ('VBL', 'PAG', 'AAGR') and not os.environ.get('LR', '').startswith('a'): continue  # Gebiet A: alle Betreiber (PostAuto, Rottal Auto, …)  # AAGR = Auto AG Rothenburg (Emmen, Region Nord)
+    # 13o: nur Ortsverkehr (Fernbusse wie Flixbus und ausländische Reisecars weg). Betreiber: PostAuto, VBL, Auto AG Rothenburg/Uri?, Rottal Auto, ZVB, Auto AG Schwyz
+    if op not in ('PAG', 'VBL', 'AAGR', 'ARAG', 'AAGU', 'ZVB', 'AAGS', 'SGV') or not ref or len(ref) > 3: continue
     pts = chain(r)
     if not pts: continue
     length = sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))

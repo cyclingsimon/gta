@@ -12,30 +12,38 @@ export interface BusPlayer { x: number; z: number; heading: number; speed: numbe
 const MAX_BUSES = 14;
 const LANE = 1.7;
 
+/** 13o: Betreiber-Farben. VBL blau-weiss, PostAuto gelb; übrige Regionalbetreiber (Rottal Auto, Auto AG Rothenburg/Schwyz, ZVB)
+ *  [Annahme] neutral weiss mit grauem Unterteil und Betreibername, weil die echten Lackierungen nicht geprüft sind. */
+function brand(op: string) {
+  if (op === 'PAG') return { pag: true, top: '#FFCC00', low: '#FFCC00', txt: '#D2001E', name: 'PostAuto' };
+  if (op === 'VBL') return { pag: false, top: '#F4F6F8', low: '#0B5CAB', txt: '#FFFFFF', name: 'vbl' };
+  const name = ({ ARAG: 'Rottal Auto', AAGR: 'Auto AG', AAGU: 'Auto AG Uri', AAGS: 'Auto AG Schwyz', ZVB: 'zvb', SGV: 'SGV' } as Record<string, string>)[op] || op;
+  return { pag: false, top: '#F4F6F8', low: '#6B7178', txt: '#FFFFFF', name };
+}
 function sideTex(op: string, ref: string, flip = false) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d')!;
-  const pag = op === 'PAG';
-  g.fillStyle = pag ? '#FFCC00' : '#F4F6F8'; g.fillRect(0, 0, 512, 128);           // Dach/Grundfarbe
+  const B = brand(op), pag = B.pag;
+  g.fillStyle = B.top; g.fillRect(0, 0, 512, 128);           // Dach/Grundfarbe
   g.fillStyle = '#25313B'; g.fillRect(0, 26, 512, 52);                               // Fensterband
   g.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 10; x < 512; x += 64) g.fillRect(x, 30, 8, 44); // Spiegelung
   g.fillStyle = '#1B1F24'; for (let x = 62; x < 512; x += 64) g.fillRect(x, 26, 4, 52);             // Fensterpfosten
-  g.fillStyle = pag ? '#FFCC00' : '#0B5CAB'; g.fillRect(0, 78, 512, 50);             // Unterteil
+  g.fillStyle = B.low; g.fillRect(0, 78, 512, 50);             // Unterteil
   if (!pag) { g.fillStyle = '#FFFFFF'; g.fillRect(0, 78, 512, 5); }
-  g.font = 'bold 34px system-ui, sans-serif'; g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.textAlign = flip ? 'right' : 'left'; g.fillText(pag ? 'PostAuto' : 'vbl', flip ? 486 : 26, 118);
-  g.fillStyle = pag ? '#D2001E' : '#FFFFFF'; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(ref, flip ? 72 : 440, 118);
+  g.font = 'bold 34px system-ui, sans-serif'; g.fillStyle = B.txt; g.textAlign = flip ? 'right' : 'left'; g.fillText(B.name, flip ? 486 : 26, 118);
+  g.fillStyle = B.txt; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(ref, flip ? 72 : 440, 118);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 function frontTex(op: string, ref: string, to: string) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d')!;
-  const pag = op === 'PAG';
-  g.fillStyle = pag ? '#FFCC00' : '#0B5CAB'; g.fillRect(0, 0, 256, 256);
+  const B = brand(op), pag = B.pag;
+  g.fillStyle = B.low; g.fillRect(0, 0, 256, 256);
   g.fillStyle = '#111'; g.fillRect(14, 10, 228, 40);                                  // Zielanzeige
   g.fillStyle = '#FFB000'; g.font = 'bold 30px monospace'; g.fillText(ref, 22, 41);
   g.font = 'bold 19px monospace'; g.fillText(to.slice(0, 15), 22 + (ref.length + 1) * 18, 38);
   g.fillStyle = '#25313B'; g.fillRect(14, 58, 228, 112);                              // Frontscheibe
   g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(30, 160); g.lineTo(90, 66); g.lineTo(120, 66); g.lineTo(60, 160); g.fill();
   g.fillStyle = '#FFF7D6'; g.fillRect(20, 206, 40, 18); g.fillRect(196, 206, 40, 18); // Scheinwerfer
-  if (!pag) { g.fillStyle = '#FFFFFF'; g.font = 'bold 28px system-ui'; g.fillText('vbl', 104, 226); }
+  if (!pag) { g.fillStyle = '#FFFFFF'; g.font = 'bold 28px system-ui'; g.textAlign = 'center'; g.fillText(B.name === 'vbl' ? 'vbl' : B.name.split(' ')[0], 128, 226); g.textAlign = 'left'; }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
@@ -48,7 +56,7 @@ function busAtlas(op: string, ref: string, to: string) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const draw = () => {
     g.drawImage(st, 0, 0, 512, 128); g.drawImage(st2, 0, 128, 512, 128); g.drawImage(fr, 512, 0, 256, 256);
-    g.fillStyle = op === 'PAG' ? '#FFCC00' : '#F4F6F8'; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
+    g.fillStyle = brand(op).top; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
     g.drawImage(rt.image as HTMLCanvasElement, 0, 256, 512, 560); t.needsUpdate = true;
   };
   draw(); (rt as any).listeners.push(draw);
@@ -65,11 +73,11 @@ function busSegGeo(segL: number, front: boolean, rear: boolean) {
 /** Heck: Werbung «Kinderspital Zentralschweiz» mit Luksi (ein Canvas je Betreiberfarbe, Luksi-Bild wird nachgeladen) */
 const rearCache = new Map<string, THREE.CanvasTexture>();
 function rearTex(op: string) {
-  const k = op === 'PAG' ? 'PAG' : 'VBL'; const old = rearCache.get(k); if (old) return old;
+  const k = op === 'PAG' || op === 'VBL' ? op : 'X'; const old = rearCache.get(k); if (old) return old;
   const c = document.createElement('canvas'); c.width = 512; c.height = 560; const g = c.getContext('2d')!; g.scale(2, 2);
   const imgs: { luksi?: HTMLImageElement; logo?: HTMLImageElement } = {};
   const draw = () => {
-    g.fillStyle = k === 'PAG' ? '#FFCC00' : '#0B5CAB'; g.fillRect(0, 0, 256, 280);
+    g.fillStyle = k === 'PAG' ? '#FFCC00' : k === 'VBL' ? '#0B5CAB' : '#6B7178'; g.fillRect(0, 0, 256, 280);
     g.fillStyle = '#25313B'; g.fillRect(16, 12, 224, 70);                               // Heckscheibe
     g.fillStyle = '#FFFFFF'; g.beginPath(); (g as any).roundRect ? (g as any).roundRect(12, 92, 232, 140, 14) : g.rect(12, 92, 232, 140); g.fill(); // Werbefläche
     const L = imgs.luksi; if (L) { const h = 128, w = L.width * h / L.height; g.drawImage(L, 16, 98, w, h); }

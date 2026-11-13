@@ -11,4 +11,5 @@ REGIONS_A = {
     'a8': ('Malters', (-14500, -3600, -8400, 3000)),
     'a9': ('Rothenburg', (-3700, -9100, 1500, -3700)),
     'a10': ('Root, Buchrain und Inwil', (1300, -9100, 7500, -3700)),  # 13n: Ausbau Umgebung (Fokus Simon 45 %)
+    'a11': ('Küssnacht und Meierskappel', (7300, -8600, 12300, -1800)),  # 13o
 }

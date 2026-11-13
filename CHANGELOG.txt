@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14o  Neue Gegend Küssnacht und Meierskappel · echte Busfarben
+- Neue Gegend «Küssnacht und Meierskappel» (rund 33 km², mit Immensee, Merlischachen, Haltikon und dem Küssnachtersee): 4313 echte 3D-Häuser, Gelände, Luftbild, 8 Einsätze an echten Orten (u. a. Bahnhof Immensee, Spielplatz Meierskappel), Rettungsposten Küssnacht (erfunden), 40 Luksi-Herzen, Busse von Auto AG Schwyz, ZVB und PostAuto, S-Bahn. Anschluss an Root (Küssnachterstrasse)
+- Busse: Fernbusse (Flixbus und ausländische Reisecars) fahren nicht mehr durch die Dörfer; nur noch Linienbusse
+- Busse von Rottal Auto, Auto AG, ZVB und Auto AG Schwyz tragen ihren eigenen Namen (weiss-grau) statt «vbl»
+- Spielwelt jetzt 16 Gegenden, rund 507 km² mit rund 69 000 Gebäuden
+
 2026-11-13n  Neue Gegend Root, Buchrain und Inwil · Busse in ganz Gebiet A
 - Neue Gegend «Root, Buchrain und Inwil» (rund 33 km², mit Gisikon, Perlen, Honau, Udligenswil-Rand): echte 3D-Häuser aus swissBUILDINGS3D (5918 Gebäude), Gelände, Luftbild, 8 Einsätze an echten Orten, Rettungsposten Buchrain (erfunden, beim Gemeindehaus), 40 Luksi-Herzen, S-Bahn-Strecke durch Root und Gisikon. Anschluss an den Norden (Zugerstrasse Ebikon–Root) und an Rothenburg (Inwilstrasse); auch per Schnellreise
 - Busse fahren jetzt auch in allen Gegenden rund um Sursee, Wolhusen und Rothenburg (vorher keine): echte Linien aus OpenStreetMap, z. B. Rothenburg 54, Sursee 38, Neuenkirch 34 Busläufe

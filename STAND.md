@@ -1,9 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 00:45. Fertig: **2026-11-13n** = 13m + Region a10 (Root, Buchrain, Inwil) + Busse in Gebiet A. ZIP an Simon, nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 01:00. Fertig: **2026-11-14o** = 13n + Region a11 (Küssnacht, Meierskappel) + Busfilter/Betreiberfarben. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14o (14.11. nachts, nicht hochgeladen)
+- Region **a11 «Küssnacht und Meierskappel»** x 7300..12300, z −8600..−1800 (LV95 E 2673145–2678426, N 1213351–1220441), überlappt a10 (200 m) und Ost (200 m). b3dm x 1103–1134 / y 1289–1355 (923 Kacheln), 56 neue Höhenkacheln, Bus-Relationen eigens geholt (`data/a/raw/bus_a11.json`, AAGS/ZVB/PAG). Rettungsposten Küssnacht am Rigi [erfunden]. Küssnachtersee als OSM-Wasser (Seehöhe 434 m), keine globale Seefläche.
+- Neues Werkzeug `tools/geo/unpack_region.py` (osm/wms/bus nach data/a/raw, Höhen-Delta dekodieren). `bus_for()` in build_region_a.py: osm_bus_all + bus_<id>.json zusammengeführt.
+- `build_bus.py` (Gebiet A): nur Betreiber PAG, VBL, AAGR, ARAG, AAGU, ZVB, AAGS, SGV mit Linien-Nr. ≤ 3 Stellen (Fernbusse raus). Busse a1–a10 neu: a1 34, a2 20, a3 7, a4 8, a5 21, a6 30, a7 10, a8 12, a9 20, a10 9, a11 21.
+- `src/bus.ts`: `brand(op)` – VBL blau-weiss, PostAuto gelb, übrige [Annahme] weiss mit grauem Unterteil und Betreibername (echte Lackierungen nicht geprüft). Betrifft auch Nord (AAGR).
+- Tests 14o: smoke_a a11 ok (8/8, keine Fehler); a10↔a11 Küssnachterstrasse beide Richtungen ok; Luftbilder Küssnacht ok; Bus-Screenshots a1 (PostAuto 81), a5 (61), a11 (ZVB 622). Nicht getestet: Ost↔a11 (Ost-Daten lokal unvollständig), fps.
+- Geplante Läufe: «Luksi: Weiterarbeiten (nächster Lauf)» 14.11. 02:13; «Umgebung ausbauen» deaktiviert; «nächste Gegend» (02:26) liess sich nicht deaktivieren (Freigabe verweigert) → feuert zusätzlich, harmlos.
 
 ## Version 13n (13.11./14.11. nachts, nicht hochgeladen)
 - [Entscheid Claude, gestützt auf Fokus Simon «45 % Umgebung»] Neue Region **a10 «Root, Buchrain und Inwil»**, Feld x 1300..7500, z −9100..−3700 (LV95 E 2667137–2673596, N 1215190–1220883), überlappt a9 (200 m) und Nord (200 m). Gleiche Pipeline wie Gebiet A (`build_region_a.py a10`), id `a10` → kein Spielcode nötig.

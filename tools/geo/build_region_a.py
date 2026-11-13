@@ -15,16 +15,17 @@ def run(cmd, **env):
     subprocess.run(cmd, shell=isinstance(cmd, str), check=True, env=e)
 
 def bus_for(rid, x0, z0, x1, z1, out):
-    """Overpass-Relationen (Bus/Zug, out geom) → {rels, ways, nodes} wie data/osm_bus.json (nur Buslinien)."""
-    src = 'data/a/raw/bus.json'
-    if os.path.exists('data/a/raw/osm_bus_all.json'):  # 13n: Bus-Relationen ganz Gebiet A, schon im Format {rels, ways, nodes} (vorher ungenutzt → keine Busse in Gebiet A)
-        import shutil; shutil.copy('data/a/raw/osm_bus_all.json', out)
-        return len(json.load(open(out))['rels'])
+    """Bus-Relationen → {rels, ways, nodes} wie data/osm_bus.json. Quellen: data/a/raw/osm_bus_all.json (schon im Zielformat)
+    und optional data/a/raw/bus_<rid>.json (Overpass out geom, 13o: für Gebiete ausserhalb von osm_bus_all, z. B. Küssnacht)."""
     rels, ways, nodes = [], {}, {}
-    if os.path.exists(src):
+    if os.path.exists('data/a/raw/osm_bus_all.json'):
+        d = json.load(open('data/a/raw/osm_bus_all.json')); rels, ways, nodes = d['rels'], d['ways'], d['nodes']
+    have = {r['id'] for r in rels}
+    for src in (f'data/a/raw/bus_{rid}.json', 'data/a/raw/bus.json'):
+        if not os.path.exists(src): continue
         for e in json.load(open(src))['elements']:
             t = e.get('tags', {})
-            if e['type'] != 'relation' or t.get('route') != 'bus': continue
+            if e['type'] != 'relation' or t.get('route') != 'bus' or e['id'] in have: continue
             ms = []
             for m in e.get('members', []):
                 if m['type'] == 'way' and m.get('geometry'):
@@ -33,7 +34,7 @@ def bus_for(rid, x0, z0, x1, z1, out):
                 elif m['type'] == 'node' and 'lat' in m:
                     nodes[str(m['ref'])] = [m['lat'], m['lon'], '']
                     ms.append(['n', m['ref'], m.get('role', '')])
-            rels.append({'id': e['id'], 't': {'ref': t.get('ref', ''), 'operator': t.get('operator', ''), 'to': t.get('to', ''), 'name': t.get('name', '')}, 'm': ms})
+            rels.append({'id': e['id'], 't': {'ref': t.get('ref', ''), 'operator': t.get('operator', ''), 'to': t.get('to', ''), 'name': t.get('name', '')}, 'm': ms}); have.add(e['id'])
     json.dump({'rels': rels, 'ways': ways, 'nodes': nodes}, open(out, 'w'), separators=(',', ':'), ensure_ascii=False)
     return len(rels)
 

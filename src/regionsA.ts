@@ -221,5 +221,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -4742.2
   },
   "welcome": "Willkommen in Root, Buchrain und Inwil! Der Rettungsposten Buchrain ist auf der Karte blau markiert."
+ },
+ "a11": {
+  "name": "Küssnacht und Meierskappel",
+  "b": [
+   7300,
+   -8600,
+   12300,
+   -1800
+  ],
+  "aerial": {
+   "E0": 2673145,
+   "E1": 2678426,
+   "N0": 1213351,
+   "N1": 1220441
+  },
+  "hosp": {
+   "label": "Rettungsposten Küssnacht am Rigi",
+   "kind": "rp",
+   "x": 10064.1,
+   "z": -3135.1
+  },
+  "welcome": "Willkommen in Küssnacht und Meierskappel! Der Rettungsposten Küssnacht am Rigi ist auf der Karte blau markiert."
  }
 };
