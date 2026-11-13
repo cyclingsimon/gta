@@ -15,7 +15,7 @@ for r in c.get('railAll', c['rail']):
         ka, kb = key(a), key(b); pos[ka] = a; pos[kb] = b
         d = math.dist(a, b)
         adj.setdefault(ka, []).append((kb, d)); adj.setdefault(kb, []).append((ka, d))
-if os.environ.get('LR'):  # Nord: Gleisenden an der Nahtstelle z = −950 (zwei OSM-Stände) bis 25 m verbinden
+if os.environ.get('LR'):  # Nord/Ost: Gleisenden an der Nahtstelle z = −950 (zwei OSM-Stände) bis 25 m verbinden
     dang = [k for k, v in adj.items() if len(v) == 1]
     segs = [(key(a), key(b), a, b) for r in c.get('railAll', c['rail']) for a, b in zip(r, r[1:])]
     for ka in dang:  # Gleisende auf das nächste fremde Gleisstück (Weiche) bis 20 m einhängen
@@ -52,6 +52,8 @@ R = [('S-Bahn Littau', 'sbb', (190, 240), (-3801, -245)),
 if os.environ.get('LR') == 'nord':  # Region Nord: Strecken zwischen Spielfeldrändern (Kreuzungspunkte der Gleise mit dem Rand)
     R = [('S-Bahn Rothenburg', 'sbb', (-1580, -552), (-2027, -3899)),
          ('IR Richtung Zürich', 'sbb', (-1578, -552), (2929, -3899))]
+if os.environ.get('LR') == 'ost':  # Region Ost: S-Bahn Luzern–Küssnacht via Meggen (Westrand bei Würzenbach → Nordostrand Richtung Merlischachen)
+    R = [('S-Bahn Küssnacht', 'sbb', (2501, -157), (7499, -1655)), ('S-Bahn Luzern', 'sbb', (7499, -1655), (2501, -157))]
 out = []
 for name, kind, a, b in R:
     r = route(a, b)

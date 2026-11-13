@@ -103,7 +103,7 @@ water_out = []
 WEHR_X = -345
 parts = []
 for q in polys(water):
-    if q.area > 100000 and not os.environ.get('LR'):  # Region Nord: Rotsee/Reuss liegen nicht auf Seespiegel
+    if q.area > 100000 and os.environ.get('LR') != 'nord':  # Region Nord: Rotsee/Reuss liegen nicht auf Seespiegel; Ost: Vierwaldstättersee flach
         parts += [(g, 1) for g in polys(q.intersection(box(WEHR_X, Z0, X1, Z1)))] + [(g, 0) for g in polys(q.intersection(box(X0, Z0, WEHR_X, Z1)))]
     else:
         parts.append((q, 0))

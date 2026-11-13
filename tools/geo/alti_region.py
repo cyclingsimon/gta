@@ -4,7 +4,7 @@ Aufruf: alti_region.py X0 Z0 X1 Z1 OUT.i16   → int16 dm relativ 400 m, Zeilen 
 import sys, glob, os, numpy as np
 X0, Z0, X1, Z1 = [float(v) for v in sys.argv[1:5]]; OUT = sys.argv[5]; S = 2
 NX, NZ = int(round((X1 - X0) / S)) + 1, int(round((Z1 - Z0) / S)) + 1
-E0, N1, W, H = 2661000, 1217000, 11000, 6000  # Mosaik E 2661–2672, N 1211–1217
+E0, N1, W, H = [int(v) for v in os.environ.get('LR_MOS', '2661000,1217000,11000,6000').split(',')]  # Standard: Mosaik E 2661–2672, N 1211–1217 (Nord)
 mos = np.full((H // 2, W // 2), np.nan, np.float32)
 def put(e, n, a):
     i0, j0 = int((e - E0) / 2), int((N1 - n) / 2)
@@ -14,7 +14,7 @@ try:
     for f in glob.glob('data/alti2022/*.tif'):
         t = tifffile.TiffFile(f); e, n = t.pages[0].tags['ModelTiepointTag'].value[3:5]; put(e, n, t.asarray().astype(np.float32))
 except ImportError: pass
-for f in glob.glob('data/e2/alti/*.i16'):
+for f in glob.glob('data/e2/alti/*.i16') + glob.glob('data/e3/alti/*.i16'):
     E, N = [int(v) for v in os.path.basename(f)[:-4].split('-')]
     put(E * 1000, (N + 1) * 1000, np.fromfile(f, '<i2').reshape(500, 500).astype(np.float32) / 10 + 400)
 def lv95v(x, z):
