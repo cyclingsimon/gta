@@ -200,7 +200,8 @@ export function thermoGame(done: Done) {
   (body.querySelector('.b-ok') as HTMLButtonElement).onclick = ok;
   loop(() => {
     const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
-    v += dir * dt * 0.32; // gemächlich, damit auch kleine Kinder treffen if (v > 0.95) { v = 0.95; dir = -1; } if (v < 0.05) { v = 0.05; dir = 1; }
+    v += dir * dt * 0.32; // gemächlich, damit auch kleine Kinder treffen
+    if (v > 0.95) { v = 0.95; dir = -1; } if (v < 0.05) { v = 0.05; dir = 1; } // oben/unten umkehren (vorher im Kommentar → Anzeige lief nach einem Fehlversuch endlos davon)
     const h = v * 190; level.setAttribute('y', String(205 - h)); level.setAttribute('height', String(h + 5));
     if (hit('confirm')) ok();
     return finished;

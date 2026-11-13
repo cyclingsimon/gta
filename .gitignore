@@ -8,3 +8,5 @@ __pycache__/
 public/stats/config.php
 public/stats/data/*.sqlite*
 public/stats/data/backups/
+dist_next/
+dist_old/

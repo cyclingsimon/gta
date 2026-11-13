@@ -22,3 +22,4 @@ LR_BOUNDS=2510,-1990,7490,2490 LR_BUS=data/e3/merged_ost/osm_bus.json python3 to
 cp public/data/horizon.json public/data/horizon.bin public/data/ost/
 LR_TUN=data/e3/merged_ost/tunnels.json python3 tools/geo/build_trains.py
 python3 tools/geo/crossings.py
+python3 tools/geo/plazas.py

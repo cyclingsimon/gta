@@ -19,7 +19,7 @@ const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: 'luzern' | 'nord' | 'ost'; heartsO?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
+interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: 'luzern' | 'nord' | 'ost' | 'west'; heartsO?: number[]; heartsW?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -29,12 +29,14 @@ function loadSave(): Save {
 let save = loadSave();
 // Regionen: «luzern» (Stadt, Kriens, Horw, Verkehrshaus) und «nord» (Emmenbrücke, Rotsee, Ebikon, Adligenswil, Etappe 2).
 // Gewechselt wird am Nordrand per Neuladen (eigene Daten in data/nord/, Speicher bleibt klein).
-const REGION: 'luzern' | 'nord' | 'ost' = /[?&]region=nord/.test(location.search) ? 'nord' : /[?&]region=ost/.test(location.search) ? 'ost' : /[?&]region=luzern/.test(location.search) ? 'luzern' : save.region || 'luzern';
+const REGION: 'luzern' | 'nord' | 'ost' | 'west' = /[?&]region=nord/.test(location.search) ? 'nord' : /[?&]region=ost/.test(location.search) ? 'ost' : /[?&]region=west/.test(location.search) ? 'west' : /[?&]region=luzern/.test(location.search) ? 'luzern' : save.region || 'luzern';
 const DIR = REGION === 'luzern' ? 'data/' : `data/${REGION}/`;
 /** Ost hat kein Kinderspital: Einsätze enden beim (erfundenen) Rettungsposten Meggen beim Gemeindehaus */
-const HOSP = REGION === 'ost' ? 'Rettungsposten' : 'Kinderspital';
+const HOSP = REGION === 'ost' || REGION === 'west' ? 'Rettungsposten' : 'Kinderspital';
+const RP = REGION === 'ost' || REGION === 'west'; // Ost/West: Ziel ist ein (erfundener) Rettungsposten statt des Kinderspitals
 if (REGION === 'nord') Object.assign(AERIAL, { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 });
 if (REGION === 'ost') Object.assign(AERIAL, { E0: 2668400, E1: 2673700, N0: 1209000, N1: 1213700 });
+if (REGION === 'west') Object.assign(AERIAL, { E0: 2657400, E1: 2662600, N0: 1208400, N1: 1212900 });
 const MOBILE = isTouchDevice();
 const QUALITY_: 'echt' | 'leicht' = /[?&]q=leicht/.test(location.search) ? 'leicht' : /[?&]q=echt/.test(location.search) ? 'echt' : save.quality || (MOBILE ? 'leicht' : 'echt');
 const QUALITY = QUALITY_;
@@ -47,6 +49,7 @@ save.seen = [...new Set([...(save.seen || []), REGION])];
 const LUZERN_IDS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18'];
 const NORD_IDS = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9'];
 const OST_IDS = ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8'];
+const WEST_IDS = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7'];
 const heartsAll = () => (save.hearts || []).length + (save.heartsN || []).length;
 const BADGES: [string, string, string, () => boolean][] = [
   ['erster', '🚑', 'Erster Einsatz', () => save.played >= 1],
@@ -55,6 +58,7 @@ const BADGES: [string, string, string, () => boolean][] = [
   ['luzern', '🏙️', 'Alle Einsätze in Luzern', () => LUZERN_IDS.every((k) => save.best[k] >= 1)],
   ['nord', '🚆', 'Alle Einsätze im Norden', () => NORD_IDS.every((k) => save.best[k] >= 1)],
   ['ost', '⛵', 'Alle Einsätze in Meggen', () => OST_IDS.every((k) => save.best[k] >= 1)],
+  ['west', '🌄', 'Alle Einsätze im Westen', () => WEST_IDS.every((k) => save.best[k] >= 1)],
   ['drei', '🌟', 'Alle Einsätze mit 3 Sternen', () => [...LUZERN_IDS, ...NORD_IDS].every((k) => save.best[k] >= 3)],
   ['herz10', '💗', '10 Luksi-Herzen', () => heartsAll() >= 10],
   ['herz80', '💖', 'Alle 80 Luksi-Herzen', () => heartsAll() >= 80],
@@ -311,6 +315,7 @@ function snap(p: [number, number], carOnly: boolean | 'main' = 'main'): [number,
 function setupMissions() {
   if (REGION === 'nord') { setupMissionsNord(); return; }
   if (REGION === 'ost') { setupMissionsOst(); return; }
+  if (REGION === 'west') { setupMissionsWest(); return; }
   const P = world.pois;
   const schwanen = snap(P['Schwanenplatz'] || [86, -151]);
   const see = snap(mid('Seebrücke') || [150, -60]);
@@ -375,6 +380,20 @@ function setupMissionsOst() {
   ];
 }
 
+function setupMissionsWest() {
+  // Orte aus OpenStreetMap (Etappe 3: Littau, Obernau, Blatten); jeweils an die nächste Fahrstrasse gesetzt
+  const at = (p: [number, number]) => snap(p, true);
+  missions = [
+    { id: 'w1', title: 'Bauchweh am Bahnhof Littau', radio: 'Am Bahnhof Littau hat ein Kind nach der Zugfahrt Bauchweh.', place: 'Bahnhof Littau', at: at([-3835, -145]), game: memoryGame, transport: true, prop: propKid, thanks: 'Mit Tee geht es wieder. Gute Reise!' },
+    { id: 'w2', title: 'Katze in Obernau', radio: 'In Obernau sitzt eine Katze ganz oben im Baum und miaut.', place: 'Obernau', at: at([-4104, 2167]), game: catGame, transport: false, prop: propCat, thanks: 'Die Katze ist wieder unten. Obernau sagt Merci!' },
+    { id: 'w3', title: 'Wanderer in Blatten', radio: 'In Blatten ist ein Wanderer nach dem langen Weg ganz schwindlig.', place: 'Blatten', at: at([-6371, 1193]), game: waterGame, transport: true, prop: propTourist, thanks: 'Wasser und eine Pause – schon besser. Merci!' },
+    { id: 'w4', title: 'Velo-Sturz auf der Kreuzhöhe', radio: 'Auf der Kreuzhöhe ist jemand mit dem Mountainbike gestürzt. Der Arm braucht einen Verband.', place: 'Kreuzhöhe', at: at([-4293, 1268]), game: bandageGame, transport: true, prop: propBike, thanks: 'Sauber verarztet. Gute Fahrt den Berg hinunter!' },
+    { id: 'w5', title: 'Erschreckt bei der Thorenbergbrücke', radio: 'Bei der Thorenbergbrücke hat sich ein Kind vor dem lauten Zug erschreckt und weint.', place: 'Thorenbergbrücke', at: at([-4060, -188]), game: comfortGame, transport: false, prop: propKid, thanks: 'Schon wieder gut – und der Zug winkt zurück!' },
+    { id: 'w6', title: 'Fieber in Spahau', radio: 'Auf dem Hof in Spahau fühlt sich ein Kind ganz heiss an. Bitte Fieber messen!', place: 'Spahau', at: at([-5650, 116]), game: thermoGame, transport: true, prop: propKid, thanks: 'Tee und ein kühles Tuch helfen. Gute Besserung!' },
+    { id: 'w7', title: 'Kätzchen beim Stegmättli', radio: 'Beim Stegmättli miaut ein Kätzchen hoch oben im Baum.', place: 'Stegmättli', at: at([-7238, 1053]), game: catGame, transport: false, prop: propCat, thanks: 'Das Kätzchen ist wieder bei den Kühen. Danke!' },
+  ];
+}
+
 /** Comic-Sprechblasen («Boing!», «Hoppla!») über Zusammenstössen */
 const COMIC_WORDS = [['Boing!', 'Hoppla!', 'Huch!', 'Wuiii!', 'Hopsala!'], ['Uff!', 'Bumm!', 'Oha!'], ['Plopp!', 'Klonk!', 'Boing!', 'Hui!'], ['Muuuh!', 'Muh!', 'Muuh!'], ['Platsch!', 'Spritz!', 'Blubb!'], ['Tschu-tschu!', 'Uff!', 'Hoppla!']];
 const comicTex = new Map<string, THREE.Texture>();
@@ -418,18 +437,21 @@ function setupFun(data: CityData) {
   for (const st of stops) pts.push([st[0], st[1]]);
   for (const g of data.green as any[]) if (g.k === 'park' || g.k === 'playground') { const cx = g.p.reduce((a: number, q: number[]) => a + q[0], 0) / g.p.length, cz = g.p.reduce((a: number, q: number[]) => a + q[1], 0) / g.p.length; pts.push([cx, cz]); }
   for (const l of world.landmarks) pts.push([l.x, l.z]);
+  // Ländliche Regionen (West) haben wenige Haltestellen/Parks: dann zusätzlich Strassenmitten als Kandidaten, damit es überall 40 Herzen gibt
+  if (pts.length < 80) for (const r of data.roads as any[]) { if (pts.length > 600 || !['residential', 'unclassified', 'tertiary', 'secondary'].includes(r.c) || r.b) continue;
+    const q = r.p[Math.floor(r.p.length / 2)]; if (inField(q[0], q[1])) pts.push([q[0], q[1]]); }
   const chosen: number[][] = [hospitalBay];
   while (chosen.length < 41 && pts.length) {
     let bi = 0, bd = -1; for (let i = 0; i < pts.length; i++) { const d = Math.min(...chosen.map((c) => Math.hypot(c[0] - pts[i][0], c[1] - pts[i][1]))); if (d > bd) { bd = d; bi = i; } }
     chosen.push(pts.splice(bi, 1)[0]);
   }
   const hearts = chosen.slice(1).map((p) => snap([p[0], p[1]]));
-  fun = new Fun(terrain, sites, stops, hearts, (REGION === 'nord' ? save.heartsN : REGION === 'ost' ? save.heartsO : save.hearts) || [],
+  fun = new Fun(terrain, sites, stops, hearts, (REGION === 'nord' ? save.heartsN : REGION === 'ost' ? save.heartsO : REGION === 'west' ? save.heartsW : save.hearts) || [],
     (x, z) => { sfxPlay.boing(); comic(x, z, 2); stats.tot.boings++; },
-    (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else if (REGION === 'ost') save.heartsO = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
+    (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else if (REGION === 'ost') save.heartsO = fun!.heartsGot(); else if (REGION === 'west') save.heartsW = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
       const el = $('#hearts'); el.textContent = `♥ ${n}/${tot}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neue Lackierung freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
-      toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : REGION === 'ost' ? 'in Meggen und Würzenbach' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
+      toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : REGION === 'ost' ? 'in Meggen und Würzenbach' : REGION === 'west' ? 'in Littau, Obernau und Blatten' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
   $('#hearts').textContent = `♥ ${fun.heartCount}/${fun.heartTotal}`;
   scene.add(fun.group);
   // Tiere: Schwäne auf Wasser nahe Ufer (Stadt + Horwer Bucht), Kühe auf Weiden
@@ -438,8 +460,8 @@ function setupFun(data: CityData) {
   for (let k = 0; k < 4000 && swans.length < 46; k++) {
     const city = k % 3 !== 0;
     // Nord: Rotsee und Reuss bei Emmenbrücke; Luzern: Seebecken/Reuss und Horwer Bucht
-    const x = REGION === 'ost' ? 2700 + hsh(k, 1) * 4600 : REGION === 'nord' ? (city ? -100 + hsh(k, 1) * 1300 : -3000 + hsh(k, 2) * 1500) : city ? -700 + hsh(k, 1) * 1500 : 200 + hsh(k, 2) * 950;
-    const z = REGION === 'ost' ? 400 + hsh(k, 3) * 2050 : REGION === 'nord' ? (city ? -2900 + hsh(k, 3) * 1500 : -2400 + hsh(k, 4) * 1300) : city ? -500 + hsh(k, 3) * 1000 : 3600 + hsh(k, 4) * 2600;
+    const x = REGION === 'west' ? -8400 + hsh(k, 1) * 4700 : REGION === 'ost' ? 2700 + hsh(k, 1) * 4600 : REGION === 'nord' ? (city ? -100 + hsh(k, 1) * 1300 : -3000 + hsh(k, 2) * 1500) : city ? -700 + hsh(k, 1) * 1500 : 200 + hsh(k, 2) * 950;
+    const z = REGION === 'west' ? -1200 + hsh(k, 3) * 4100 : REGION === 'ost' ? 400 + hsh(k, 3) * 2050 : REGION === 'nord' ? (city ? -2900 + hsh(k, 3) * 1500 : -2400 + hsh(k, 4) * 1300) : city ? -500 + hsh(k, 3) * 1000 : 3600 + hsh(k, 4) * 2600;
     if (!isW(x, z)) continue;
     const shore = [[14, 0], [-14, 0], [0, 14], [0, -14]].some(([a, b]) => !isW(x + a, z + b));
     if (!shore || swans.some((q) => Math.hypot(q[0] - x, q[1] - z) < 9)) continue;
@@ -451,7 +473,7 @@ function setupFun(data: CityData) {
     if ((x1 - x0) * (z1 - z0) < 6000) continue; let n = 0;
     for (let k = 0; k < 40 && n < 4; k++) { const x = x0 + hsh(k, x0) * (x1 - x0), z = z0 + hsh(z0, k) * (z1 - z0);
       if (world.mask.at(x, z) !== 0 || world.mask.isRoad(x, z) || !inPoly(x, z, g.p)) continue; cows.push([x, z]); n++; } }
-  animals = new Animals(terrain, swans, cows, isW, REGION !== 'nord');
+  animals = new Animals(terrain, swans, cows, isW, REGION === 'luzern' || REGION === 'ost');
   scene.add(animals.group);
   // Kursschiffe: Rundfahrt ab Bahnhofquai im Seebecken und in der Horwer Bucht (Wegpunkte auf Wasser geprüft)
   if (REGION !== 'luzern') { // Kursschiffe nur im Seebecken; Nord: Boote auf dem Rotsee; Ost: Boote vor Meggen
@@ -545,7 +567,7 @@ function afterGame() {
   if (!current) return;
   if (current.transport) {
     if (propObj) { scene.remove(propObj); propObj = null; }
-    toast(`Patient ist eingestiegen. Sanft ${REGION === 'ost' ? 'zum Rettungsposten' : 'ins Kinderspital'} fahren!`);
+    toast(`Patient ist eingestiegen. Sanft ${RP ? 'zum Rettungsposten' : 'ins Kinderspital'} fahren!`);
     const cv = carrier || car;
     phase = 'toHospital'; phaseTime = 0; bumpsAtStart = cv.bumps;
     setTarget(hospitalBay, '#3FA9FF');
@@ -574,9 +596,9 @@ function handover() {
   writeSave();
   const ov = document.createElement('div'); ov.className = 'mg';
   const reasons = current.transport
-    ? [`✔ Einsatz erfüllt`, bumps <= 2 ? '✔ Sanft gefahren – der Patient hat nicht gewackelt' : `○ ${bumps} Rempler – nächstes Mal sanfter`, phaseTime <= parTime ? `✔ Zügig ${REGION === 'ost' ? 'am Rettungsposten' : 'im Kinderspital'}` : `○ ${Math.round(phaseTime)} s – geht noch schneller`]
+    ? [`✔ Einsatz erfüllt`, bumps <= 2 ? '✔ Sanft gefahren – der Patient hat nicht gewackelt' : `○ ${bumps} Rempler – nächstes Mal sanfter`, phaseTime <= parTime ? `✔ Zügig ${RP ? 'am Rettungsposten' : 'im Kinderspital'}` : `○ ${Math.round(phaseTime)} s – geht noch schneller`]
     : ['✔ Einsatz erfüllt', '✔ Tier gerettet', '✔ Bonus für Tierliebe'];
-  ov.innerHTML = `<div class="mg-card"><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi"><h2>${current.transport ? (REGION === 'ost' ? 'Übergabe am Rettungsposten' : 'Übergabe im Kinderspital') : 'Einsatz geschafft!'}</h2>
+  ov.innerHTML = `<div class="mg-card"><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi"><h2>${current.transport ? (RP ? 'Übergabe am Rettungsposten' : 'Übergabe im Kinderspital') : 'Einsatz geschafft!'}</h2>
     <div class="stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${i * 0.35}s">★</span>`).join('')}</div>
     <p>${current.thanks}</p><ul class="reasons">${reasons.map((r) => `<li>${r}</li>`).join('')}</ul>
     <p class="small">Sterne total: <b>${totalStars()}</b></p><button class="big" id="weiter">Weiterfahren <kbd>Enter</kbd>/<kbd>A</kbd></button></div>`;
@@ -591,10 +613,10 @@ function handover() {
 function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
-  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Luzern');
+  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Luzern');
   else if (phase === 'toScene') m.textContent = `${current.title}: zum ${current.place}`;
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
-  else if (phase === 'toHospital') m.textContent = `${current.title}: ${REGION === 'ost' ? 'zum Rettungsposten' : 'ins Kinderspital'}`;
+  else if (phase === 'toHospital') m.textContent = `${current.title}: ${RP ? 'zum Rettungsposten' : 'ins Kinderspital'}`;
   else m.textContent = current.title;
 }
 
@@ -888,17 +910,23 @@ const TEST_NOEDGE = /[?&]noedge/.test(location.search) || (TEST && !/[?&]edge/.t
 let edgeT = 0, edgeWarned = false;
 function checkRegionEdge(dt: number) {
   // Luzern → Nord: z < −1000 (nicht ganz im Westen); Luzern → Ost: x > 2660 (Seeburg/Würzenbach, nicht an Einsatzorten); Nord/Ost → Luzern zurück
-  let other: 'luzern' | 'nord' | 'ost' = 'luzern', out = false;
-  if (REGION === 'luzern') { if (car.z < -1000 && car.x > -3700 && car.x < 2400) { other = 'nord'; out = true; } else if (car.x > 2660 && car.z > -1000 && car.z < 2450 && !missions.some((m) => Math.hypot(m.at[0] - car.x, m.at[1] - car.z) < 120)) { other = 'ost'; out = true; } }
+  let other: 'luzern' | 'nord' | 'ost' | 'west' = 'luzern', out = false;
+  const nearMission = missions.some((m) => Math.hypot(m.at[0] - car.x, m.at[1] - car.z) < 120);
+  if (REGION === 'luzern') {
+    if (car.z < -1000 && car.x > -3700 && car.x < 2400) { other = 'nord'; out = true; }
+    else if (car.x > 2660 && car.z > -1000 && car.z < 2450 && !nearMission) { other = 'ost'; out = true; }
+    else if (car.x < -3720 && car.z > -1000 && car.z < 2950 && !nearMission) { other = 'west'; out = true; }
+  }
   else if (REGION === 'nord') out = car.z > -650;
-  else out = car.x < 2560;
-  const OTHER_NAME = other === 'nord' ? 'Emmenbrücke' : other === 'ost' ? 'Meggen' : 'Luzern';
+  else if (REGION === 'ost') out = car.x < 2560;
+  else out = car.x > -3660;
+  const OTHER_NAME = other === 'nord' ? 'Emmenbrücke' : other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau und Blatten' : 'Luzern';
   if (!out) { edgeT = 0; edgeWarned = false; return; }
   if (phase !== 'free' && phase !== 'offer' || players.length > 1) {
     if (!edgeWarned) toast(players.length > 1 ? 'Zu zweit geht es hier nicht weiter – die Karte endet hier.' : REGION === 'luzern' ? `Nach ${OTHER_NAME} geht es nach dem Einsatz weiter.` : 'Zurück nach Luzern geht es nach dem Einsatz weiter.', 2600);
     edgeWarned = true; return;
   }
-  if (edgeT === 0) toast(REGION === 'luzern' ? (other === 'ost' ? '🗺️ Weiter nach Meggen …' : '🗺️ Weiter nach Emmenbrücke, Ebikon und Adligenswil …') : '🗺️ Zurück nach Luzern …', 2600);
+  if (edgeT === 0) toast(REGION === 'luzern' ? (other === 'ost' ? '🗺️ Weiter nach Meggen …' : other === 'west' ? '🗺️ Weiter nach Littau, Obernau und Blatten …' : '🗺️ Weiter nach Emmenbrücke, Ebikon und Adligenswil …') : '🗺️ Zurück nach Luzern …', 2600);
   edgeT += dt;
   if (edgeT < 1.5) return;
   edgeT = -1e9; // nur einmal
@@ -1088,6 +1116,7 @@ async function boot() {
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
   { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); scene.add(buses.buildWires()); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
   if (REGION === 'ost') world.hospital = { x: 4990, z: 470, name: 'Rettungsposten Meggen' };
+  if (REGION === 'west') world.hospital = { x: -3752, z: 173, name: 'Rettungsposten Littau' };
   hospitalBay = snap([world.hospital.x, world.hospital.z]);
   setupMissions();
   setupFun(data);
@@ -1121,8 +1150,8 @@ async function boot() {
   }
   // Wegweiser an der Regionsgrenze (Hauptstrassen, die die Wechsel-Linie kreuzen)
   // Linien: [Achse 'z'|'x', Wert, Text, nur wo die andere Koordinate in [a, b] liegt]
-  const lines: [string, number, string, number, number][] = REGION === 'luzern' ? [['z', -1000, '⬆ Emmenbrücke · Ebikon', -3700, 2400], ['x', 2660, '➡ Meggen', -1000, 2450]]
-    : REGION === 'nord' ? [['z', -650, '⬇ Luzern · Kinderspital', -1e9, 1e9]] : [['x', 2560, '⬅ Luzern · Kinderspital', -1e9, 1e9]];
+  const lines: [string, number, string, number, number][] = REGION === 'luzern' ? [['z', -1000, '⬆ Emmenbrücke · Ebikon', -3700, 2400], ['x', 2660, '➡ Meggen', -1000, 2450], ['x', -3720, '⬅ Littau · Blatten', -1000, 2950]]
+    : REGION === 'nord' ? [['z', -650, '⬇ Luzern · Kinderspital', -1e9, 1e9]] : REGION === 'west' ? [['x', -3660, '➡ Luzern · Kinderspital', -1e9, 1e9]] : [['x', 2560, '⬅ Luzern · Kinderspital', -1e9, 1e9]];
   for (const [ax, lv, txt, a0, a1] of lines) { const put: number[][] = [];
     for (const r of data.roads as any[]) { if (!['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) continue;
       for (let i = 1; i < r.p.length; i++) { const P1 = r.p[i - 1], P2 = r.p[i]; const u1 = ax === 'z' ? P1[1] : P1[0], u2 = ax === 'z' ? P2[1] : P2[0];
@@ -1197,7 +1226,7 @@ function start() {
   $('#start').classList.add('hide');
   setTimeout(() => $('#start').remove(), 600);
   paused = false;
-  toast(REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
+  toast(REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Der Rettungsposten ist in Littau Dorf.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
 }
 $('#start-btn').onclick = start;
 setupTouch();
@@ -1229,7 +1258,7 @@ function qaReport() {
     return { n, bad, share: n ? bad / n : 0, worst };
   };
   // G3b: See (flach auf Seespiegel) – im Seeinnern (≥ 10 m vom Ufer) darf kein Gelände über die Wasserfläche ragen
-  if (REGION !== 'nord') { let n = 0, bad = 0; const ex: number[][] = []; const [bx0, bz0, bx1, bz1] = world.bounds; // Nord: kein flacher See (Rotsee/Reuss liegen aufs Gelände)
+  if (REGION === 'luzern' || REGION === 'ost') { let n = 0, bad = 0; const ex: number[][] = []; const [bx0, bz0, bx1, bz1] = world.bounds; // Nord: kein flacher See (Rotsee/Reuss liegen aufs Gelände)
     for (let x = bx0 + 10; x < bx1 - 10; x += 10) for (let z = bz0 + 10; z < bz1 - 10; z += 10) {
       if (world.mask.at(x, z) !== 1) continue; let inner = true;
       for (let q = 0; q < 8 && inner; q++) inner = world.mask.at(x + Math.cos(q * 0.785) * 10, z + Math.sin(q * 0.785) * 10) === 1;
@@ -1251,7 +1280,7 @@ function qaReport() {
       n++; if (gap > 1.5) { fl++; if (ex.length < 8) ex.push([cx, cz, Math.round(gap * 10) / 10]); } }
     add('G5', 'Gebäude: Wandfuss > 1.5 m über Gelände', fl / n, 0.02, fl / n <= 0.02, { gebaeude: n, schwebend: fl, beispiele: ex }); }
   // G6: Wahrzeichen vorhanden
-  { const need = REGION === 'nord' ? ['Reussport', 'Rothenburgstrasse', 'Seetalplatz', 'Luzernerstrasse'] : REGION === 'ost' ? ['Meggenhornstrasse', 'Hauptstrasse', 'Seeacherstrasse'] : ['Kapellbrücke', 'Spreuerbrücke', 'Wasserturm', 'Jesuitenkirche', 'KKL', 'Hofkirche', 'Bahnhofstor', 'Wilhelm Tell'];
+  { const need = REGION === 'nord' ? ['Reussport', 'Rothenburgstrasse', 'Seetalplatz', 'Luzernerstrasse'] : REGION === 'ost' ? ['Meggenhornstrasse', 'Hauptstrasse', 'Seeacherstrasse'] : REGION === 'west' ? ['Luzernstrasse'] : ['Kapellbrücke', 'Spreuerbrücke', 'Wasserturm', 'Jesuitenkirche', 'KKL', 'Hofkirche', 'Bahnhofstor', 'Wilhelm Tell'];
     const names = world.landmarks.map((l) => l.name).join('|') + '|' + [...world.roadsByName.keys()].join('|');
     const miss = need.filter((n) => !names.includes(n));
     add('G6', 'Wahrzeichen vorhanden', need.length - miss.length, need.length, miss.length === 0, { fehlend: miss }); }
@@ -1284,7 +1313,8 @@ function qaReport() {
   // G13: Belebung vorhanden (Tiere, Schiffe, Züge, Spass-Objekte, Herzen)
   { const a = animals as any, sh = ships as any, tr = trains as any;
     const n = { schwaene: a ? a.swans.length : 0, kuehe: a ? a.cows.length : 0, schiffe: sh ? sh.ships.length : 0, zuege: tr ? tr.tr.length : 0, kegel: fun ? fun.hops.length : 0, herzen: fun ? fun.heartTotal : 0 };
-    const ok = REGION === 'ost' ? n.schwaene > 10 && n.kuehe > 20 && n.zuege >= 1 && n.kegel > 50 && n.herzen === 40
+    const ok = REGION === 'west' ? n.kuehe > 20 && n.zuege >= 1 && n.kegel > 30 && n.herzen === 40
+      : REGION === 'ost' ? n.schwaene > 10 && n.kuehe > 20 && n.zuege >= 1 && n.kegel > 50 && n.herzen === 40
       : REGION === 'nord' ? n.schwaene > 10 && n.kuehe > 30 && n.zuege >= 2 && n.kegel > 100 && n.herzen === 40 // Nord: keine Kursschiffe
       : n.schwaene > 20 && n.kuehe > 30 && n.schiffe >= 2 && n.zuege >= 4 && n.kegel > 100 && n.herzen === 40;
     add('G13', 'Belebung (Tiere, Schiffe, Züge, Herzen)', ok ? 1 : 0, 1, ok, n); }

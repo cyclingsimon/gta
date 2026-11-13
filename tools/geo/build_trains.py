@@ -54,6 +54,8 @@ if os.environ.get('LR') == 'nord':  # Region Nord: Strecken zwischen Spielfeldr�
          ('IR Richtung Zürich', 'sbb', (-1578, -552), (2929, -3899))]
 if os.environ.get('LR') == 'ost':  # Region Ost: S-Bahn Luzern–Küssnacht via Meggen (Westrand bei Würzenbach → Nordostrand Richtung Merlischachen)
     R = [('S-Bahn Küssnacht', 'sbb', (2501, -157), (7499, -1655)), ('S-Bahn Luzern', 'sbb', (7499, -1655), (2501, -157))]
+if os.environ.get('LR') == 'west':  # Region West: S-Bahn Luzern–Littau–Malters (Ostrand → Westrand entlang der Kleinen Emme)
+    R = [('S-Bahn Malters', 'sbb', (-3601, -496), (-8499, 1228)), ('S-Bahn Luzern', 'sbb', (-8499, 1228), (-3601, -496))]
 out = []
 for name, kind, a, b in R:
     r = route(a, b)

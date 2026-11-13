@@ -34,10 +34,10 @@ async def solve(pg):
         await pg.click('.b-ok')
         for i in range(3): await pg.click('.b-ok'); await pg.wait_for_timeout(200)
     elif 'Fieber' in title:
-        for k in range(200):  # warten, bis die Anzeige im grünen Bereich ist (Spiel liefert Rückmeldung)
+        for k in range(1500):  # warten, bis die Anzeige im grünen Bereich ist (Spiel liefert Rückmeldung); bei langsamer Software-Grafik viele Versuche
             await pg.evaluate("(() => { const l = document.querySelector('.thermo .level'); if (!l) return; const y = +l.getAttribute('y'); if (y >= 205 - 0.71 * 190 && y <= 205 - 0.57 * 190) document.querySelector('.b-ok').click(); })()")
             if await pg.query_selector('.mg-msg.ok'): break
-            await pg.wait_for_timeout(30)
+            await pg.wait_for_timeout(10)
     elif 'Verband' in title:
         for i in range(5): await pg.click(f'.seg[data-i="{i}"]', force=True); await pg.wait_for_timeout(150)
     elif 'Trösten' in title:

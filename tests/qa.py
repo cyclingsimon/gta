@@ -34,6 +34,6 @@ async def main():
         sheet.paste(im, (x, y + 22)); d.text((x + 6, y + 4), name, fill='#3b302b')
     sheet.save('shots/qa/kontaktbogen.png')
     json.dump(rep, open('shots/qa/report.json', 'w'), ensure_ascii=False, indent=1)
-    for c in rep['checks']: print(('OK  ' if c['ok'] else 'FAIL'), c['id'], c['name'], c['value'], '/', c['limit'], {k: v for k, v in c.items() if k in ('beispiele', 'fehlend', 'drawCalls', 'schwebend')})
+    for c in rep['checks']: print(('OK  ' if c['ok'] else 'FAIL'), c['id'], c['name'], c['value'], '/', c['limit'], {k: v for k, v in c.items() if k in ('beispiele', 'fehlend', 'drawCalls', 'schwebend', 'schwaene', 'kuehe', 'schiffe', 'zuege', 'kegel', 'herzen')})
     print('Gesamt', 'OK' if rep['ok'] else 'NICHT OK', '· Ladezeit (Software)', load, 's · Fehler', errs)
 asyncio.run(main())

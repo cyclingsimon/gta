@@ -10,6 +10,7 @@ export interface CityData {
   green: { p: number[][]; k: string }[];
   rail: number[][][];
   pois: Record<string, [number, number]>;
+  plazas?: { p: number[][]; h: number[][][]; n: string }[];
 }
 
 // ---------- Toon-Material ----------
@@ -634,6 +635,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   {
     const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] };
     const dashes: number[] = [];
+    // Plätze als Pflasterfläche (OSM-Fussgängerflächen): statt Luftbild mit Dächern/Schatten liegt auf Kapellplatz, Weinmarkt, Europaplatz … Pflaster
+    { const pc = new THREE.Color('#D9CFBF'); for (const pl of d.plazas || []) addFlat(cobble.pos, cobble.col, pl.p, pl.h || [], 0.29, pc); }
     // Brücken, die in OSM aus mehreren Wegstücken bestehen, als Kette behandeln: das Deck verläuft gerade zwischen den Kettenenden
     // (sonst sackt es an einer Stückgrenze mitten über dem Fluss auf Talhöhe ab)
     const brs = d.roads.filter((r) => r.b || r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke');
