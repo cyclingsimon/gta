@@ -552,7 +552,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   });
   {
     const pos: number[] = [], col: number[] = [];
-    const c = new THREE.Color('#4AA6BC'); // Referenz SWISSIMAGE 2025: Seebecken/Reuss türkis-grün, nicht himmelblau
+    const c = new THREE.Color('#2F86A0'); // Referenz SWISSIMAGE + Fotos Kapellbrücke/Seebrücke: tiefes Blaugrün, hell nur durch Himmelsspiegelung
     // Seeflächen auf Seehöhe brauchen kein feines Netz (spart viel Speicher), Flüsse/Bäche werden aufs Gelände gelegt
     const fpos: number[] = [], fcol: number[] = [];
     for (const w of d.water) { const flat = (w as any).f === 1 || w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
@@ -567,7 +567,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (fpos.length) { const lk = flatMesh(fpos, fcol, wmat); worldUV(lk.geometry, 14); lk.name = 'water-lake'; waterMeshes.push(lk); group.add(lk); }
     // Seefläche ausserhalb des Spielfelds Richtung Osten/Süden (Vierwaldstättersee)
     const lakeTex = waterTex.clone(); lakeTex.repeat.set(6000 / 14, 6000 / 14); lakeTex.needsUpdate = true;
-    const lake = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), withWater(toon('#4AA6BC', { map: lakeTex })));
+    const lake = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), withWater(toon('#2F86A0', { map: lakeTex })));
     waterMeshes.push(lake);
     lake.rotation.x = -Math.PI / 2; lake.position.set(X1 + 3000 - 1, -0.1, 1500);
     group.add(lake);
@@ -739,7 +739,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (b.n === 'Altes Bahnhofstor') kind = 'tor';
       if (b.n.includes('Hofkirche')) kind = 'hofkirche';
       if (b.t === 'ship') kind = 'ship';
-      if (kind === 'wasserturm' || kind === 'ship') { special.push({ b, kind }); continue; }
+      if (kind === 'ship') { special.push({ b, kind }); continue; }
+      if (kind === 'wasserturm') { // Foto-Referenz (Commons): Bruchstein ocker-braun, kaum Fenster, rotbraunes Achteckdach
+        special.push({ b, kind });
+        if (b3d) styles.push({ p: b.p, facade: new THREE.Color('#9C7A58'), roofC: new THREE.Color('#8C3B26'), style: 'stone', flat: false, kind });
+        continue; }
       if (kind) special.push({ b, kind });
 
       const [cx, cz] = centroid(b.p);
@@ -845,7 +849,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       tiles: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
       slate: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
       altstadt: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.altstadt }), tex.shopAlt), 0.85),
-      painted: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.5),
+      painted: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.8),
       gruenderzeit: withShop(toon('#ffffff', { vertexColors: true, map: tex.gruenderzeit }), tex.shopNeu),
       hotel: withShop(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
     };
@@ -1589,7 +1593,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     let roofFlat = new THREE.Color(FLAT_ROOF);
     // R8: Dachfarbe aus SWISSIMAGE (comic-verstärkt)
     const aer = b.roof && b.roof[bi];
-    if (aer && !(st && st.kind === 'kispi')) {
+    if (aer && !(st && (st.kind === 'kispi' || st.kind === 'wasserturm'))) {
       const c = new THREE.Color('#' + aer); c.getHSL(hsl);
       const warm = (hsl.h < 0.17 || hsl.h > 0.94) && hsl.s > 0.06;
       if (warm) { slateRoof = false; roofTile = new THREE.Color().setHSL(hsl.h > 0.5 ? 0.01 : Math.min(hsl.h, 0.11), Math.max(hsl.s, 0.42), Math.min(0.55, Math.max(0.36, hsl.l))); }
@@ -2109,8 +2113,8 @@ function withWater(m: THREE.MeshToonMaterial) {
         g += vec2(0.1, 1.0) * cos(dot(p, vec2(0.1, 1.0)) * 3.1 + t * 3.4) * 0.12;
         vec3 n = normalize(vec3(-g.x * 0.18, 1.0, -g.y * 0.18));
         vec3 v = normalize(cameraPosition - vWP);
-        float fr = pow(1.0 - max(dot(n, v), 0.0), 4.0);
-        diffuseColor.rgb = mix(diffuseColor.rgb, uWSky, fr * 0.55);
+        float fr = pow(1.0 - max(dot(n, v), 0.0), 5.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uWSky, fr * 0.45);
         // Glitzern nur als kleine Funken und vor allem bei flachem Blick (von oben sah es sonst wie Schaumflecken aus)
         float sp = pow(max(dot(reflect(-v, n), uWSun), 0.0), 900.0);
         float graze = clamp(1.0 - v.y * 1.15, 0.0, 1.0);
@@ -2155,9 +2159,11 @@ function withRows(m: THREE.MeshToonMaterial, amount: number) {
       {
         vec2 hc = vec2(floor(vMapUv.x / 2.6), floor((vRowP.x + vRowP.z) / 350.0));
         float hr = fract(sin(dot(hc, vec2(12.9898, 78.233))) * 43758.5453);
-        vec3 tint = hr < 0.125 ? vec3(0.96, 0.84, 0.62) : hr < 0.25 ? vec3(0.93, 0.72, 0.64) : hr < 0.375 ? vec3(0.80, 0.89, 0.80)
-          : hr < 0.5 ? vec3(0.97, 0.93, 0.85) : hr < 0.625 ? vec3(0.78, 0.85, 0.93) : hr < 0.75 ? vec3(0.95, 0.80, 0.52)
-          : hr < 0.875 ? vec3(0.90, 0.66, 0.58) : vec3(0.86, 0.90, 0.72);
+        // Farben aus Fotos von Weinmarkt/Kornmarkt/Rathausquai (Wikimedia Commons, 13.11.2026), linear: Ocker, Terrakotta, Salbeigrau,
+        // Altrosa, Steingrau, Sonnengelb, Taubenblau, Crème
+        vec3 tint = hr < 0.125 ? vec3(0.69, 0.45, 0.16) : hr < 0.25 ? vec3(0.55, 0.19, 0.10) : hr < 0.375 ? vec3(0.38, 0.43, 0.30)
+          : hr < 0.5 ? vec3(0.72, 0.38, 0.35) : hr < 0.625 ? vec3(0.58, 0.56, 0.51) : hr < 0.75 ? vec3(0.80, 0.61, 0.21)
+          : hr < 0.875 ? vec3(0.43, 0.51, 0.58) : vec3(0.85, 0.76, 0.58);
         diffuseColor.rgb *= mix(vColor, tint, ${amount.toFixed(2)});
       }
       #else

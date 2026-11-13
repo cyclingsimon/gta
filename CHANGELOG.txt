@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13b  Fotovergleich: bunte Altstadt, tieferer See, echter Wasserturm
+- Abgleich mit 20 Fotos von Wikimedia Commons (Kapellbrücke, Wasserturm, Weinmarkt, Kornmarkt, Schwanenplatz, Seebrücke, Haldenstrasse, Bahnhof, KKL) und gleichen Ansichten im Spiel
+- Altstadt-Häuser in den Farben der Fotos: Ocker, Terrakotta, Salbeigrau, Altrosa, Steingrau, Sonnengelb, Taubenblau, Crème (vorher fast alle crèmefarben). Die bemalten Häuser am Weinmarkt/Kornmarkt sind deutlich farbiger
+- Wasserturm: braune Bruchsteinmauer und rotbraunes Dach statt rosa Bürofassade mit Balkonen
+- See und Reuss: tieferes Blaugrün wie auf den Fotos, Himmelsspiegelung schwächer (vorher zu hell, wie ein Schwimmbad)
+
 2026-11-13a  Neue Region Meggen, neues Aussehen, Sonnenschatten, Wolken, glitzernder See, schärferes Luftbild
 - Fix «Bäume und Strassen schweben»: Die grobe Gelände-Detailstufe für die Ferne mass den Abstand zur Kapellbrücke statt zur Kamera. Überall mehr als 650 m von der Kapellbrücke entfernt lag deshalb der grobe, absichtlich etwas abgesenkte Boden (bis 7 m zu tief) – auch direkt unter dem Auto. Jetzt hat jede 400-m-Kachel ihre eigene Mitte. Neuer Test tests/gdiff.py: sichtbarer Boden im Umkreis von 600 m weicht nirgends mehr als 1.5 m von der echten Höhe ab (Kinderspital und Hang ob dem Gütsch geprüft)
 - Fix Bus-Beschriftung gespiegelt: Die linke Busseite zeigte «vbl» und die Liniennummer spiegelverkehrt. Jetzt hat jede Seite ihr eigenes, lesbares Bild
