@@ -1495,6 +1495,7 @@ if (location.search.includes('test')) {
       for (const sc of [world.group, scene]) for (const c of sc.children) { if (c === world.group || !c.visible) continue; const k = (c.name || c.type) + (sc === scene ? '*' : ''); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }
       for (const [k, cs] of groups) { cs.forEach((c) => (c.visible = false)); o[k] = Math.round((all - meas()) / 1000); cs.forEach((c) => (c.visible = true)); }
       o.total_k = Math.round(all / 1000); return o; },
+    airCam: (x: number, z: number, d = 120, hh = 70, a = 0) => { const y = terrain.height(x, z); (window as any).__cam = [x - Math.sin(a) * d, y + hh, z - Math.cos(a) * d, x, y, z]; },
     camAt: (x: number, z: number, h: number, up = 4) => { const y = terrain.height(x, z) + 1.8; (window as any).__cam = [x, y, z, x + Math.sin(h) * 50, y + up, z + Math.cos(h) * 50]; },
     players: () => players.map((p) => ({ i: p.idx, x: Math.round(p.car.x), z: Math.round(p.car.z), v: Math.round(p.car.speed * 3.6) })),
     buses: () => buses ? { aktiv: buses.buses.length, linien: [...new Set(buses.buses.map((b) => buses!.lines[b.line].ref + ' → ' + buses!.lines[b.line].to))], ...buses.stats } : null,
