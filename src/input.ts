@@ -42,18 +42,18 @@ export function pollInput() {
 
 function gpEdge(p: PadState | undefined, i: number) { return !!p && !!p.now[i] && !p.prev[i]; }
 
-export type Action = 'siren' | 'horn' | 'reset' | 'camera' | 'map' | 'pause' | 'mute' | 'accept' | 'photo' | 'fps' | 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'join' | 'decline';
+export type Action = 'siren' | 'horn' | 'reset' | 'camera' | 'map' | 'pause' | 'mute' | 'accept' | 'photo' | 'fps' | 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'join' | 'decline' | 'travel';
 
 const KEYMAP: Record<Action, string[]> = {
   siren: ['Space'], horn: ['KeyH'], reset: ['KeyR'], camera: ['KeyC'], map: ['Tab'],
   pause: ['Escape', 'KeyP'], mute: ['KeyM'], accept: ['KeyE', 'Enter'], photo: [], fps: ['F3'],
   up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'],
-  confirm: ['Enter', 'Space', 'KeyE'], back: ['Escape', 'Backspace'], join: [], decline: ['KeyN'],
+  confirm: ['Enter', 'Space', 'KeyE'], back: ['Escape', 'Backspace'], join: [], decline: ['KeyN'], travel: ['KeyT'],
 };
 const PADMAP: Record<Action, number[]> = {
   siren: [GP.A], horn: [GP.B], reset: [GP.Y], camera: [GP.RS, GP.RB], map: [GP.BACK], pause: [GP.START],
   mute: [], accept: [GP.X], photo: [], fps: [],
-  up: [GP.UP], down: [GP.DOWN], left: [GP.LEFT], right: [GP.RIGHT], confirm: [GP.A], back: [GP.B, GP.START], join: [GP.START, GP.A], decline: [GP.LB],
+  up: [GP.UP], down: [GP.DOWN], left: [GP.LEFT], right: [GP.RIGHT], confirm: [GP.A], back: [GP.B, GP.START], join: [GP.START, GP.A], decline: [GP.LB], travel: [],
 };
 
 // Touch-Knöpfe (von touch.ts gesetzt)

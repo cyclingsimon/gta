@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13i  Schnellreise, Luzerner Skyline, Spielumfang im Ladebild
+- Schnellreise (Wunsch Simon): Taste T oder Pausenmenü «🗺️ Schnellreise». Karte aller Gegenden, Ziel wählen (Kinderspital Luzern, Bahnhof Luzern, Spital Nidwalden, Emmenbrücke, Rettungsposten Meggen und Littau), kurze Zeitraffer-Fahrt auf der Karte, Ankunft. In eine andere Gegend lädt das Spiel neu und setzt die Ambulanz am Ziel ab. Ein laufender Einsatz wird dabei abgegeben (ohne Strafe). Zu zweit oder mitten in einem Mini-Spiel geht es nicht
+- Spital Wolhusen und Spital Sursee stehen grau mit «kommt bald» auf der Karte (Ausbau Gebiet A geplant)
+- Start- und Ladebild: eigene Luzerner Silhouette (Pilatus, Gütsch, Jesuitenkirche, Musegg, Kapellbrücke, Hofkirche, KKL) statt Klötzchen
+- Ladebild zeigt, was gerade gebaut wird (Fläche, Gebäude, Strassen der Gegend) und wie gross die ganze Spielwelt ist; «Lade …» nennt die richtige Gegend
+
 2026-11-13h  Great Tatü Ambulanz – Nice City
 - Neuer Look im Stil der grossen Stadt-Fahrspiele, aber kindlich: Ladebild mit Sonnenuntergang und Logo in Wortkästen, dunkles Pausenmenü, Sterne oben rechts, Minikarte unten links, Auftrag als Untertitel, grosses «Einsatz erfüllt!»
 - Neue Schriften: Luckiest Guy und Archivo (frei lizenziert)

@@ -1,3 +1,4 @@
+import { openTravel } from './travel';
 import { Stats } from './stats';
 import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
@@ -14,7 +15,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-13h';
+export const VERSION = '2026-11-13i';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -834,7 +835,7 @@ function menuRows(): MenuRow[] {
   const skinN = fun ? fun.heartCount : 0;
   const setSkin = (sk: string) => { save.skin = sk; for (const p of players) p.car.setSkin(sk); writeSave(); };
   const rows: MenuRow[] = [
-    { kind: 'main', btns: [{ t: '▶ Weiterfahren', f: () => setPause(false) }, { t: `🏥 Zum ${HOSP}`, f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } },
+    { kind: 'main', btns: [{ t: '▶ Weiterfahren', f: () => setPause(false) }, { t: `🏥 Zum ${HOSP}`, f: () => { placeCar(hospitalBay[0], hospitalBay[1]); setPause(false); } }, { t: '🗺️ Schnellreise', f: () => { setPause(false); openTravelMap(); } },
       ...(current && (phase === 'toScene' || phase === 'toHospital') ? [{ t: '✋ Einsatz abgeben', f: () => { abortMission(); setPause(false); } }] : [])] },
     { kind: 'opt', label: 'Fahren', note: { entdecken: 'Für Kinder bis 6: Navi-Linie, mit Blaulicht bis 90 km/h (ohne 70)', rettung: 'Bis etwa 12 Jahre: mit Blaulicht bis 150 km/h (ohne 120)', profi: 'Für Grössere: mit Blaulicht bis 269 km/h (ohne 200)' }[save.diff],
       btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Einfach', rettung: '🚑 Mittel', profi: '⚡ Schnell' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
@@ -991,6 +992,27 @@ function checkRegionEdge(dt: number) {
   (ov as any)._confirm = go; (ov as any)._cancel = stay;
 }
 
+// ---------------- 13i Schnellreise (Wunsch Simon 13.11.) ----------------
+let travelArrived = ''; // Name des Ziels nach Neuladen → Meldung beim Losfahren
+function openTravelMap() {
+  if (!world || document.querySelector('.mg')) return;
+  for (const p of players) p.car.speed = 0;
+  const leaveMission = () => { if (current && (phase === 'toScene' || phase === 'toHospital')) { abortMission(); toast('Einsatz abgegeben – kein Problem!', 2200); } else if (phase === 'offer') declineOffer(); };
+  openTravel(ui, {
+    region: REGION, carX: () => car.x, carZ: () => car.z, hosp: hospitalBay,
+    canGo: () => players.length > 1 ? 'Schnellreise geht nur allein – zu zweit fahrt ihr zusammen weiter.' : (phase === 'onsite' || phase === 'handover') ? 'Zuerst den Einsatz hier fertig machen – dann kann es losgehen.' : null,
+    teleport: (to) => { leaveMission(); const t = to === 'hosp' ? hospitalBay : to; placeCar(t[0], t[1]); for (const p of players) p.car.speed = 0; updateCamera(0, true); sfxPlay.reset(); toast('🗺️ Angekommen!', 2000); writeSave(); },
+    switchTo: (region, to, name) => {
+      leaveMission();
+      writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: region + ':reise' }); stats.flush(true);
+      save.region = region as Save['region']; save.pos = to === 'hosp' ? undefined : [to[0], to[1], NaN];
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', region); sessionStorage.setItem('luksiTravel', name); } catch { /* privat */ }
+      const u = new URL(location.href); u.searchParams.set('region', region); location.replace(u.toString());
+    },
+    sfx: () => sfxPlay.radio(), onClose: () => { /* weiterfahren */ },
+  });
+}
+
 // ---------------- Hauptschleife ----------------
 let last = performance.now(), fpsShow = false, fpsAcc = 0, fpsN = 0, saveTimer = 60;
 let hintTimer = 0, playTime = 0;
@@ -1001,6 +1023,7 @@ function frame(now: number) {
   if (hit('fps')) { fpsShow = !fpsShow; $('#fps').classList.toggle('show', fpsShow); }
   if (world && !overlayOpen) {
     if (hit('pause')) setPause(!paused);
+    if (!paused && hit('travel')) openTravelMap();
     if (paused) {
       const rows = menuRows();
       if (hit('up')) { menuFocus = (menuFocus + rows.length - 1) % rows.length; menuCol = rows[menuFocus].btns.findIndex((b) => b.on) >= 0 ? rows[menuFocus].btns.findIndex((b) => b.on) : 0; renderMenu(); }
@@ -1011,7 +1034,7 @@ function frame(now: number) {
     }
   }
   if (overlayOpen && phase === 'handover' && hit('confirm')) (document.querySelector('.mg') as any)._close?.();
-  else if (overlayOpen && (document.querySelector('.mg') as any)._confirm) { const o = document.querySelector('.mg') as any; if (hit('confirm')) o._confirm(); else if (hit('pause')) o._cancel(); }
+  else if (overlayOpen && (document.querySelector('.mg') as any)._confirm) { const o = document.querySelector('.mg') as any; if (o._nav) for (const d of ['up', 'down', 'left', 'right'] as const) if (hit(d)) o._nav(d); if (hit('confirm')) o._confirm(); else if (hit('pause')) o._cancel(); }
 
   if (world && !paused) {
     const playing = !overlayOpen;
@@ -1231,7 +1254,7 @@ async function boot() {
   bay.rotation.x = -Math.PI / 2; bay.position.set(hospitalBay[0], gy(hospitalBay[0], hospitalBay[1]) + 0.6, hospitalBay[1]);
   scene.add(bay);
 
-  if (save.pos) placeCar(save.pos[0], save.pos[1], save.pos[2]); else placeCar(hospitalBay[0], hospitalBay[1]);
+  if (save.pos) placeCar(save.pos[0], save.pos[1], Number.isFinite(save.pos[2]) ? save.pos[2] : undefined); else placeCar(hospitalBay[0], hospitalBay[1]);
   setMuted(save.muted);
   updateHud();
   // 13h (Simon): Erst losfahren lassen, wenn auch die echten Häuser stehen – kein Spielbild mehr, das noch hängt
@@ -1239,6 +1262,7 @@ async function boot() {
   memLog('navTraffic'); status.textContent = ''; loaderDone();
   $('#start-btn').style.display = '';
   try { if (sessionStorage.getItem('luksiRegionSwitch')) { sessionStorage.removeItem('luksiRegionSwitch'); $('#start-btn').textContent = 'Weiterfahren ▶'; } } catch { /* privat */ }
+  try { const tn = sessionStorage.getItem('luksiTravel'); if (tn) { sessionStorage.removeItem('luksiTravel'); travelArrived = tn; } } catch { /* privat */ }
   $('#start-btn').focus();
 }
 
@@ -1283,6 +1307,7 @@ function start() {
   $('#start').classList.add('hide');
   setTimeout(() => $('#start').remove(), 600);
   paused = false;
+  if (travelArrived) { toast(`🗺️ Angekommen: ${travelArrived}!`, 3000); travelArrived = ''; return; }
   toast(REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Der Rettungsposten ist beim Gemeindehaus.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Der Rettungsposten ist in Littau Dorf.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
 }
 $('#start-btn').onclick = start;
@@ -1396,6 +1421,7 @@ if (location.search.includes('test')) {
     offer: () => { offerTimer = 0; },
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
+    car: () => ({ x: car.x, z: car.z, heading: car.heading }),
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
       return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }
         return { path: n.join('<'), p: [Math.round(h.point.x), Math.round(h.point.y * 10) / 10, Math.round(h.point.z)], d: Math.round(h.distance) }; }); },

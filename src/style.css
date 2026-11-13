@@ -399,3 +399,35 @@ body.art-g4 #pause { background: linear-gradient(180deg, rgba(20,17,31,.45), rgb
 body.art-g3 .ic { width: 1em; height: 1em; vertical-align: -0.12em; background: center / contain no-repeat; color: transparent; text-shadow: none; overflow: hidden; }
 body.art-g3 .ic-star { background-image: var(--g3-star); }
 body.art-g3 .ic-heart { background-image: var(--g3-heart); }
+
+/* =====================================================================
+   13i – Schnellreise (Karte, Zielwahl, Zeitraffer)
+   ===================================================================== */
+.mg.tr .tr-card { max-width: min(980px, 96vw); width: 96vw; max-height: 94vh; display: flex; flex-direction: column; }
+.tr-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(220px, 1fr); gap: 14px; min-height: 0; flex: 1; }
+.tr-map { width: 100%; height: auto; max-height: 62vh; background: #1d4a63; border: 3px solid #000; border-radius: 8px; }
+.tr-reg { fill: #6cbf6a; stroke: #000; stroke-width: 2; opacity: .9; }
+.tr-reg.here { fill: var(--sun, #FFD23F); }
+.tr-rn { font: 700 12px var(--font, sans-serif); text-anchor: middle; fill: #10202a; }
+.tr-pin circle { fill: #fff; stroke: #000; stroke-width: 2.5; cursor: pointer; }
+.tr-pin text { font: 800 12px var(--font, sans-serif); text-anchor: middle; fill: #fff; paint-order: stroke; stroke: #000; stroke-width: 3px; pointer-events: none; }
+.tr-pin.soon circle { fill: #999; stroke-dasharray: 3 3; }
+.tr-pin.soon text { fill: #ddd; }
+.tr-pin.focus circle { fill: var(--pink, #FF4FA3); r: 12; }
+.tr-me circle { fill: #3FA9FF; stroke: #fff; stroke-width: 3; }
+.tr-amb circle { fill: var(--pink, #FF4FA3); stroke: #000; stroke-width: 2.5; }
+.tr-amb text { font-size: 13px; text-anchor: middle; }
+.tr-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 62vh; padding-right: 4px; }
+.tr-list button { display: grid; grid-template-columns: 30px 1fr auto; grid-template-rows: auto auto; column-gap: 8px; text-align: left; padding: 6px 10px; font: inherit; }
+.tr-list button .tr-ic { grid-row: span 2; font-size: 22px; align-self: center; }
+.tr-list button b { font-size: 15px; } .tr-list button small { grid-column: 2; font-size: 11.5px; opacity: .8; }
+.tr-list button em { grid-row: 1 / span 2; grid-column: 3; align-self: center; font-style: normal; font-weight: 800; }
+.tr-list button.focus { outline: 4px solid var(--pink, #FF4FA3); outline-offset: 1px; }
+.tr-list button.off { opacity: .55; }
+.tr-msg { min-height: 1.4em; margin: 8px 0 0; font-weight: 700; }
+@media (max-width: 820px), (max-height: 560px) {
+  .tr-body { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tr-map, .tr-list { max-height: 58vh; }
+  .mg.tr .tr-card h2 { font-size: 20px; margin: 0; } .mg.tr .mg-hint { display: none; }
+  .tr-list button { padding: 3px 6px; } .tr-list button b { font-size: 12.5px; } .tr-list button small { display: none; }
+}
