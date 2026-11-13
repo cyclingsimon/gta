@@ -808,7 +808,16 @@ function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
 let paused = true; // bis zum Start
 // Spielumfang (tools/geo/umfang.py → data/umfang.json): im Pause-Menü unter dem Sammelalbum
 let UMFANG: { gesamt: { km2: number; gebaeude: number; strassen_km: number; wege_km: number }; regionen: Record<string, unknown> } | null = null;
-fetch('data/umfang.json').then((r) => r.json()).then((j) => { UMFANG = j; }).catch(() => { /* ohne Anzeige */ });
+const REGION_NAME: Record<string, string> = { luzern: 'Luzern', nord: 'Norden (Emmen, Ebikon)', ost: 'Meggen', west: 'Littau', sued: 'Nidwalden' };
+fetch('data/umfang.json').then((r) => r.json()).then((j) => { UMFANG = j; showLoadUmfang(); }).catch(() => { /* ohne Anzeige */ });
+// 13i (Wunsch Simon): Schon im Ladebild sagen, wie gross die Welt ist – darum dauert das Laden
+function showLoadUmfang() {
+  const el = document.getElementById('load-umfang'); if (!el || !UMFANG) return;
+  const r = (UMFANG.regionen as Record<string, { km2: number; gebaeude: number; strassen_km: number }>)[REGION];
+  const g = UMFANG.gesamt;
+  el.innerHTML = (r ? `<b>Wird gebaut: ${REGION_NAME[REGION]}</b> – ${chZahl(r.km2)} km², ${chZahl(r.gebaeude)} echte Gebäude, ${chZahl(r.strassen_km)} km Strassen<br>` : '')
+    + `Ganze Spielwelt: ${Object.keys(UMFANG.regionen).length} Gegenden · ${chZahl(g.km2)} km² · ${chZahl(g.gebaeude)} Gebäude`;
+}
 const chZahl = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2019'); // Schweizer Tausendertrenner
 let menuFocus = 0;
 const DIFF_LABEL: Record<Difficulty, string> = { entdecken: 'Einfach (Navi-Linie, bis 90 km/h)', rettung: 'Mittel (bis 150 km/h)', profi: 'Schnell (bis 269 km/h)' };
@@ -1125,7 +1134,7 @@ async function boot() {
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
-  status.textContent = 'Lade Luzern …';
+  status.textContent = `Lade ${REGION_NAME[REGION]} …`;
   const echt = QUALITY === 'echt';
   // alles gleichzeitig anfordern; Stufe B (3D-Häuser, feiner Boden) wird erst nach dem Start fertig gebaut
   const pCity = getJSON('city.json'), pTmeta = getJSON('terrain.json'), pTraw = getBuf('terrain.bin');

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 300" preserveAspectRatio="xMidYMax meet">
+<!-- Luzern-Silhouette (eigene Zeichnung, vereinfacht): Pilatus, Gütsch, Jesuitenkirche, Museggmauer, Kapellbrücke mit Wasserturm, Hofkirche, KKL, Rigi.
+     Ränder enden auf Wasserhöhe (y 252), damit CSS links/rechts mit einem flachen Streifen fortsetzen kann. -->
+<defs>
+  <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1B4A"/><stop offset="1" stop-color="#14111F"/></linearGradient>
+</defs>
+<!-- Berge hinten -->
+<path fill="#4A2A7A" fill-opacity=".75" d="M0 252 L60 225 L150 175 L215 140 L255 92 L278 104 L300 62 L318 80 L338 48 L356 70 L372 58 L395 96 L440 118 L520 160 L620 196 L720 222 L1000 232 L1180 222 L1290 182 L1380 150 L1430 140 L1490 152 L1560 190 L1600 220 L1600 252 Z"/>
+<path fill="#5B3290" fill-opacity=".55" d="M338 48 L356 70 L372 58 L395 96 L360 90 L345 72 Z M300 62 L318 80 L305 86 Z"/>
+<g fill="#14111F">
+  <!-- Gütsch-Hügel mit Schloss -->
+  <path d="M40 252 Q80 205 140 196 Q205 190 245 222 L262 252 Z"/>
+  <rect x="104" y="166" width="54" height="34"/>
+  <rect x="96" y="146" width="14" height="40"/><path d="M93 147 L103 124 L113 147 Z"/>
+  <rect x="140" y="132" width="16" height="44"/><path d="M137 133 L148 104 L159 133 Z"/>
+  <path d="M110 166 L131 150 L152 166 Z"/>
+  <!-- Altstadt links der Reuss + Jesuitenkirche -->
+  <path d="M235 252 V232 L245 224 L255 232 V226 L266 218 L277 226 V252 Z"/>
+  <rect x="282" y="206" width="60" height="46"/>
+  <path d="M282 207 L312 190 L342 207 Z"/>
+  <rect x="280" y="172" width="15" height="40"/><rect x="329" y="172" width="15" height="40"/>
+  <ellipse cx="287.5" cy="164" rx="10" ry="11"/><ellipse cx="336.5" cy="164" rx="10" ry="11"/>
+  <rect x="285.5" y="140" width="4" height="16"/><rect x="334.5" y="140" width="4" height="16"/>
+  <circle cx="287.5" cy="152" r="4"/><circle cx="336.5" cy="152" r="4"/>
+  <!-- Musegg-Hügel, Mauer und Türme -->
+  <path d="M345 252 L360 236 Q560 196 790 232 L805 252 Z"/>
+  <path d="M385 222 L760 216 L760 228 L385 234 Z"/>
+  <g>
+    <rect x="388" y="186" width="18" height="44"/><path d="M385 187 L397 164 L409 187 Z"/>
+    <rect x="428" y="180" width="18" height="48"/><path d="M425 181 L437 158 L449 181 Z"/>
+    <rect x="470" y="176" width="18" height="50"/><path d="M467 177 L479 152 L491 177 Z"/>
+    <rect x="512" y="172" width="20" height="52"/><path d="M509 173 L522 146 L535 173 Z"/>
+    <rect x="555" y="162" width="22" height="60"/><path d="M552 163 L566 128 L580 163 Z"/>
+    <rect x="600" y="172" width="18" height="50"/><path d="M597 173 L609 148 L621 173 Z"/>
+    <rect x="642" y="176" width="18" height="46"/><path d="M639 177 L651 154 L663 177 Z"/>
+    <rect x="684" y="180" width="18" height="42"/><path d="M681 181 L693 160 L705 181 Z"/>
+    <rect x="726" y="186" width="18" height="38"/><path d="M723 187 L735 166 L747 187 Z"/>
+  </g>
+  <!-- Altstadt-Dächer -->
+  <path d="M395 252 V238 L408 228 L421 238 V232 L436 222 L451 232 V240 L462 230 L473 240 V234 L489 224 L505 234 V242 L517 232 L529 242 V236 L546 226 L563 236 V240 L577 230 L591 240 V234 L606 224 L621 234 V242 L634 233 L647 242 V236 L662 226 L677 236 V240 L690 231 L703 240 V236 L718 226 L733 236 V244 L746 236 L759 244 V252 Z"/>
+  <!-- Kapellbrücke mit Wasserturm -->
+  <path d="M790 252 L790 246 L1080 238 L1080 252 Z"/>
+  <path d="M786 247 L800 239 L1070 231 L1084 238 Z"/>
+  <rect x="880" y="196" width="34" height="56"/>
+  <path d="M876 197 L897 150 L918 197 Z"/>
+  <rect x="895" y="140" width="4" height="12"/>
+  <!-- Hofkirche -->
+  <path d="M1100 252 V232 L1112 224 L1124 232 V252 Z"/>
+  <rect x="1132" y="212" width="80" height="40"/><path d="M1132 213 L1172 194 L1212 213 Z"/>
+  <rect x="1126" y="168" width="13" height="50"/><path d="M1124 169 L1132.5 112 L1141 169 Z"/>
+  <rect x="1205" y="168" width="13" height="50"/><path d="M1203 169 L1211.5 112 L1220 169 Z"/>
+  <!-- Seeufer und KKL mit auskragendem Dach -->
+  <rect x="1240" y="236" width="60" height="16"/>
+  <rect x="1340" y="222" width="180" height="30"/>
+  <path d="M1300 210 L1580 206 L1580 214 L1300 217 Z"/>
+  <rect x="1350" y="214" width="4" height="10"/><rect x="1450" y="213" width="4" height="10"/><rect x="1540" y="212" width="4" height="12"/>
+  <!-- Wasser / Ufer -->
+  <rect x="0" y="252" width="1600" height="48"/>
+</g>
+<!-- warme Fenster und Spiegelungen -->
+<g fill="#FFD23F" fill-opacity=".85">
+  <rect x="116" y="174" width="5" height="7"/><rect x="134" y="174" width="5" height="7"/><rect x="144" y="146" width="4" height="7"/>
+  <circle cx="566" cy="176" r="5" fill="#FFE45C"/>
+  <rect x="300" y="222" width="5" height="9"/><rect x="319" y="222" width="5" height="9"/>
+  <rect x="440" y="240" width="4" height="5"/><rect x="520" y="242" width="4" height="5"/><rect x="610" y="240" width="4" height="5"/><rect x="700" y="242" width="4" height="5"/>
+  <rect x="1360" y="230" width="150" height="3" fill-opacity=".55"/>
+</g>
+<g stroke="#FF4FA3" stroke-opacity=".35" stroke-width="2">
+  <path d="M120 262 H220 M300 268 H360 M470 262 H620 M860 266 H940 M1150 262 H1230 M1340 268 H1520"/>
+</g>
+<g stroke="#FFD23F" stroke-opacity=".3" stroke-width="2">
+  <path d="M560 274 H600 M890 280 H920 M1400 278 H1470"/>
+</g>
+</svg>

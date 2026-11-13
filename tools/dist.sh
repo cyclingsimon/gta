@@ -7,7 +7,7 @@ O=${OUT:-dist}
 npx vite build --outDir "$O" --emptyOutDir
 rm -rf "$O/data" && cp -r public/data "$O/data"
 for f in b3d.bin ground.bin terrain.bin city.json b3d.json; do gzip -9 -c "public/data/$f" > "$O/data/$f.gz"; rm "$O/data/$f"; done
-for r in nord ost west sued; do for f in b3d.bin ground.bin terrain.bin city.json b3d.json; do gzip -9 -c "public/data/$r/$f" > "$O/data/$r/$f.gz"; rm "$O/data/$r/$f"; done; done
+for r in nord ost west sued; do [ -d "public/data/$r" ] || { echo "HINWEIS: Region $r fehlt (nicht im Paket)"; continue; }; for f in b3d.bin ground.bin terrain.bin city.json b3d.json; do gzip -9 -c "public/data/$r/$f" > "$O/data/$r/$f.gz"; rm "$O/data/$r/$f"; done; done
 cp public/LIESMICH.txt "$O/"
 du -sh "$O"
 
