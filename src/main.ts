@@ -14,7 +14,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-12z';
+export const VERSION = '2026-11-13a';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -591,7 +591,7 @@ function handover() {
 function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
-  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : 'Freie Fahrt durch Luzern';
+  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Luzern');
   else if (phase === 'toScene') m.textContent = `${current.title}: zum ${current.place}`;
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
   else if (phase === 'toHospital') m.textContent = `${current.title}: ${REGION === 'ost' ? 'zum Rettungsposten' : 'ins Kinderspital'}`;
@@ -1251,7 +1251,7 @@ function qaReport() {
       n++; if (gap > 1.5) { fl++; if (ex.length < 8) ex.push([cx, cz, Math.round(gap * 10) / 10]); } }
     add('G5', 'Gebäude: Wandfuss > 1.5 m über Gelände', fl / n, 0.02, fl / n <= 0.02, { gebaeude: n, schwebend: fl, beispiele: ex }); }
   // G6: Wahrzeichen vorhanden
-  { const need = REGION === 'nord' ? ['Reussport', 'Rothenburgstrasse', 'Seetalplatz', 'Luzernerstrasse'] : REGION === 'ost' ? ['Meggenhornstrasse', 'Hauptstrasse', 'Gottlieben'] : ['Kapellbrücke', 'Spreuerbrücke', 'Wasserturm', 'Jesuitenkirche', 'KKL', 'Hofkirche', 'Bahnhofstor', 'Wilhelm Tell'];
+  { const need = REGION === 'nord' ? ['Reussport', 'Rothenburgstrasse', 'Seetalplatz', 'Luzernerstrasse'] : REGION === 'ost' ? ['Meggenhornstrasse', 'Hauptstrasse', 'Seeacherstrasse'] : ['Kapellbrücke', 'Spreuerbrücke', 'Wasserturm', 'Jesuitenkirche', 'KKL', 'Hofkirche', 'Bahnhofstor', 'Wilhelm Tell'];
     const names = world.landmarks.map((l) => l.name).join('|') + '|' + [...world.roadsByName.keys()].join('|');
     const miss = need.filter((n) => !names.includes(n));
     add('G6', 'Wahrzeichen vorhanden', need.length - miss.length, need.length, miss.length === 0, { fehlend: miss }); }

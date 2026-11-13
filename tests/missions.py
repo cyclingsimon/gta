@@ -21,7 +21,7 @@ async def jump_near(pg, remain=110):
     return st['routeLen']
 async def solve(pg):
     await pg.wait_for_selector('.mg-card', timeout=120000)
-    title = await pg.inner_text('.mg-card h2')
+    title = await pg.eval_on_selector('.mg-card h2', 'e => e.textContent')  # textContent: unabhängig von CSS text-transform
     if 'Memory' in title:
         for k in range(4):
             cs = await pg.query_selector_all(f'.card[data-k="{k}"]')

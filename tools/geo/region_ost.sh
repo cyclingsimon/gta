@@ -21,3 +21,4 @@ LR_BEACH=data/e3/merged_ost/beach.json python3 tools/geo/build_props.py data/e3/
 LR_BOUNDS=2510,-1990,7490,2490 LR_BUS=data/e3/merged_ost/osm_bus.json python3 tools/geo/build_bus.py > /dev/null
 cp public/data/horizon.json public/data/horizon.bin public/data/ost/
 LR_TUN=data/e3/merged_ost/tunnels.json python3 tools/geo/build_trains.py
+python3 tools/geo/crossings.py

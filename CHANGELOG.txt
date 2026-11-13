@@ -1,5 +1,18 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13a  Neue Region Meggen, neues Aussehen, Sonnenschatten, Wolken, glitzernder See, schärferes Luftbild
+- Fix «Bäume und Strassen schweben»: Die grobe Gelände-Detailstufe für die Ferne mass den Abstand zur Kapellbrücke statt zur Kamera. Überall mehr als 650 m von der Kapellbrücke entfernt lag deshalb der grobe, absichtlich etwas abgesenkte Boden (bis 7 m zu tief) – auch direkt unter dem Auto. Jetzt hat jede 400-m-Kachel ihre eigene Mitte. Neuer Test tests/gdiff.py: sichtbarer Boden im Umkreis von 600 m weicht nirgends mehr als 1.5 m von der echten Höhe ab (Kinderspital und Hang ob dem Gütsch geprüft)
+- Fix Bus-Beschriftung gespiegelt: Die linke Busseite zeigte «vbl» und die Liniennummer spiegelverkehrt. Jetzt hat jede Seite ihr eigenes, lesbares Bild
+- Neue Region «Ost» (Meggen, Würzenbach, Meggenhorn): echtes Gelände, 3619 Häuser aus swissBUILDINGS3D mit Dachfarben aus dem Luftbild, Luftbild-Boden, Wald, See flach auf Seespiegel, Strassen und Buslinien aus OpenStreetMap, S-Bahn Luzern–Küssnacht. Erreichbar: in Luzern bei der Seeburg/Würzenbach nach Osten fahren (x > 2660), zurück am Westrand. Wegweiser «➡ Meggen» bzw. «⬅ Luzern · Kinderspital»
+- 8 neue Einsätze in Meggen: Schloss Meggenhorn, Strandbad Benzeholz, Schulhaus Hofmatt, Bahnhof Meggen, Meggen Zentrum, Schloss Neuhabsburg, Spielplatz Hochhüsliweid, Tschädigen. Patienten kommen zum «Rettungsposten Meggen» beim Gemeindehaus (erfunden – in Meggen gibt es kein Kinderspital). 40 eigene Herzen, Boote vor Meggen, Abzeichen «Alle Einsätze in Meggen»
+- Neues Aussehen der Bedienung im Stil von demo.luksi.ch: Schrift «Play» (SIL Open Font License, liegt bei), dicke Konturen, harte Schatten, schräge Bänder (Funk, Pause, Titel), Tacho als dunkles Zahlenfeld, Pause-Menü-Optionen als Segment-Schalter. Bewusst weggelassen: Farbverläufe, Glas-Effekte, weiche graue Schatten
+- Sonnenschatten (nur «Echt»): Häuser, Bäume, Autos und die Ambulanz werfen Schatten im Umkreis von 140 m. Licht etwas kontrastreicher
+- Himmel: Verlauf vom dunstigen Horizont zum Blau, Sonne mit Lichthof, langsam ziehende Schönwetterwolken; abends orange
+- See und Reuss: türkis wie auf dem Luftbild statt himmelblau, bewegte Wellen, Spiegelung des Himmels bei flachem Blick, Sonnenglitzern
+- Schärferes Luftbild in der Kernzone (Altstadt, Bahnhof, Seebecken, Tribschen; 2.6 × 2.6 km, 0.6 m statt 2 m, nur «Echt»)
+- Hauswände unten etwas dunkler (Kontaktschatten)
+- Leistungsprüfung: P1 misst weiterhin das Hauptbild, neu P2 den Schattenpass (Grenze 1 Mio. Dreiecke)
+
 2026-11-12z  Züge im Norden, Brücken, Brunnen, Spielstatistik, neue Mini-Spiele, Abzeichen, neues Pause-Menü, schneller
 - Pause-Menü neu: oben «Weiterfahren» und «Zum Kinderspital» (während eines Einsatzes zusätzlich «Einsatz abgeben»), Sammelalbum, dann Einstellungen als Auswahl-Knöpfe – alle Möglichkeiten sind sichtbar, die aktive ist blau (Fahren, Kamera, Tageszeit, Ton, Ambulanz, Grafik). Unten klein: Spielstand sichern, Steuerung & Credits. Mit Controller: ↑↓ Zeile, ←→ Knopf, A wählen
 - Einsatz ablehnen: Im Funk gibt es «Nein danke» (N / LB). Der abgelehnte Einsatz kommt erst wieder, wenn die anderen dran waren

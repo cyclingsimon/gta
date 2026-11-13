@@ -439,7 +439,7 @@ const ROAD_LAYER: Record<string, number> = { footway: 0.3, path: 0.3, steps: 0.3
 
 export interface B3D { meta: { buildings: number[][] }; pos: ArrayLike<number>; idx: Uint16Array; edges?: Uint16Array; roof?: string[] }
 
-export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][] }
+export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][]; crossings?: number[][] }
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
@@ -676,6 +676,30 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       worldUV(m.geometry, sc);
       group.add(m);
     }
+    // Fussgängerstreifen (OSM highway=crossing, markiert): in der Schweiz gelb, Balken 0.5 m breit, 0.5 m Abstand, 3 m lang in Fahrtrichtung
+    const zebra: number[] = [];
+    if (props?.crossings?.length) {
+      const car = d.roads.filter((r) => ['primary', 'secondary', 'tertiary', 'trunk', 'residential', 'unclassified', 'living_street', 'service'].includes(r.c) && !r.b);
+      const cell = new Map<string, [number[][], number, number][]>(); // Segment-Gitter 50 m
+      for (const r of car) for (let i = 1; i < r.p.length; i++) { const k = Math.floor(r.p[i][0] / 50) + ',' + Math.floor(r.p[i][1] / 50); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push([r.p, i, r.w]); }
+      for (const [cx, cz] of props.crossings) {
+        let best: [number, number, number, number, number] | null = null; // d, dirx, dirz, w, t
+        for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const [p, i, w] of cell.get((Math.floor(cx / 50) + a) + ',' + (Math.floor(cz / 50) + b)) || []) {
+          const [x1, z1] = p[i - 1], [x2, z2] = p[i]; const dx = x2 - x1, dz = z2 - z1, L2 = dx * dx + dz * dz; if (L2 < 1) continue;
+          const t = Math.max(0, Math.min(1, ((cx - x1) * dx + (cz - z1) * dz) / L2)); const dd2 = Math.hypot(x1 + dx * t - cx, z1 + dz * t - cz);
+          if (dd2 < 4 && (!best || dd2 < best[0])) { const L = Math.sqrt(L2); best = [dd2, dx / L, dz / L, w, 0]; }
+        }
+        if (!best) continue;
+        const [, ux, uz, w] = best, vx = -uz, vz = ux; const half = Math.max(2.5, w / 2) - 0.3, len = 1.5;
+        for (let o = -half; o + 0.5 <= half; o += 1.0) { // Balken quer über die Fahrbahn verteilt, jeder 3 m lang entlang der Strasse
+          const bx = cx + vx * (o + 0.25), bz = cz + vz * (o + 0.25);
+          const q = [[bx - ux * len - vx * 0.25, bz - uz * len - vz * 0.25], [bx + ux * len - vx * 0.25, bz + uz * len - vz * 0.25], [bx + ux * len + vx * 0.25, bz + uz * len + vz * 0.25], [bx - ux * len + vx * 0.25, bz - uz * len + vz * 0.25]];
+          for (const k of [0, 2, 1, 0, 3, 2]) zebra.push(q[k][0], 0.37, q[k][1]);
+        }
+      }
+    }
+    if (zebra.length) { const zd = drape(zebra, null, terrain, 11, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
+      const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide })); zm.name = 'zebra'; group.add(zm); }
     const dd = drape(dashes, null, terrain, 11, true);
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
     dg.computeVertexNormals();
