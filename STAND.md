@@ -12,6 +12,8 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Regionswechsel: Dialog «Neue Gegend! Willst du nach … fahren?» (Enter/A = ja, Esc/Start = nein → Ambulanz 30 m zurück, gewendet). Fahrzeug steht während der Frage.
 - Grafikaufträge ChatGPT in Todoist «Wartet auf Grafik/Musik»: G1 Ladebild-Panorama, G2 3 Comic-Panels, G3 HUD-Icons (Magenta), G4 Pause-Hintergrund. Einbau, sobald in Drive `02_Grafik-Originale/`. Keine Luksi-Figuren bestellt.
 - Test-Hook: `__dbg.handover()`. Test: `tests/gta_ui.py` (Screenshots shots/gta_*).
+- Tests 13h (Software-Rendering, 13.11. 15:45–16:20): gta_ui.py PC 1280×720 und Handy 800×380 Touch ohne Fehler, Schriften geladen (Luckiest Guy, Archivo 400–700), Screenshots Start/HUD/Funk/Erfüllt/Pause visuell geprüft. Regionsfrage mit `?test&edge`: Dialog erscheint, Esc schliesst, Ambulanz bleibt in Luzern. Grafik «Echt»: Startknopf erst nach Stufe B (luksiReady = true), nach Start fährt die Ambulanz sofort an. Nicht getestet: qa.py/missions.py mit 13h (nur Oberfläche und Ablauf geändert), echte Ladezeit auf GTX 1080 (Ladebild dauert mit «Echt» jetzt länger, dafür kein Hänger nach dem Start).
+- ZIP: `Luksi Rescue 2026-11-13h.zip` (Vollpaket, aktuell). Nicht hochgeladen.
 
 ## Version 13c (13.11. tagsüber, nicht hochgeladen)
 - Simons Prioritäten (13.11. 08:28): 1 Luzerner Kantonsstrassen, Bahnhof, Europaplatz · 2 Optik bestehender Gegenden (Kantonsstrassen) · 3 bestehende Regionen verbessern · 4 LUKS realistisch · 50 neue Regionen. Dazu: Spielumfang-Anzeige, Android-Meldung verdeckt Sicht, Schiffe in der Bucht, Geschwindigkeiten 90/150/269 (mit Blaulicht; ohne 70/120/200, Entscheid Claude nach Art. 100 Ziff. 4 SVG).
