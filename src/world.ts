@@ -5,7 +5,7 @@ import { Terrain, drape } from './terrain';
 export interface CityData {
   meta: { bounds: [number, number, number, number]; credits: string };
   buildings: { p: number[][]; h: number; n: string; t: string; roof: string; holes?: number[][][] }[];
-  roads: { p: number[][]; c: string; w: number; n: string; b: number; o?: number; tr?: number; tf?: string[][]; tb?: string[][]; L?: number; sw?: number[]; cy?: number[]; bu?: number[]; v?: number; ref?: string }[];
+  roads: { p: number[][]; c: string; w: number; n: string; b: number; o?: number; tr?: number; tf?: string[][]; tb?: string[][]; df?: string[]; db?: string[]; L?: number; sw?: number[]; cy?: number[]; bu?: number[]; v?: number; ref?: string }[];
   water: { p: number[][]; holes: number[][][] }[];
   green: { p: number[][]; k: string }[];
   rail: number[][][];
@@ -673,7 +673,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const nodeCnt = new Map<string, number>(); const nk = (q: number[]) => Math.round(q[0]) + ',' + Math.round(q[1]);
     for (const r of d.roads) { if (['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c)) continue; for (const q of [r.p[0], r.p[r.p.length - 1]]) nodeCnt.set(nk(q), (nodeCnt.get(nk(q)) || 0) + 1);
       for (let i = 1; i < r.p.length - 1; i++) nodeCnt.set(nk(r.p[i]), (nodeCnt.get(nk(r.p[i])) || 0) + 2); }
-    const arrows: number[][] = [], hsSigns: number[][] = [], leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
+    // Wartelinien (SSV 6.13, unterbrochen 0.5 m / 0.25 m): wo eine Neben- auf eine Hauptstrasse (mit OSM-Streifen) trifft und keine Ampel steht
+    const mainHalf = new Map<string, number>(); for (const r of d.roads) if (r.L && !r.b) for (const q of r.p) mainHalf.set(nk(q), Math.max(mainHalf.get(nk(q)) || 0, r.w / 2));
+    const wartel: number[] = [];
+    for (const r of d.roads) { if (r.L || r.b || !['residential', 'unclassified', 'living_street', 'tertiary_link'].includes(r.c) || r.p.length < 2) continue;
+      for (const end of [0, 1]) { const q = end ? r.p[r.p.length - 1] : r.p[0]; const mh = mainHalf.get(nk(q)); if (!mh) continue;
+        if (props?.signals?.some((sg) => Math.hypot(sg[0] - q[0], sg[1] - q[1]) < 25)) continue;
+        const pp = end ? r.p : r.p.slice().reverse(); const A = pp[pp.length - 2], B = pp[pp.length - 1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < mh + 2) continue;
+        const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, nx = -uz, nz = ux, back = mh + 0.6, cx = B[0] - ux * back, cz = B[1] - uz * back, hw = r.w / 2 - 0.2;
+        strokeLine(wartel, [[cx - nx * hw, cz - nz * hw], [cx + nx * hw, cz + nz * hw]], 0.36, 0.4, 0.5, 0.25); } }
+    const wegweiser: any[][] = [], arrows: number[][] = [], hsSigns: number[][] = [], leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
       if (r.tr) { // Trottoir neben der Fahrbahn (tools/geo/roadtags.py): 12 cm erhöht, grauer Belag, Randstein beidseitig
@@ -702,6 +711,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
             const cx = A[0] + ux * t, cz = A[1] + uz * t;
             tl.slice(-n).forEach((dirs, i) => { const has = (d: string) => dirs.includes(d), th = has('through'), lf = has('left'), rt = has('right'); const kind = th && lf ? 3 : th && rt ? 4 : lf && rt ? 5 : lf ? 1 : rt ? 2 : th ? 0 : -1; if (kind < 0) return;
               const o = base + (i + 0.5) * lw; arrows.push([kind, cx - uz * o, cz + ux * o, ux, uz]); }); } }
+        // Vorwegweiser (blau, weisse Schrift; Ziele aus OSM destination) 35 m vor dem Knoten am rechten Rand
+        for (const end of [0, 1]) { const ds = end ? r.df : r.db; if (!ds || !(end ? j1 : j0)) continue;
+          const pp = end ? r.p : r.p.slice().reverse(); let acc = 0, k = pp.length - 1; while (k > 0 && acc + Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]) < 35) { acc += Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]); k--; }
+          if (k < 1) continue; const A = pp[k - 1], B = pp[k], sl = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, t = Math.max(0, sl - (35 - acc));
+          const o = r.w / 2 + 1.4; wegweiser.push([A[0] + ux * t - uz * o, A[1] + uz * t + ux * o, Math.atan2(ux, uz), ds.join('|')] as any); }
         // Haltelinie (SSV 6.10, 0.5 m breit) 3 m vor einer Ampel am Wegende, über die ankommenden Streifen
         if (props?.signals?.length) for (const end of [0, 1]) { const q = end ? last : r.p[0]; if (!props.signals.some((sg) => Math.hypot(sg[0] - q[0], sg[1] - q[1]) < 22)) continue;
           const pp = end ? r.p : r.p.slice().reverse(); let acc = 0, k = pp.length - 1; while (k > 0 && acc + Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]) < 4) { acc += Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]); k--; }
@@ -772,13 +786,6 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
       const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
-    const dd = drape(dashes, null, terrain, 5, true);
-    const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
-    dg.computeVertexNormals();
-    group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
-    if (yellow.length) { const yd = drape(yellow, null, terrain, 5, true); const yg = new THREE.BufferGeometry(); yg.setAttribute('position', new THREE.Float32BufferAttribute(yd.pos, 3)); yg.computeVertexNormals();
-      const ym = new THREE.Mesh(yg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ym.name = 'yellowLines'; group.add(ym); }
-    if (decals.length) group.add(roadDecals(decals, terrain));
     // Bushaltestellen am Fahrbahnrand (OSM bus_stop neben einer Hauptstrasse): gelbe unterbrochene Umrandung 20 × 2.6 m und «BUS»
     if (props?.stops?.length) { const mains = d.roads.filter((r) => r.L && !r.b && r.p.length > 1);
       const grid = new Map<string, number[]>(); mains.forEach((r, i) => { for (const q of r.p) { const k = Math.floor(q[0] / 60) + ',' + Math.floor(q[1] / 60); if (!grid.has(k)) grid.set(k, []); const a = grid.get(k)!; if (a[a.length - 1] !== i) a.push(i); } });
@@ -794,7 +801,24 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const o1 = sd * (r.w / 2 - 0.15), o2 = sd * (r.w / 2 - 2.75); const P = (s0: number, o: number) => [px + ux * s0 + nx * o, pz + uz * s0 + nz * o];
         strokeLine(yellow, [P(-10, o2), P(10, o2)], 0.372, 0.15, 1, 1); strokeLine(yellow, [P(-10, o1), P(-10, o2)], 0.372, 0.15); strokeLine(yellow, [P(10, o1), P(10, o2)], 0.372, 0.15);
         const c = P(0, (o1 + o2) / 2); decals.push([1, c[0], c[1], sd > 0 ? ux : -ux, sd > 0 ? uz : -uz]); done.push([sx, sz]); } }
+    for (let i = 0; i < wartel.length; i++) dashes.push(wartel[i]);
+    const dd = drape(dashes, null, terrain, 5, true);
+    const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
+    dg.computeVertexNormals();
+    group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
+    if (yellow.length) { const yd = drape(yellow, null, terrain, 5, true); const yg = new THREE.BufferGeometry(); yg.setAttribute('position', new THREE.Float32BufferAttribute(yd.pos, 3)); yg.computeVertexNormals();
+      const ym = new THREE.Mesh(yg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ym.name = 'yellowLines'; group.add(ym); }
+    if (decals.length) group.add(roadDecals(decals, terrain));
     if (arrows.length) group.add(roadDecals(arrows, terrain, true));
+    if (wegweiser.length) { // je Schild eine kleine Canvas-Textur (Luzern ~30 Schilder)
+      const steel = toon('#8A8F94'); const posts: THREE.BufferGeometry[] = [];
+      for (const [x, z, h, txt] of wegweiser) { const lines = String(txt).split('|'); const H = 0.42 * lines.length + 0.2;
+        const tex = canvasTex(256, Math.round(256 * H / 2.6), (g) => { const cw = 256, ch = Math.round(256 * H / 2.6); g.fillStyle = '#1F4E9C'; g.fillRect(0, 0, cw, ch); g.strokeStyle = '#fff'; g.lineWidth = 4; g.strokeRect(4, 4, cw - 8, ch - 8);
+          g.fillStyle = '#fff'; g.font = 'bold 30px sans-serif'; g.textBaseline = 'middle'; lines.forEach((l, i) => g.fillText('↑ ' + l, 16, (i + 0.5) * (ch - 8) / lines.length + 4)); }, false);
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(2.6, H), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+        const y = terrain.height(x, z); pl.position.set(x, y + 2.3 + H / 2, z); pl.rotation.y = h + Math.PI; pl.name = 'wegweiser'; group.add(pl);
+        for (const sx of [-1, 1]) { const pg = new THREE.CylinderGeometry(0.05, 0.05, 2.3 + H, 6); pg.translate(Math.cos(h + Math.PI) * sx * 1.0, y + (2.3 + H) / 2, -Math.sin(h + Math.PI) * sx * 1.0); pg.translate(x, 0, z); posts.push(pg); } }
+      if (posts.length) group.add(new THREE.Mesh(mergeGeometries(posts)!, steel)); }
     if (hsSigns.length) { // Hauptstrassen-Signale: Stange + Rhombus (Textur gelb mit weissem Rand, Rückseite grau)
       const tex = canvasTex(64, 64, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#1d1e1b'; g.fillRect(3, 3, 58, 58); g.fillStyle = '#fff'; g.fillRect(6, 6, 52, 52); g.fillStyle = '#F2C21B'; g.fillRect(15, 15, 34, 34); }, false);
       const sg = new THREE.PlaneGeometry(0.62, 0.62); sg.rotateZ(Math.PI / 4); sg.translate(0, 2.35, 0);

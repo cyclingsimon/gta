@@ -24,7 +24,7 @@ for d in sys.argv[1:] or ['public/data', 'public/data/nord', 'public/data/ost', 
     if not os.path.exists(d + '/city.json'): continue
     c = json.load(open(d + '/city.json')); n = hit = 0
     for r in c['roads']:
-        for k in ('L', 'sw', 'cy', 'bu', 'v', 'ref', 'tf', 'tb'): r.pop(k, None)
+        for k in ('L', 'sw', 'cy', 'bu', 'v', 'ref', 'tf', 'tb', 'df', 'db'): r.pop(k, None)
         if 'w0' in r: r['w'] = r['w0']
         elif r['c'] in MAIN: r['w0'] = r['w']  # ursprüngliche Breite merken (Skript ist wiederholbar)
         if r['c'] not in MAIN or len(r['p']) < 2: continue
@@ -59,6 +59,20 @@ for d in sys.argv[1:] or ['public/data', 'public/data/nord', 'public/data/ost', 
         fw = tl(t.get('turn:lanes:forward') or (t.get('turn:lanes') if t.get('oneway') == 'yes' else None)); bw = tl(t.get('turn:lanes:backward'))
         if not same: fw, bw = bw, fw
         if fw: r['tf'] = fw
+        # Wegweiser-Ziele (OSM destination*), je Richtung höchstens 3 Orte
+        def dest(*keys):
+            out = []
+            for k in keys:
+                for part in str(t.get(k, '')).replace('|', ';').split(';'):
+                    part = part.strip()
+                    if part and part not in out: out.append(part)
+            return out[:3] or None
+        one = t.get('oneway') == 'yes' or '_link' in t.get('highway', '')
+        dfw = dest('destination:forward', 'destination:lanes:forward', *(['destination', 'destination:lanes'] if one else []))
+        dbw = dest('destination:backward', 'destination:lanes:backward')
+        if not same: dfw, dbw = dbw, dfw
+        if dfw: r['df'] = dfw
+        if dbw: r['db'] = dbw
         if bw: r['tb'] = bw
     json.dump(c, open(d + '/city.json', 'w'), separators=(',', ':'), ensure_ascii=False)
     print(d, 'Hauptstrassen', n, 'mit OSM-Details', hit)

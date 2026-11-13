@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13e  Wegweiser, Wartelinien, Bushalte-Markierung
+- Blaue Vorwegweiser 35 m vor Knoten an Kantonsstrassen mit den Zielen aus OpenStreetMap (z. B. «Horw · Allmend · Strassenverkehrsamt» auf der Luzernerstrasse Kriens) (OSM kennt Ziele an 69 Strassenstücken; ein Schild steht nur dort, wo das Stück vor einem Knoten mindestens 35 m lang ist)
+- Wartelinien (unterbrochene weisse Querlinie) wo eine Nebenstrasse ohne Ampel auf eine Hauptstrasse trifft (SSV 6.13)
+- Fix: Die gelben Bushalte-Markierungen (Umrandung und «BUS» an Haltestellen am Fahrbahnrand) waren seit 13c programmiert, wurden aber erst nach dem Zeichnen der gelben Linien berechnet und fehlten deshalb im Spiel. Jetzt sichtbar
+
 2026-11-13d  Läden an den Kantonsstrassen, Längslinien vor Haltelinien
 - Wohn- und Geschäftsblöcke sowie Bürobauten an Kantonsstrassen innerorts (Gebäudemitte höchstens 24 m von der Strassenachse) haben im Erdgeschoss Schaufenster statt Wohnungsfenster
 - Vor jeder Haltelinie an einer Ampel 5 m ununterbrochene Linie zwischen den Fahrstreifen derselben Richtung (Normalien Stadt Bern 2.10.2, SSV 6.12)
