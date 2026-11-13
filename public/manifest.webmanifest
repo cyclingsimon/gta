@@ -1,11 +1,11 @@
 {
- "name": "Luksi Rescue Luzern",
- "short_name": "Luksi Rescue",
+ "name": "Great Tatü Ambulanz – Nice City",
+ "short_name": "GTA Nice City",
  "start_url": "./",
  "display": "fullscreen",
  "orientation": "landscape",
- "background_color": "#0E73BA",
- "theme_color": "#0E73BA",
+ "background_color": "#14111F",
+ "theme_color": "#14111F",
  "icons": [
   {
    "src": "img/icon-192.png",

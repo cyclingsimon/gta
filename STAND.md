@@ -1,9 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 15:05. Fertig: **2026-11-13g** = 13c + Läden an Kantonsstrassen, Längslinien vor Haltelinien, Wegweiser (OSM destination), Wartelinien, Fix Bushalte-Markierung, Tempo-Signale, Hänger-Schutz (Winkel-Normierung ohne while). Nicht hochgeladen. Tests mit 13g: qa Luzern grün, missions Ost 8/8. Mit 13f: qa Süd grün, missions Nord 9/9 (27★), West 7/7 (20★). Mit 13c: missions Luzern 18/18, Süd 9/9, qa alle Regionen.
+Stand: 13.11.2026 16:00. Fertig: **2026-11-13h** = 13g + GTA-Look «Great Tatü Ambulanz – Nice City» (Start-/Ladebild, Pause, HUD, Schriften), Luksi-Figur vom Ambulanzdach entfernt, Regionswechsel nur nach Bestätigung, Losfahren erst wenn die echten Häuser stehen. Nicht hochgeladen (live: 13b). Tests 13h siehe Abschnitt 13h. Ältere Tests: 13g qa Luzern grün, missions Ost 8/8; 13f qa Süd, missions Nord 9/9, West 7/7; 13c missions Luzern 18/18, Süd 9/9, qa alle Regionen.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13h (13.11. nachmittags, nicht hochgeladen)
+- Simon 15:3x: GTA-Look mit kindlichem Twist; Wording «Great Tatü Ambulanz – Nice City» (Anspielung GTA/Vice City). Luksi-Figur auf der Ambulanz weg (vehicle.ts). Regionswechsel mit Knopfdruck bestätigen. Bei «Echt» war das Spiel nach dem Start noch blockiert (Stufe B baute nach dem Start) → Stufe B läuft jetzt im Ladebild, Startknopf erst danach.
+- Schriften: Pricedown (GTA-Logo) und Chalet (GTA-V-UI) sind nicht für Web/Spiele lizenzierbar → Luckiest Guy (Apache 2.0, Display) + Archivo (OFL, Text) via npm @fontsource, in public/fonts, Lizenzen dabei, Credits angepasst. Play entfernt.
+- style.css: Block «13h – GTA-Look» am Dateiende überlagert den Luksi-Stil (Variablen --display, --pink, --mint, --sun, --night). HUD: Minimap unten links (Touch: oben links), Sterne/Herzen oben rechts als Konturschrift, Auftragstext als Untertitel unten Mitte, Funk = dunkle Hilfebox oben links, «Einsatz erfüllt!» gross gelb (Klasse .mg-card.passed), Pause dunkel mit Pink-Kante. Start: Sonnenuntergang + Skyline (CSS), Logo in schwarzen Wortkästen, «Nice City» pink Neon, Lade-Panel gekippt.
+- Regionswechsel: Dialog «Neue Gegend! Willst du nach … fahren?» (Enter/A = ja, Esc/Start = nein → Ambulanz 30 m zurück, gewendet). Fahrzeug steht während der Frage.
+- Grafikaufträge ChatGPT in Todoist «Wartet auf Grafik/Musik»: G1 Ladebild-Panorama, G2 3 Comic-Panels, G3 HUD-Icons (Magenta), G4 Pause-Hintergrund. Einbau, sobald in Drive `02_Grafik-Originale/`. Keine Luksi-Figuren bestellt.
+- Test-Hook: `__dbg.handover()`. Test: `tests/gta_ui.py` (Screenshots shots/gta_*).
 
 ## Version 13c (13.11. tagsüber, nicht hochgeladen)
 - Simons Prioritäten (13.11. 08:28): 1 Luzerner Kantonsstrassen, Bahnhof, Europaplatz · 2 Optik bestehender Gegenden (Kantonsstrassen) · 3 bestehende Regionen verbessern · 4 LUKS realistisch · 50 neue Regionen. Dazu: Spielumfang-Anzeige, Android-Meldung verdeckt Sicht, Schiffe in der Bucht, Geschwindigkeiten 90/150/269 (mit Blaulicht; ohne 70/120/200, Entscheid Claude nach Art. 100 Ziff. 4 SVG).

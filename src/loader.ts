@@ -19,6 +19,9 @@ const GAGS: [string, string][] = [
   ['lp14-freut', 'Der Zug pfeift schon: Tschu-tschu!'],
   ['lp2-winkt', '40 Luksi-Herzen werden versteckt – findest du alle?'],
   ['lp15-kickt', 'Leitkegel werden aufgestellt. Boing!'],
+  ['lp3-daumen', 'Fahndungslevel: 0 Sterne – du bist einfach zu nett!'],
+  ['lp4-popcorn', 'Nice City putzt sich heraus …'],
+  ['lp14-freut', 'Tatü-Tata wird gestimmt: Tatüüü – Tataaa!'],
 ];
 let el: HTMLDivElement | null = null, runner: HTMLImageElement, gagImg: HTMLImageElement, gagTxt: HTMLDivElement, bar: HTMLDivElement;
 let shown = 0, target = 0, frame = 0, gagI = 0, timer = 0, raf = 0, done = false;

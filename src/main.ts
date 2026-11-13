@@ -14,7 +14,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-13g';
+export const VERSION = '2026-11-13h';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -625,10 +625,10 @@ function handover() {
   const reasons = current.transport
     ? [`✔ Einsatz erfüllt`, bumps <= 2 ? '✔ Sanft gefahren – der Patient hat nicht gewackelt' : `○ ${bumps} Rempler – nächstes Mal sanfter`, phaseTime <= parTime ? `✔ Zügig ${AT_H}` : `○ ${Math.round(phaseTime)} s – geht noch schneller`]
     : ['✔ Einsatz erfüllt', '✔ Tier gerettet', '✔ Bonus für Tierliebe'];
-  ov.innerHTML = `<div class="mg-card"><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi"><h2>${current.transport ? (RP ? 'Übergabe am Rettungsposten' : SP ? 'Übergabe im Spital Nidwalden' : 'Übergabe im Kinderspital') : 'Einsatz geschafft!'}</h2>
+  ov.innerHTML = `<div class="mg-card passed"><h2>Einsatz erfüllt!</h2><p class="mp-sub">${current.transport ? (RP ? 'Übergabe am Rettungsposten' : SP ? 'Übergabe im Spital Nidwalden' : 'Übergabe im Kinderspital') : 'Tier gerettet'}</p><img class="luksi-img" src="img/${current.transport ? 'luksi-kissen' : 'luksi-winkt'}.png" alt="Luksi">
     <div class="stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}" style="animation-delay:${i * 0.35}s">★</span>`).join('')}</div>
     <p>${current.thanks}</p><ul class="reasons">${reasons.map((r) => `<li>${r}</li>`).join('')}</ul>
-    <p class="small">Sterne total: <b>${totalStars()}</b></p><button class="big" id="weiter">Weiterfahren <kbd>Enter</kbd>/<kbd>A</kbd></button></div>`;
+    <p class="small">Respekt: <b>${totalStars()} ★</b></p><button class="big" id="weiter">Weiterfahren <kbd>Enter</kbd>/<kbd>A</kbd></button></div>`;
   ui.appendChild(ov);
   for (let i = 0; i < stars; i++) setTimeout(() => sfxPlay.star(i), 350 * i + 200);
   const close = () => { ov.remove(); phase = 'free'; carrier = null; offerTimer = 12; setMusicMode('free'); updateHud(); };
@@ -640,7 +640,7 @@ function handover() {
 function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
-  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Luzern');
+  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Nice City');
   else if (phase === 'toScene') m.textContent = `${current.title}: zum ${current.place}`;
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
   else if (phase === 'toHospital') m.textContent = `${current.title}: ${TO_H}`;
@@ -937,8 +937,9 @@ function removePlayer() {
 // Luzern ↔ Nord überlappen sich zwischen z = −1100 und −550 (beide enthalten das Kinderspital). Wer über die Linie fährt,
 // fährt nach 1.5 s in der anderen Region weiter: Spielstand und Position bleiben, die Seite lädt die Daten der neuen Region.
 let badgeT = 0;
+let stageBP: Promise<void> | null = null;
 const TEST_NOEDGE = /[?&]noedge/.test(location.search) || (TEST && !/[?&]edge/.test(location.search)); // Tests teleportieren frei
-let edgeT = 0, edgeWarned = false;
+let edgeWarned = false;
 function checkRegionEdge(dt: number) {
   // Luzern → Nord: z < −1000 (nicht ganz im Westen); Luzern → Ost: x > 2660 (Seeburg/Würzenbach, nicht an Einsatzorten); Nord/Ost → Luzern zurück
   let other: 'luzern' | 'nord' | 'ost' | 'west' | 'sued' = 'luzern', out = false;
@@ -954,19 +955,31 @@ function checkRegionEdge(dt: number) {
   else if (REGION === 'sued') out = car.z < 6170 && car.x > -2950 && car.x < 2650;
   else out = car.x > -3660;
   const OTHER_NAME = other === 'nord' ? 'Emmenbrücke' : other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau und Blatten' : other === 'sued' ? 'Hergiswil und Stansstad' : 'Luzern';
-  if (!out) { edgeT = 0; edgeWarned = false; return; }
+  if (!out) { edgeWarned = false; return; }
   if (phase !== 'free' && phase !== 'offer' || players.length > 1) {
     if (!edgeWarned) toast(players.length > 1 ? 'Zu zweit geht es hier nicht weiter – die Karte endet hier.' : REGION === 'luzern' ? `Nach ${OTHER_NAME} geht es nach dem Einsatz weiter.` : 'Zurück nach Luzern geht es nach dem Einsatz weiter.', 2600);
     edgeWarned = true; return;
   }
-  if (edgeT === 0) toast(REGION === 'luzern' ? (other === 'ost' ? '🗺️ Weiter nach Meggen …' : other === 'west' ? '🗺️ Weiter nach Littau, Obernau und Blatten …' : other === 'sued' ? '🗺️ Weiter nach Hergiswil, Stansstad und Stans …' : '🗺️ Weiter nach Emmenbrücke, Ebikon und Adligenswil …') : '🗺️ Zurück nach Luzern …', 2600);
-  edgeT += dt;
-  if (edgeT < 1.5) return;
-  edgeT = -1e9; // nur einmal
-  writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: other }); stats.flush(true);
-  save.region = other; save.pos = [car.x, car.z, car.heading];
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', other); } catch { /* privat */ }
-  const u = new URL(location.href); u.searchParams.set('region', other); location.replace(u.toString());
+  // 13h (Simon): Wechsel nur nach Bestätigung per Knopfdruck
+  if (edgeWarned || document.querySelector('.mg')) return;
+  edgeWarned = true;
+  const ZIEL = REGION === 'luzern' ? (other === 'ost' ? 'Meggen' : other === 'west' ? 'Littau, Obernau und Blatten' : other === 'sued' ? 'Hergiswil, Stansstad und Stans' : 'Emmenbrücke, Ebikon und Adligenswil') : 'Luzern';
+  for (const p of players) p.car.speed = 0;
+  const ov = document.createElement('div'); ov.className = 'mg';
+  ov.innerHTML = `<div class="mg-card ask"><h2>Neue Gegend!</h2><p class="mg-hint">Willst du nach <b>${ZIEL}</b> fahren?</p>
+    <div class="mg-buttons"><button class="big" id="rg-ja">Ja, los! <kbd>Enter</kbd>/<kbd>A</kbd></button><button id="rg-nein">Nein, hierbleiben <kbd>Esc</kbd></button></div></div>`;
+  ui.appendChild(ov);
+  const go = () => {
+    ov.remove();
+    writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: other }); stats.flush(true);
+    save.region = other; save.pos = [car.x, car.z, car.heading];
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', other); } catch { /* privat */ }
+    toast('🗺️ Unterwegs nach ' + ZIEL + ' …', 4000);
+    const u = new URL(location.href); u.searchParams.set('region', other); location.replace(u.toString());
+  };
+  const stay = () => { ov.remove(); placeCar(car.x - car.fx * 30, car.z - car.fz * 30, car.heading + Math.PI); sfxPlay.reset(); };
+  ($('#rg-ja') as HTMLButtonElement).onclick = go; ($('#rg-nein') as HTMLButtonElement).onclick = stay;
+  (ov as any)._confirm = go; (ov as any)._cancel = stay;
 }
 
 // ---------------- Hauptschleife ----------------
@@ -989,6 +1002,7 @@ function frame(now: number) {
     }
   }
   if (overlayOpen && phase === 'handover' && hit('confirm')) (document.querySelector('.mg') as any)._close?.();
+  else if (overlayOpen && (document.querySelector('.mg') as any)._confirm) { const o = document.querySelector('.mg') as any; if (hit('confirm')) o._confirm(); else if (hit('pause')) o._cancel(); }
 
   if (world && !paused) {
     const playing = !overlayOpen;
@@ -1141,7 +1155,7 @@ async function boot() {
   world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
-  if (pB) stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
+  if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
   if (TEST) (window as any).__dbgWorld = scene;
   memLog('worldA'); status.textContent = 'Navi wird eingerichtet …'; loaderProgress(0.8);
   await new Promise((r) => setTimeout(r, 30));
@@ -1211,6 +1225,8 @@ async function boot() {
   if (save.pos) placeCar(save.pos[0], save.pos[1], save.pos[2]); else placeCar(hospitalBay[0], hospitalBay[1]);
   setMuted(save.muted);
   updateHud();
+  // 13h (Simon): Erst losfahren lassen, wenn auch die echten Häuser stehen – kein Spielbild mehr, das noch hängt
+  if (stageBP) { status.textContent = 'Echte Häuser werden gebaut …'; loaderProgress(0.9); await stageBP; }
   memLog('navTraffic'); status.textContent = ''; loaderDone();
   $('#start-btn').style.display = '';
   try { if (sessionStorage.getItem('luksiRegionSwitch')) { sessionStorage.removeItem('luksiRegionSwitch'); $('#start-btn').textContent = 'Weiterfahren ▶'; } } catch { /* privat */ }
@@ -1235,9 +1251,7 @@ async function stageB(pB: Promise<any>, data: CityData, props: any) {
     let gpos: ArrayLike<number> = g16;
     if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
     const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-    // warten, bis das Spiel läuft (Startbildschirm nicht blockieren)
-    while (document.getElementById('start') && !TEST) await new Promise((res) => setTimeout(res, 300));
-    const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+    const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; const st = document.getElementById('load-status'); if (st) st.textContent = 'Echte Häuser: ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
     memLog('worldB'); swapWorld(nw); memLog('swapped');
     ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
   } catch (e) { console.warn('Stufe B fehlgeschlagen, bleibe bei OSM-Häusern', e); ind.remove(); }
@@ -1371,7 +1385,7 @@ function qaReport() {
 if (location.search.includes('test')) {
   (window as any).__dbg = {
     offer: () => { offerTimer = 0; },
-    accept: () => acceptOffer(),
+    accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
       return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }

@@ -107,13 +107,6 @@ export function buildAmbulance() {
     pl.position.set(sgn * 1.162, 2.45, -1.05); pl.rotation.y = sgn * Math.PI / 2;
     body.add(pl);
   }
-  // Luksi (Originalgrafik, nie neu gezeichnet) als Billboard auf dem Kabinendach
-  const luksiTex = new THREE.TextureLoader().load('img/luksi-winkt.png');
-  luksiTex.colorSpace = THREE.SRGBColorSpace;
-  const luksi = new THREE.Sprite(new THREE.SpriteMaterial({ map: luksiTex, transparent: true, alphaTest: 0.2 }));
-  luksi.center.set(0.5, 0.05);
-  luksi.position.set(0, 2.3, 1.9); luksi.scale.set(1.75 * 0.903, 1.75, 1); // Seitenverhältnis 542×600
-  body.add(luksi);
   // Schwindel-Sternchen (bei Remplern)
   const dizzy = new THREE.Group();
   for (let i = 0; i < 5; i++) {

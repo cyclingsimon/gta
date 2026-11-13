@@ -1,5 +1,12 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-13h  Great Tatü Ambulanz – Nice City
+- Neuer Look im Stil der grossen Stadt-Fahrspiele, aber kindlich: Ladebild mit Sonnenuntergang und Logo in Wortkästen, dunkles Pausenmenü, Sterne oben rechts, Minikarte unten links, Auftrag als Untertitel, grosses «Einsatz erfüllt!»
+- Neue Schriften: Luckiest Guy und Archivo (frei lizenziert)
+- Die Luksi-Figur auf dem Ambulanzdach ist weg
+- Neue Gegend nur noch auf Knopfdruck: «Willst du nach … fahren?»
+- Mit Grafik «Echt» geht es erst los, wenn die echten Häuser fertig gebaut sind – kein Hängen mehr direkt nach dem Start
+
 2026-11-13g  Schutz gegen Hänger
 - In einem Testlauf (Region Ost, 2. Einsatz) blieb das Spiel einmal stehen; beim Wiederholen lief alles normal, die Ursache ist nicht belegt. Vorsorglich sind die Winkel-Schleifen (Kamera, Navi-Pfeil, Verkehr, Tiere) jetzt begrenzt: Sie konnten bei einem sehr grossen oder unendlichen Winkelwert sehr lange oder endlos laufen (Annahme, nicht nachgewiesen)
 

@@ -1,13 +1,21 @@
-/* Luksi Rescue – Oberfläche im Luksi-Stil (orientiert an demo.luksi.ch/ambulanz).
+/* Great Tatü Ambulanz – Nice City. Basis: Luksi-Stil; ab 13h überlagert vom GTA-Look am Dateiende.
+   Ursprünglich: Oberfläche im Luksi-Stil (orientiert an demo.luksi.ch/ambulanz).
    Bewusst: eine Schrift mit Charakter (Play), flache Farbflächen, dicke Konturen, harte Versatzschatten,
    schräge Bänder. Bewusst nicht: Verläufe, Glas-Effekte, weiche graue Schatten, Systemschrift. */
-@font-face { font-family: 'Play'; src: url('/fonts/Play-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Play'; src: url('/fonts/Play-Bold.woff2') format('woff2'); font-weight: 700 900; font-display: swap; }
+@font-face { font-family: 'Luckiest Guy'; src: url('/fonts/LuckiestGuy.woff2') format('woff2'); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Luckiest Guy'; src: url('/fonts/LuckiestGuy-ext.woff2') format('woff2'); font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-500.woff2') format('woff2'); font-weight: 400 500; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-ext-500.woff2') format('woff2'); font-weight: 400 500; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-700.woff2') format('woff2'); font-weight: 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-ext-700.woff2') format('woff2'); font-weight: 700; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-900.woff2') format('woff2'); font-weight: 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/Archivo-ext-900.woff2') format('woff2'); font-weight: 900; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 :root {
   --orange: #F39204; --orange-dark: #A86004; --blue: #0E73BA; --blue-dark: #0A4F80; --navy: #12305C;
   --creme: #FFF6DE; --flat: #DCEBF7; --sky: #BFE3F2; --green: #4C8A3A; --red: #D8263A;
   --ink: #1D1E1B; --text: #1D3543; --line: #C9C2AE;
-  --font: 'Play', 'Trebuchet MS', sans-serif;
+  --font: 'Archivo', 'Arial', sans-serif; --display: 'Luckiest Guy', 'Arial Black', sans-serif;
+  --night: #14111F; --pink: #FF4FA3; --mint: #33E0C4; --sun: #FFD23F; --gta-green: #7BE35A;
   --r-btn: 14px 16px 13px 15px; --r-card: 22px 26px 20px 24px;
 }
 * { box-sizing: border-box; }
@@ -200,3 +208,164 @@ body.split #minimap, body.split #speed { display: none; }
 .arm .seg { cursor: pointer; } .arm .seg.focus rect { stroke: var(--orange); stroke-width: 4; opacity: .95; }
 
 @media (prefers-reduced-motion: reduce) { #radio.show, .mg-card, .stars span.on, .ld-fill { animation: none; } }
+
+/* =====================================================================
+   13h – GTA-Look mit kindlichem Twist («Great Tatü Ambulanz – Nice City»)
+   Vorbild: GTA-HUD (Minimap unten links, Sterne oben rechts, Auftragstext als Untertitel unten,
+   dunkles Pausenmenü mit Reitern, grosser gelber «Mission Passed»-Titel, Ladebild als gekipptes Comic-Panel).
+   Twist: runde Comicschrift (Luckiest Guy), Sonnenuntergangsfarben Pink/Mint/Gelb, leichte Schräglagen, Hüpf-Animationen.
+   Schriften: Luckiest Guy (Apache 2.0) als Display, Archivo (OFL) für Text – Pricedown/Chalet nicht lizenzierbar.
+   ===================================================================== */
+.gta, .title span, #stars, #hearts, .mg-card h2, #pause h2, .toast, #dist, #speed b {
+  font-family: var(--display); font-weight: 400; letter-spacing: .02em; }
+/* Konturschrift wie GTA: weiss/gelb mit schwarzem Rand */
+#stars, #hearts, #dist, .mg-card h2, #pause h2, .title span, #speed b {
+  -webkit-text-stroke: 0; paint-order: stroke fill;
+  text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 0 #000, 0 5px 0 rgba(0,0,0,.35); }
+
+/* ---- Knöpfe ---- */
+button { font: 700 17px var(--font); color: #fff; background: rgba(20,17,31,.82); border: 2px solid rgba(255,255,255,.18); border-radius: 10px; box-shadow: 0 4px 0 #000; }
+button:hover { background: #fff; color: #000; }
+button.focus, button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; background: #fff; color: #000; box-shadow: 0 4px 0 #000, 0 0 0 7px rgba(255,79,163,.55); }
+button:active { box-shadow: 0 1px 0 #000; }
+button.big, .btn-go { font: 400 24px var(--display); color: #fff; background: var(--pink); border: 3px solid #000; border-radius: 14px; -webkit-text-stroke: 0; letter-spacing: .03em;
+  text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 3px 0 #000; box-shadow: 0 6px 0 #000; transform: rotate(-1.5deg); }
+button.big:hover, .btn-go:hover, button.big.focus { background: #FF6DB4; color: #fff; }
+kbd { background: rgba(255,255,255,.92); color: #000; border: 2px solid #000; border-bottom-width: 3px; border-radius: 5px; font: 700 .82em var(--font); }
+button kbd { color: #000; }
+
+/* ---- HUD wie GTA ---- */
+.chip, #stars, #hearts, #mission, #dist, #speed { box-shadow: none; border: 0; border-radius: 0; background: none; }
+#hud-top { top: 12px; left: auto; right: 18px; flex-direction: column; align-items: flex-end; gap: 0; }
+#stars { color: var(--sun); font-size: 40px; padding: 0; line-height: 1.05; }
+#hearts { color: var(--pink); font-size: 30px; padding: 0; line-height: 1.05; }
+#mission { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); max-width: min(760px, 70vw); width: max-content; text-align: center;
+  font: 700 21px var(--font); color: #fff; padding: 2px 10px;
+  text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 4px rgba(0,0,0,.6); }
+#navbox { top: 104px; right: 18px; }
+#dist { color: var(--mint); font-size: 28px; padding: 0; background: none; }
+#minimap { left: 18px; right: auto; bottom: 18px; width: 230px; height: 230px; border-radius: 14px; border: 4px solid #000;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.9), 0 0 0 9px var(--pink), 0 10px 0 9px rgba(0,0,0,.35); }
+#speed { left: 270px; right: auto; bottom: 18px; background: rgba(20,17,31,.78); border-radius: 12px; padding: 2px 12px 4px; box-shadow: 0 4px 0 #000; }
+#speed b { font-size: 34px; color: #fff; }
+#speed small { color: var(--mint); font-family: var(--font); }
+#keys { left: auto; right: 14px; bottom: 14px; max-width: 46vw; background: rgba(20,17,31,.72); color: #fff; border: 0; border-radius: 10px; font: 500 12.5px var(--font); }
+#fps { top: auto; bottom: 260px; left: 18px; }
+
+/* ---- Funk = GTA-Hilfetext oben links ---- */
+#radio { left: 18px; top: 16px; transform: translate(0, -16px); width: min(440px, 46vw); background: rgba(20,17,31,.88); color: #fff; border: 0; border-left: 6px solid var(--pink);
+  border-radius: 6px 14px 14px 6px; box-shadow: 0 6px 0 rgba(0,0,0,.4); font: 500 17px var(--font); padding: 30px 16px 12px; }
+#radio.show { transform: translate(0, 0); animation: none; }
+#radio::before { content: '📻 Funk – Leitstelle'; position: absolute; margin: 0; left: 10px; top: -12px; background: var(--mint); color: #000; font: 400 16px var(--display); letter-spacing: .04em; border: 3px solid #000; border-radius: 8px; transform: rotate(-3deg); padding: 3px 12px 1px; }
+#radio b { color: var(--sun); }
+#radio button { font: 400 18px var(--display); background: var(--pink); color: #fff; border: 2px solid #000; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; -webkit-text-stroke: 0; }
+#radio #dec { background: rgba(255,255,255,.12); color: #fff; font: 700 14px var(--font); text-shadow: none; }
+#radio #dec:hover, #radio #dec.focus { background: #fff; color: #000; }
+
+/* ---- Meldungen ---- */
+.toast { background: rgba(20,17,31,.86); color: #fff; border: 0; border-radius: 12px; box-shadow: 0 5px 0 rgba(0,0,0,.4); font-size: 22px; letter-spacing: .03em; padding: 10px 20px 6px; }
+@media (max-height: 560px), (pointer: coarse) { .toast { font-size: 15px; padding: 5px 12px 3px; box-shadow: none; } #radio { left: 50%; transform: translate(-50%, -16px); width: min(460px, 66vw); padding: 24px 12px 8px; font-size: 14px; } #radio.show { transform: translate(-50%, 0); } #radio::before { font-size: 13px; } }
+
+/* ---- Karten / Minispiele / «Mission Passed» ---- */
+.mg { background: radial-gradient(ellipse at center, rgba(20,17,31,.35), rgba(20,17,31,.78)); }
+.mg-card { background: #FFFBF2; border: 4px solid #000; border-radius: 18px; box-shadow: 0 0 0 5px var(--sun), 0 12px 0 5px rgba(0,0,0,.45); padding: 0 26px 20px; overflow-x: hidden; }
+.mg-card h2 { margin: 0 -26px 14px; padding: 16px 20px 10px; background: var(--night); border-bottom: 4px solid #000; color: var(--sun); font-size: 34px; text-transform: none; }
+.mg-card.passed { background: rgba(20,17,31,.9); color: #fff; box-shadow: 0 0 0 5px var(--pink), 0 12px 0 5px rgba(0,0,0,.45); }
+.mg-card.passed h2 { background: none; border: 0; font-size: 58px; margin: 14px -26px 0; padding: 0; transform: rotate(-2deg); animation: passed .6s cubic-bezier(.3,1.7,.5,1); color: var(--sun); text-transform: uppercase; }
+.mp-sub { margin: 4px 0 6px; font: 400 22px var(--display); color: #fff; letter-spacing: .04em; text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000; }
+.mg-card.passed .luksi-img { height: 110px; }
+.mg-card.passed .reasons, .mg-card.passed .small { color: #fff; }
+.mg-card.passed .small b { color: var(--sun); font-size: 18px; }
+.stars span { color: rgba(255,255,255,.18); -webkit-text-stroke: 2px #000; }
+.stars span.on { color: var(--sun); text-shadow: 0 4px 0 #000; }
+@keyframes passed { from { transform: scale(2.2) rotate(-8deg); opacity: 0; } to { transform: rotate(-2deg); opacity: 1; } }
+
+/* ---- Pause = dunkles GTA-Menü ---- */
+#pause { background: linear-gradient(180deg, rgba(20,17,31,.55), rgba(20,17,31,.86)); }
+#pause .panel { background: rgba(14,12,22,.92); color: #fff; border: 0; border-top: 6px solid var(--pink); border-radius: 6px; box-shadow: 0 14px 40px rgba(0,0,0,.5); width: min(640px, 94vw); padding: 0 24px 20px; }
+#pause h2 { background: var(--night); border-bottom: 3px solid rgba(255,255,255,.12); color: #fff; font-size: 34px; margin: 0 -24px 16px; padding: 14px 20px 8px; align-items: baseline; text-transform: uppercase; }
+#pause h2::before { content: 'Great Tatü Ambulanz'; background: none; border: 0; transform: rotate(-2deg); margin: 0 16px 0 0; padding: 0; color: var(--sun); font-size: 22px; }
+.mlabel { color: var(--mint); font-family: var(--font); font-weight: 900; }
+.mhead { color: #fff; font: 400 18px var(--display); letter-spacing: .05em; }
+.mhead::after { border-top: 2px solid rgba(255,255,255,.2); }
+.mnote { color: #fff; opacity: .65; }
+.mrow-main .mbtns button { font: 400 22px var(--display); letter-spacing: .03em; text-align: left; padding: 12px 16px 8px; background: rgba(255,255,255,.07); }
+.mrow-main .mbtns button:first-child { background: var(--pink); color: #fff; -webkit-text-stroke: 0; text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000; }
+.mrow-main .mbtns button:hover, .mrow-main .mbtns button.focus { background: #fff; color: #000; text-shadow: none; }
+.mrow-opt .mbtns { background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.14); }
+.mrow-opt .mbtns button { color: #fff; }
+.mrow-opt .mbtns button:hover { background: rgba(255,255,255,.18); color: #fff; }
+.mrow-opt .mbtns button.on { background: #fff; color: #000; border-color: #000; box-shadow: 0 2px 0 #000; }
+.mrow-opt .mbtns button.focus { color: #000; }
+.mrow-small .mbtns button { background: rgba(255,255,255,.1); color: #fff; box-shadow: 0 3px 0 #000; }
+.mrow-small .mbtns button:hover, .mrow-small .mbtns button.focus { background: #fff; color: #000; }
+#credits { color: #fff; }
+#credits h3 { color: var(--sun); font: 400 20px var(--display); letter-spacing: .04em; }
+.album { color: #000; }
+#pause .small { color: #fff; }
+
+/* ---- Grosse Karte ---- */
+#bigmap-wrap { background: rgba(14,12,22,.94); border: 0; border-top: 6px solid var(--pink); border-radius: 6px; color: #fff; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+#bigmap { border: 3px solid #000; }
+
+/* ---- Startbildschirm: Sonnenuntergang über Nice City, Comic-Panel, Logo in Wortkästen ---- */
+#start { background:
+    repeating-linear-gradient(0deg, transparent 0 22px, rgba(255,255,255,.06) 22px 24px),
+    radial-gradient(circle at 78% 70%, #FFE45C 0 9%, #FF9A3C 9.3% 14%, transparent 14.3%),
+    linear-gradient(180deg, #2A1B5C 0%, #6A2C8E 32%, #E2457E 62%, #FF9A3C 84%, #FFD23F 100%); }
+#start::before { content: ''; position: absolute; inset: auto 0 0 0; height: 26vh; top: auto; border: 0; box-shadow: none;
+  background:
+    linear-gradient(180deg, transparent 0 20%, var(--night) 20%) 0 0 / 100% 100% no-repeat;
+  clip-path: polygon(0 60%, 4% 60%, 4% 35%, 9% 35%, 9% 52%, 12% 52%, 12% 18%, 15% 18%, 15% 46%, 20% 46%, 20% 30%, 24% 30%, 24% 55%, 30% 55%, 30% 10%, 31% 0, 32% 10%, 32% 50%, 38% 50%, 38% 28%, 44% 28%, 44% 58%, 52% 58%, 52% 38%, 57% 38%, 57% 22%, 61% 22%, 61% 48%, 68% 48%, 68% 34%, 74% 34%, 74% 62%, 80% 62%, 80% 26%, 84% 26%, 84% 50%, 90% 50%, 90% 40%, 95% 40%, 95% 56%, 100% 56%, 100% 100%, 0 100%); }
+.start-card { background: none; border: 0; box-shadow: none; color: #fff; width: min(900px, 96vw); padding: 0; display: grid; grid-template-columns: 1.05fr 1fr; gap: 10px 34px; align-items: center; text-align: left; }
+.start-card > * { grid-column: 2; }
+#loader { grid-column: 1; grid-row: 1 / span 6; width: 100%; margin: 0; background: #FFFBF2; border: 5px solid #000; border-radius: 10px; box-shadow: 0 0 0 6px #fff, 12px 14px 0 6px rgba(0,0,0,.35); transform: rotate(-3deg); padding: 14px 16px 10px; color: var(--text); }
+.ld-gag { height: 210px; }
+.ld-gag img { height: 200px; }
+.ld-bubble { font-family: var(--font); border-color: #000; box-shadow: 0 4px 0 #000; }
+.ld-track { margin: 74px 6px 6px; border-color: #000; box-shadow: 0 4px 0 #000; }
+.ld-fill { background: repeating-linear-gradient(-45deg, var(--pink) 0 14px, #FF8CC6 14px 28px); background-size: 40px 40px; }
+#loader.fin .ld-gag { margin-bottom: 0; }
+.title { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; transform: none; white-space: normal; }
+.title span { display: inline-block; margin: 0; padding: 8px 18px 2px; border: 4px solid #fff; border-radius: 10px; background: #000; color: #fff; font-size: 54px; line-height: 1; box-shadow: 0 6px 0 rgba(0,0,0,.4); }
+.title .t1 { transform: rotate(-3deg); background: #000; }
+.title .t2 { transform: rotate(2deg) translateX(18px); background: #000; color: var(--sun); font-size: 62px; }
+.title .t3 { transform: rotate(-1.5deg); background: #000; }
+.title .t4 { border: 0; background: none; color: var(--pink); font-size: 50px; transform: rotate(-7deg) translate(30px, -4px); box-shadow: none; padding: 0;
+  text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff, 0 5px 0 #fff, 0 0 26px rgba(255,79,163,.95), 0 0 50px rgba(51,224,196,.6);
+  animation: neon 2.4s ease-in-out infinite; }
+@keyframes neon { 50% { filter: brightness(1.25) saturate(1.2); } }
+.sub { font: 700 17px var(--font); color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px rgba(0,0,0,.6); margin: 6px 0 0; }
+#start-btn { font-size: 30px; padding: 12px 40px 8px; margin: 8px 0 4px; justify-self: start; }
+#load-status { font: 700 15px var(--font); color: #fff; text-shadow: 0 2px 0 #000; }
+#load-status:not(:empty)::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border: 3px solid #fff; border-right-color: var(--pink); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#start .small { color: #fff; opacity: .85; text-shadow: 0 1px 0 #000; font-size: 12px; }
+@media (max-width: 820px), (max-height: 560px) {
+  .start-card { grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+  .title span { font-size: 32px; padding: 6px 12px 1px; border-width: 3px; } .title .t2 { font-size: 38px; } .title .t4 { font-size: 30px; }
+  .ld-gag { height: 120px; } .ld-gag img { height: 112px; } .ld-bubble { font-size: 13px; } .ld-track { margin-top: 60px; }
+  .sub { font-size: 13px; } #start-btn { font-size: 22px; padding: 8px 26px 5px; } #start .small { display: none; }
+}
+@media (max-width: 520px) { .start-card { grid-template-columns: 1fr; } .start-card > *, #loader { grid-column: 1; grid-row: auto; } .title { align-items: center; } }
+
+/* ---- Touch: Minimap oben links bleibt, Sterne oben rechts unter den Knöpfen ---- */
+body.touch #hud-top { top: 118px; right: 14px; }
+body.touch #stars { font-size: 28px; } body.touch #hearts { font-size: 22px; }
+body.touch #navbox { top: 186px; right: 14px; }
+body.touch #dist { font-size: 22px; }
+body.touch #minimap { left: 12px; top: 12px; bottom: auto; width: 130px; height: 130px; border-width: 3px; box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--pink); }
+body.touch #speed { top: 12px; left: 50%; transform: translateX(-50%); bottom: auto; }
+body.touch #mission { bottom: auto; top: 58px; font-size: 15px; max-width: 46vw; }
+body.touch #t-btns { top: 12px; }
+#t-knob { background: rgba(255,255,255,.75); border-color: #000; box-shadow: 0 4px 0 #000; }
+#t-pedals button { border-color: #000; box-shadow: 0 5px 0 #000; font: 400 18px var(--display); color: #000; }
+#t-btns button { background: rgba(20,17,31,.8); border: 2px solid #000; box-shadow: 0 3px 0 #000; color: #fff; }
+.p-tag, #join-hint, #lazy-ind { background: rgba(20,17,31,.85); color: #fff; border: 0; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .mg-card.passed h2, .title .t4 { animation: none; } }
+/* 13h: Steuerungshilfe und Auftragstext dürfen sich nicht überdecken */
+#keys { max-width: min(380px, 30vw); }
+#mission { max-width: min(560px, 36vw); }
+@media (max-width: 1000px) { #keys { display: none; } #mission { max-width: 60vw; } }
+.mg-card.ask .mg-hint { font-size: 20px; } .mg-card.ask .mg-hint b { color: var(--pink); }
+.album { color: #fff; } .album span { color: #000; } .album small { color: #fff; }
