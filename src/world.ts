@@ -11,6 +11,7 @@ export interface CityData {
   rail: number[][][];
   pois: Record<string, [number, number]>;
   plazas?: { p: number[][]; h: number[][][]; n: string }[];
+  rbs?: number[][]; places?: [string, number, number, number][]; // 13j: Kreisel [x, z, r], Ortsnamen [Name, x, z, Rang]
   gapFill?: number[][][]; busIslands?: number[][][]; bhfFill?: { p: number[][]; h: number[][][] }[]; shelters?: { p: number[][]; h: number }[]; wagenbach?: number[][] | null;
 }
 
@@ -452,7 +453,7 @@ const ROAD_LAYER: Record<string, number> = { footway: 0.3, path: 0.3, steps: 0.3
 
 export interface B3D { meta: { buildings: number[][] }; pos: ArrayLike<number>; idx: Uint16Array; edges?: Uint16Array; roof?: string[] }
 
-export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][]; crossings?: number[][] }
+export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][]; crossings?: number[][]; isl?: number[][] }
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
@@ -856,6 +857,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const pg = new THREE.BoxGeometry(0.1, 1.6, 0.1); pg.translate(0, 0.1, 0); const im = new THREE.InstancedMesh(pg, toon('#8E9399'), posts.length); const m4 = new THREE.Matrix4();
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
+    kantonsPaket(d, props, terrain, group, vAt, nk);
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
       const pa = g.getAttribute('position'); for (let k = 0; k < pa.count; k++) { const yy = pa.getY(k); const dark = yy > 0.72 && yy < 0.92; ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = dark ? 0.08 : 0.95; } g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
       const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
@@ -2550,4 +2552,101 @@ function withShop(m: THREE.MeshToonMaterial, shopTex: THREE.Texture) {
   };
   m.customProgramCacheKey = () => 'shop' + shopTex.uuid;
   return m;
+}
+
+// ---------------- 13j Kantonsstrassen-Paket: Kreisel, Ortstafeln, Mittelinseln ----------------
+/** Schweizer Signale als kleine Canvas-Texturen (SSV): 2.41.1 Kreisverkehr, 3.02 Kein Vortritt, 2.37 Hindernis rechts umfahren, 4.27/4.28 Ortsbeginn/-ende */
+function signTex(kind: 'kreisel' | 'vortritt' | 'umfahren') {
+  return canvasTex(64, 64, (g) => {
+    g.clearRect(0, 0, 64, 64);
+    if (kind === 'vortritt') { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(2, 6); g.lineTo(62, 6); g.lineTo(32, 60); g.closePath(); g.fill();
+      g.fillStyle = '#D52B1E'; g.beginPath(); g.moveTo(5, 8); g.lineTo(59, 8); g.lineTo(32, 56); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(17, 15); g.lineTo(47, 15); g.lineTo(32, 42); g.closePath(); g.fill(); return; }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 31, 0, 7); g.fill(); g.fillStyle = '#1F4E9C'; g.beginPath(); g.arc(32, 32, 29, 0, 7); g.fill();
+    g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 5;
+    if (kind === 'umfahren') { g.beginPath(); g.moveTo(20, 18); g.lineTo(42, 40); g.stroke(); g.beginPath(); g.moveTo(46, 46); g.lineTo(46, 30); g.lineTo(30, 46); g.closePath(); g.fill(); return; }
+    for (let k = 0; k < 3; k++) { const a0 = k * 2.094 + 0.35; g.beginPath(); g.arc(32, 32, 16, a0, a0 + 1.35); g.stroke();
+      const a1 = a0 + 1.35, x = 32 + Math.cos(a1) * 16, y = 32 + Math.sin(a1) * 16, tx = -Math.sin(a1), ty = Math.cos(a1);
+      g.beginPath(); g.moveTo(x + tx * 7, y + ty * 7); g.lineTo(x - Math.cos(a1) * 6, y - Math.sin(a1) * 6); g.lineTo(x + Math.cos(a1) * 6, y + Math.sin(a1) * 6); g.closePath(); g.fill(); }
+  }, false);
+}
+function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, group: THREE.Group, vAt: Map<string, Set<number>>, nk: (q: number[]) => string) {
+  const CAR = ['primary', 'secondary', 'tertiary', 'trunk', 'residential', 'unclassified', 'living_street', 'primary_link', 'secondary_link', 'tertiary_link', 'trunk_link'];
+  const roundSigns: number[][] = [], vortritt: number[][] = [], umfahren: number[][] = [];
+  // --- Kreisel: Mittelinsel (Gras mit Randstein), gepflästerter überfahrbarer Innenring, Skulptur oder Baum; Signale an den Zufahrten ---
+  const rbs = d.rbs || [];
+  if (rbs.length) {
+    const grass: THREE.BufferGeometry[] = [], paving: THREE.BufferGeometry[] = [], curb: THREE.BufferGeometry[] = [], art: THREE.BufferGeometry[] = [], artCol: number[] = [];
+    const PAL = ['#E6332A', '#F2C21B', '#2E7DD7', '#FF4FA3', '#3FB27F'];
+    for (const [cx, cz, r] of rbs) {
+      const ri = Math.max(1.6, r - 4.0), apron = Math.min(2.0, ri * 0.3), h = terrain.height(cx, cz);
+      const pv = new THREE.CylinderGeometry(ri, ri, 0.9, 40); pv.translate(cx, h - 0.35, cz); paving.push(pv); // Oberkante 0.10 m über Fahrbahn
+      const cb = new THREE.CylinderGeometry(ri - apron, ri - apron, 0.9, 36); cb.translate(cx, h - 0.27, cz); curb.push(cb);
+      const gr = new THREE.CylinderGeometry(ri - apron - 0.25, ri - apron - 0.25, 0.9, 36); gr.translate(cx, h - 0.25, cz); grass.push(gr);
+      if (ri - apron > 2.5) { // Kunst im Kreisel (in der Schweiz häufig): bunte Stele bzw. bei kleinen Inseln ein Baum
+        const k = Math.abs(Math.round(cx * 7 + cz * 13)) % PAL.length;
+        if (ri > 6) { const st = new THREE.CylinderGeometry(0.5, 0.9, 4.5, 6); st.translate(cx, h + 2.4, cz); art.push(st); const c = new THREE.Color(PAL[k]); for (let i = 0; i < st.getAttribute('position').count; i++) artCol.push(c.r, c.g, c.b);
+          const top = new THREE.SphereGeometry(1.1, 10, 8); top.translate(cx, h + 5.2, cz); art.push(top); const c2 = new THREE.Color(PAL[(k + 2) % PAL.length]); for (let i = 0; i < top.getAttribute('position').count; i++) artCol.push(c2.r, c2.g, c2.b); }
+        else { const tr = new THREE.ConeGeometry(1.6, 4.2, 8); tr.translate(cx, h + 2.6, cz); art.push(tr); const c = new THREE.Color('#3E8E41'); for (let i = 0; i < tr.getAttribute('position').count; i++) artCol.push(c.r, c.g, c.b); }
+      }
+      // Zufahrten: Wegenden nahe am Ring, die selbst nicht Teil des Rings sind → «Kreisverkehr» + «Kein Vortritt» 10 m vor der Einfahrt rechts
+      for (const rd of d.roads) { if (!CAR.includes(rd.c) || rd.b || rd.p.length < 2) continue;
+        if (rd.p.every((q) => Math.abs(Math.hypot(q[0] - cx, q[1] - cz) - r) < 5)) continue; // Ringstück
+        for (const end of [0, 1]) { const pp = end ? rd.p : rd.p.slice().reverse(); const B = pp[pp.length - 1]; if (Math.abs(Math.hypot(B[0] - cx, B[1] - cz) - r) > 4) continue;
+          if (end === 0 && rd.o) continue; // Einbahn weg vom Kreisel: keine Zufahrt
+          let acc = 0, k = pp.length - 1; while (k > 0 && acc + Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]) < 10) { acc += Math.hypot(pp[k][0] - pp[k - 1][0], pp[k][1] - pp[k - 1][1]); k--; }
+          if (k < 1) continue; const A = pp[k - 1], Bq = pp[k], sl = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) || 1, ux = (Bq[0] - A[0]) / sl, uz = (Bq[1] - A[1]) / sl, t = Math.max(0, sl - (10 - acc));
+          const o = rd.w / 2 + 0.9, x = A[0] + ux * t - uz * o, z = A[1] + uz * t + ux * o; if (Math.hypot(x - cx, z - cz) < r + 2) continue;
+          roundSigns.push([x, z, Math.atan2(ux, uz)]); if (rd.L) vortritt.push([x, z, Math.atan2(ux, uz)]); } }
+    }
+    const mk = (gs: THREE.BufferGeometry[], col: string, name: string) => { if (!gs.length) return; const m = new THREE.Mesh(mergeGeometries(gs)!, toon(col)); m.name = name; group.add(m); };
+    mk(paving, '#A39E94', 'kreisel'); mk(curb, '#C9C5BB', 'kreisel'); mk(grass, '#76A957', 'kreisel');
+    if (art.length) { const g = mergeGeometries(art.map((x) => x.toNonIndexed()))!; g.setAttribute('color', new THREE.Float32BufferAttribute(artCol, 3)); const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true })); m.name = 'kreisel'; group.add(m); }
+  }
+  // --- Mittelinseln an Fussgängerstreifen (gepflästert, Randstein) mit Signal «Hindernis rechts umfahren» an beiden Enden ---
+  const islGeo: THREE.BufferGeometry[] = [];
+  if (props?.isl?.length) {
+    const car = d.roads.filter((r) => CAR.includes(r.c) && !r.b && r.w >= 6);
+    for (const [ix, iz] of props.isl) { let best: [number, number, number, number, number] | null = null;
+      for (const r of car) for (let i = 1; i < r.p.length; i++) { const [x1, z1] = r.p[i - 1], [x2, z2] = r.p[i]; if (Math.abs(x1 - ix) > 80 && Math.abs(x2 - ix) > 80) continue;
+        const dx = x2 - x1, dz = z2 - z1, L2 = dx * dx + dz * dz; if (L2 < 1) continue; const t = Math.max(0, Math.min(1, ((ix - x1) * dx + (iz - z1) * dz) / L2)), px = x1 + dx * t, pz = z1 + dz * t, dd = Math.hypot(px - ix, pz - iz);
+        if (dd < 3 && (!best || dd < best[0])) { const L = Math.sqrt(L2); best = [dd, dx / L, dz / L, px, pz]; } }
+      if (!best) continue; const [, ux, uz, px, pz] = best; const h = terrain.height(px, pz);
+      const b = new THREE.BoxGeometry(1.6, 0.6, 7); b.rotateY(Math.atan2(ux, uz)); b.translate(px, h - 0.14, pz); islGeo.push(b);
+      for (const sd of [-1, 1]) umfahren.push([px + ux * 3.2 * sd, pz + uz * 3.2 * sd, Math.atan2(ux * sd, uz * sd)]); }
+    if (islGeo.length) { const m = new THREE.Mesh(mergeGeometries(islGeo)!, toon('#B8B3A8')); m.name = 'mittelinsel'; group.add(m); }
+  }
+  // Signale (Stange + Scheibe), je Art eine Instanz-Gruppe; Mittelinsel-Signal tief (1.0 m)
+  const steel = toon('#8A8F94');
+  const put = (list: number[][], tex: THREE.Texture, size: number, hgt: number, name: string) => { if (!list.length) return;
+    const sg = new THREE.PlaneGeometry(size, size); sg.translate(0, hgt, 0); const pg = new THREE.CylinderGeometry(0.04, 0.04, hgt, 6); pg.translate(0, hgt / 2, 0);
+    const ms = new THREE.InstancedMesh(sg, new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }), list.length), mp = new THREE.InstancedMesh(pg, steel, list.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+    list.forEach(([x, z, hh], k) => { q.setFromEuler(e.set(0, hh + Math.PI, 0)); m4.compose(v.set(x, terrain.height(x, z), z), q, one); ms.setMatrixAt(k, m4); mp.setMatrixAt(k, m4); });
+    for (const im of [ms, mp]) { im.computeBoundingSphere(); im.name = name; group.add(chunkInstanced(im, 1000)); } };
+  put(roundSigns, signTex('kreisel'), 0.64, 2.3, 'kreisel-signal');
+  put(vortritt.map(([x, z, h]) => [x, z, h]), signTex('vortritt'), 0.7, 1.55, 'kein-vortritt');
+  put(umfahren, signTex('umfahren'), 0.5, 1.0, 'umfahren');
+  // --- Ortstafeln (SSV 4.27 Ortsbeginn, 4.28 Ortsende): wo eine Hauptstrasse von > 50 auf 50 km/h wechselt (OSM maxspeed) ---
+  const places = d.places || [];
+  const tafeln: [number, number, number, string, boolean][] = [];
+  if (places.length) {
+    const nameAt = (x: number, z: number) => { let best: [number, string] | null = null;
+      for (const [n, px, pz, rk] of places) { const dd = Math.hypot(px - x, pz - z) - rk * 250; if (dd < 1500 && (!best || dd < best[0])) best = [dd, n]; } return best?.[1]; };
+    for (const r of d.roads) { if (!r.L || !r.v || r.b || r.p.length < 2) continue;
+      for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
+        const inTown = r.v <= 50; if (!inTown && r.v < 70) continue; const other = [...vs].some((v) => inTown ? v >= 70 : v <= 50); if (!other) continue; // nur Übergang innerorts ↔ ausserorts (≥ 70)
+        const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 8) continue;
+        const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.3, x = A[0] + ux * 4 - uz * o, z = A[1] + uz * 4 + ux * o;
+        const nm = nameAt(A[0], A[1]); if (!nm || tafeln.some((t) => Math.hypot(t[0] - x, t[1] - z) < 25)) continue;
+        tafeln.push([x, z, Math.atan2(ux, uz), nm, !inTown]); } }
+    for (const [x, z, h, nm, ende] of tafeln) {
+      const tex = canvasTex(256, 96, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#1F4E9C'; g.fillRect(5, 5, 246, 86);
+        g.fillStyle = '#fff'; let fs = 40; g.font = `bold ${fs}px sans-serif`; while (g.measureText(nm).width > 226 && fs > 18) { fs -= 2; g.font = `bold ${fs}px sans-serif`; }
+        g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(nm, 128, 50);
+        if (ende) { g.strokeStyle = '#D52B1E'; g.lineWidth = 9; g.beginPath(); g.moveTo(14, 84); g.lineTo(242, 12); g.stroke(); } }, false);
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.56), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+      const y = terrain.height(x, z); pl.position.set(x, y + 2.1, z); pl.rotation.y = h + Math.PI; pl.name = 'ortstafel'; group.add(pl);
+      const pg = new THREE.CylinderGeometry(0.045, 0.045, 2.1, 6); const pm = new THREE.Mesh(pg, steel); pm.position.set(x, y + 1.05, z); group.add(pm); }
+  }
+  console.log('[bau] Kreisel', rbs.length, 'Kreisel-Signale', roundSigns.length, 'Mittelinseln', islGeo.length, 'Ortstafeln', tafeln.length);
 }

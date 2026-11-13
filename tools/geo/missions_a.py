@@ -34,7 +34,7 @@ for e in els:
         p = pos(e)
         if p and inside(p, 0): hosp = {'name': t['name'], 'label': 'Spital ' + near_place(p, 2), 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
 if not hosp:
-    big = [q for q in places if inside(q[1:3], 300)]
+    big = [q for q in places if inside(q[1:3], 100)]
     big.sort(key=lambda q: (-q[3], math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))
     town = big[0] if big else (RNAME, (X0 + X1) / 2, (Z0 + Z1) / 2, 0)
     th = [pos(e) for e in els if e.get('tags', {}).get('amenity') == 'townhall' and pos(e)]
