@@ -648,7 +648,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] }, asphIsl = { pos: [] as number[], col: [] as number[] };
     const dashes: number[] = [];
     // Plätze als Pflasterfläche (OSM-Fussgängerflächen): statt Luftbild mit Dächern/Schatten liegt auf Kapellplatz, Weinmarkt, Europaplatz … Pflaster
-    { const pc = new THREE.Color('#D9CFBF'), gr = new THREE.Color('#C6C4BE'); for (const pl of d.plazas || []) addFlat(cobble.pos, cobble.col, pl.p, pl.h || [], 0.29, pl.n === 'Europaplatz' || pl.n === 'Bahnhof Fussgänger' ? gr : pc); } // Europaplatz: heller Granit
+    { const pc = new THREE.Color('#D3CBBE'), gr = new THREE.Color('#C6C4BE'); for (const pl of d.plazas || []) { const [px, pz] = centroid(pl.p); const bhf = REGION_IS_LUZERN(d) && px > 120 && px < 650 && pz > -60 && pz < 400; addFlat(cobble.pos, cobble.col, pl.p, pl.h || [], 0.29, pl.n === 'Europaplatz' || pl.n === 'Bahnhof Fussgänger' || bhf ? gr : pc); } } // Bahnhof, KKL, Europaplatz: heller Granit (Foto KKL); Altstadt-Plätze: Pflaster
     { const c = new THREE.Color('#5d6064'); for (const f of d.bhfFill || []) addFlat(asph.pos, asph.col, f.p, f.h, 0.31, c); for (const f of d.gapFill || []) addFlat(asph.pos, asph.col, f, [], 0.32, c); } // tools/geo/gaps.py // Bahnhofplatz-Belag unter den Fahrbahnen
     // Bus-Perrons am Bahnhofplatz (OSM highway=platform): 18 cm hohe Inseln, Randstein hell (Foto Bahnhofplatz)
     { const top = new THREE.Color('#A3A29E'), curb = new THREE.Color('#C9C5BB');
@@ -1523,6 +1523,8 @@ function edgeLines(out: number[], p: number[][], off: number, y: number) {
   }
 }
 
+/** Luzerner Datensatz (enthält die Altstadt): erkennbar am Spielfeld-Ursprung innerhalb der Grenzen */
+const REGION_IS_LUZERN = (d: CityData) => { const [x0, z0, x1, z1] = d.meta.bounds; return x0 < 0 && x1 > 0 && z0 < 0 && z1 > 0; };
 /** Bahnhofplatz: Wartehallen (OSM building=roof: Glasdach auf Stahlstützen) und Wagenbachbrunnen (Becken mit Wasserspielen) */
 function bahnhofExtras(d: CityData, terrain: Terrain) {
   const G = new THREE.Group(); G.name = 'bahnhofplatz';
@@ -1627,8 +1629,8 @@ function mainMarkings(r: CityData['roads'][0], y: number, white: number[], yello
     for (let k = 1; k < L; k++) { const o = x + lw * k;
       const busEdge = (r.bu?.[0] && k === 1) || (r.bu?.[1] && k === L - 1);
       if (busEdge) strokeLine(yellow, offsetLine(p, o), y, 0.15);
-      else if (k === nb && nb > 0) { if (L >= 4) { strokeLine(white, offsetLine(p, o - 0.1), y, 0.12); strokeLine(white, offsetLine(p, o + 0.1), y, 0.12); } else strokeLine(white, offsetLine(p, o), y, 0.12, dash, gap); }
-      else strokeLine(white, offsetLine(p, o), y, 0.12, dash, gap); }
+      else if (k === nb && nb > 0) { if (L >= 4) { strokeLine(white, offsetLine(p, o - 0.13), y, 0.15); strokeLine(white, offsetLine(p, o + 0.13), y, 0.15); } else strokeLine(white, offsetLine(p, o), y, 0.15, dash, gap); }
+      else strokeLine(white, offsetLine(p, o), y, 0.15, dash, gap); }
     if (cyR) strokeLine(yellow, offsetLine(p, W / 2 - 1.5), y, 0.15);
     if (out) { if (!cyL) strokeLine(white, offsetLine(p, -W / 2 + 0.3), y, 0.15); if (!cyR) strokeLine(white, offsetLine(p, W / 2 - 0.3), y, 0.15);
       // Leitpfosten ausserorts (SN 640 822): weiss mit schwarzem Band, beidseitig etwa alle 50 m, 0.8 m neben dem Fahrbahnrand
@@ -1848,6 +1850,8 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     const B = tileOf(cx, cz).B;
     if (++n % 250 === 0) await progress(`Häuser werden gebaut … ${n}`);
     let st = (grid.get(Math.floor(cx / cell) + ',' + Math.floor(cz / cell)) || []).map((i) => styles[i]).find((q) => pointInPoly(cx, cz, q.p));
+    // Bahnhof Luzern (Neubau 1991): Gebäudeteile der swissBUILDINGS3D liegen teils knapp ausserhalb des OSM-Umrisses → ganzer Bahnhofblock Glas/Metall
+    if (!st && cx > 135 && cx < 275 && cz > 140 && cz < 330) st = styles.find((q) => q.kind === 'bahnhof');
     const r = hash(cx, cz);
     const h = ymax - ymin;
     const zone = quarter(cx, cz);
