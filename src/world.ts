@@ -795,11 +795,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       group.add(m);
     }
     // Fussgängerstreifen (OSM highway=crossing, markiert): in der Schweiz gelb, Balken 0.5 m breit, 0.5 m Abstand, 3 m lang in Fahrtrichtung
-    const zebra: number[] = [];
+    const zebra: number[] = [], zebraSigns: number[][] = [];
     if (props?.crossings?.length) {
       const car = d.roads.filter((r) => ['primary', 'secondary', 'tertiary', 'trunk', 'residential', 'unclassified', 'living_street', 'service'].includes(r.c) && !r.b);
       const cell = new Map<string, [number[][], number, number][]>(); // Segment-Gitter 50 m
-      for (const r of car) for (let i = 1; i < r.p.length; i++) { const k = Math.floor(r.p[i][0] / 50) + ',' + Math.floor(r.p[i][1] / 50); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push([r.p, i, r.w]); }
+      for (const r of car) for (let i = 1; i < r.p.length; i++) { const k = Math.floor(r.p[i][0] / 50) + ',' + Math.floor(r.p[i][1] / 50); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push([r.p, i, r.L ? -r.w : r.w]); } // negative Breite = Hauptstrasse
       for (const [cx, cz] of props.crossings) {
         let best: [number, number, number, number, number] | null = null; // d, dirx, dirz, w, t
         for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const [p, i, w] of cell.get((Math.floor(cx / 50) + a) + ',' + (Math.floor(cz / 50) + b)) || []) {
@@ -808,7 +808,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           if (dd2 < 4 && (!best || dd2 < best[0])) { const L = Math.sqrt(L2); best = [dd2, dx / L, dz / L, w, 0]; }
         }
         if (!best) continue;
-        const [, ux, uz, w] = best, vx = -uz, vz = ux; const half = Math.max(2.5, w / 2) - 0.3, len = 1.5;
+        const [, ux, uz, w0] = best, w = Math.abs(w0), vx = -uz, vz = ux; const half = Math.max(2.5, w / 2) - 0.3, len = 1.5;
+        if (w0 < 0) for (const sd of [-1, 1]) zebraSigns.push([cx + vx * sd * (w / 2 + 0.9), cz + vz * sd * (w / 2 + 0.9), Math.atan2(ux, uz) + (sd > 0 ? 0 : Math.PI)]); // SSV 4.11 beidseitig
         for (let o = -half; o + 0.5 <= half; o += 1.0) { // Balken quer über die Fahrbahn verteilt, jeder 3 m lang entlang der Strasse
           const bx = cx + vx * (o + 0.25), bz = cz + vz * (o + 0.25);
           const q = [[bx - ux * len - vx * 0.25, bz - uz * len - vz * 0.25], [bx + ux * len - vx * 0.25, bz + uz * len - vz * 0.25], [bx + ux * len + vx * 0.25, bz + uz * len + vz * 0.25], [bx - ux * len + vx * 0.25, bz - uz * len + vz * 0.25]];
@@ -816,6 +817,14 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         }
       }
     }
+    if (zebraSigns.length) { // Signal «Standort eines Fussgängerstreifens» (SSV 4.11): blaues Quadrat, weisses Dreieck, schwarze Figur
+      const tx = canvasTex(64, 64, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#1F5AA6'; g.fillRect(3, 3, 58, 58); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 8); g.lineTo(58, 56); g.lineTo(6, 56); g.closePath(); g.fill();
+        g.fillStyle = '#1d1e1b'; g.beginPath(); g.arc(33, 24, 4, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = '#1d1e1b'; g.beginPath(); g.moveTo(32, 29); g.lineTo(30, 41); g.lineTo(24, 51); g.moveTo(30, 41); g.lineTo(37, 51); g.moveTo(26, 34); g.lineTo(38, 35); g.stroke();
+        for (let i = 0; i < 4; i++) { g.fillStyle = '#1d1e1b'; g.fillRect(14 + i * 10, 52, 6, 3); } }, false);
+      const pl: THREE.BufferGeometry[] = [], po: THREE.BufferGeometry[] = [];
+      for (const [x, z, h] of zebraSigns) { const y = terrain.height(x, z); const g = new THREE.PlaneGeometry(0.6, 0.6); g.rotateY(h); g.translate(x, y + 2.25, z); pl.push(g); const c = new THREE.CylinderGeometry(0.04, 0.04, 2.25, 6); c.translate(x, y + 1.12, z); po.push(c); }
+      const sm = new THREE.Mesh(mergeGeometries(pl)!, new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); sm.name = 'fgsSignal'; group.add(sm);
+      group.add(new THREE.Mesh(mergeGeometries(po)!, toon('#8A8F94'))); console.log('[bau] Fussgängerstreifen-Signale', zebraSigns.length); }
     if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
       const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
     // Bushaltestellen am Fahrbahnrand (OSM bus_stop neben einer Hauptstrasse): gelbe unterbrochene Umrandung 20 × 2.6 m und «BUS»
