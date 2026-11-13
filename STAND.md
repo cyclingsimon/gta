@@ -1,9 +1,16 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 22:15. Fertig: **2026-11-13m** = 13l + Fussgängerstreifen-Signale SSV 4.11 + Test West↔a8. Nicht hochgeladen. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 13.11.2026 23:30. Fertig: **2026-11-13m** = 13l + Fussgängerstreifen-Signale SSV 4.11 + Test West↔a8 (ZIP an Simon, nicht hochgeladen). Danach nur Prüfungen, kein neues ZIP. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Prüfungen nach 13m (13.11., 22:20–23:30, kein Spielcode geändert)
+- qa.py Luzern (Software-Rendering): alle Checks OK, P1 1.30 Mio. Dreiecke / 682 Draw Calls, P2 0.60 Mio., G7 18/18 Einsätze, Ladezeit 79 s, keine Seitenfehler. Die neuen Wegweiser/Signale sprengen das Budget nicht.
+- Nord-Daten (terrain, Luftbild, Horizont, Bus, Züge, Wald) vom Server per chunk() geholt (33 Aufrufe) → `public/data/nord/`; identisch mit Server, landen beim nächsten ZIP mit.
+- Neuer Test `tests/region_nord_a.py`: Nord → a9 auf der Rothenburgstrasse («Willst du nach Rothenburg fahren?»), a9 → Nord, Nord → a6 auf der Neuenkirchstrasse («… nach Neuenkirch und Hellbühl»), a6 → Nord. Alle 4 Wechsel ok, Position übernommen, keine Fehler. Heading-Konvention für tp(): 0 = Süden (+z), fx = sin h, fz = cos h.
+- Schilder je alte Region (Konsole «[bau]»): Luzern Ortstafeln 6 / Wegweiser 92, Nord 9 / 74, West 3 / 24. Ost und Süd lokal nicht ladbar (terrain fehlt lokal, auf dem Server vorhanden) → nicht gezählt.
+- Sichtprüfung Kantonsstrasse a6 (Luzernstrasse, Hellbühlstrasse): Randlinien, Leitlinie, Leitpfosten, Bankett, Scheunen mit Dach ok.
 
 ## Version 13m (13.11. spät, nicht hochgeladen)
 - world.ts: Fussgängerstreifen auf Hauptstrassen (OSM-Strasse mit L) erhalten beidseitig Signal SSV 4.11 (Name `fgsSignal`).
