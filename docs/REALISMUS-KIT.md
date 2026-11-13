@@ -45,9 +45,12 @@ Regionen: Luzern x −3800..2700, z −1100..6300 · Nord x −3800..4600, z −
 | R25 | Plätze gepflastert | Sicht | [ERLEDIGT 13a] 32 OSM-Fussgängerflächen |
 | R26 | Fussgängerstreifen gelb | Sicht | [ERLEDIGT 13a] 913 Luzern, 549 Nord, 96 Ost |
 | R27 | Regionen Ost/West | qa je Region | [ERLEDIGT 13a] |
+| R28 | Kantonsstrassen nach Norm | Sicht | [ERLEDIGT 13c] Fahrstreifen/Rad-/Busstreifen/Trottoirs aus OSM (lanes, cycleway, bus:lanes, sidewalk, maxspeed, turn:lanes); Markierung nach SN 640 850 (Leitlinie 3/6 innerorts, Rad-/Busstreifen gelb, Randlinien nur ausserorts; Quelle Normalien Stadt Bern 2.10); Haltelinien an Ampeln, Abbiegepfeile, Signal «Hauptstrasse», Leitpfosten, Bankett, Bushalte-Markierung |
+| R29 | Bahnhofplatz/Europaplatz | Sicht | [ERLEDIGT 13c] Belag, Bus-Inseln, Wartehallen, Granit Europaplatz, Wagenbachbrunnen (OSM-Umriss), Torbogen Sandstein |
+| R30 | LUKS | Sicht | [ERLEDIGT 13c] Haus 36 weisses Betonraster mit roten/orangen/gelben Faschen (Projektbeschrieb «Les Terrasses»), Haus 31 Sichtbeton mit Fensterbändern |
 
 ## 3. Testkit
-`python3 tests/qa.py [url]`: G1–G13, G3b, P1, P2. `tests/gdiff.py [qs] ['x,z']`: sichtbarer Boden vs. Höhe. `tests/missions.py N [url]`, `tests/region.py`, `tests/region_ost.py`, `tests/region_west.py`, `tests/look_spots.py`.
+`python3 tests/qa.py [url]`: G1–G13, G3b, P1, P2. `tests/gdiff.py [qs] ['x,z']`: sichtbarer Boden vs. Höhe. `tests/missions.py N [url]`, `tests/region.py`, `tests/region_ost.py`, `tests/region_west.py`, `tests/region_sued.py`, `tests/look_spots.py`, `tests/ui_check.py` (Pause-Menü, Funk auf kleinem Querformat).
 Tests mit `&noshadow` für Missionsläufe (Software-Grafik ist sonst zu langsam; Logik unabhängig von Schatten).
 
 ## 6. Rest-Abweichungen
@@ -55,3 +58,5 @@ Tests mit `&noshadow` für Missionsläufe (Software-Grafik ist sonst zu langsam;
 - Ausserhalb der Kernzone zeigt der Luftbild-Boden Dächer/Schatten (2 m).
 - Löwe kinderfreundlich schlafend; Verkehrshaus-Schaustücke erfunden; Rettungsposten Meggen/Littau erfunden.
 - Signalisierte Fussgängerstreifen sind wie die übrigen gelb gezeichnet (Annahme).
+- Leitlinie ausserorts 6 m / 12 m ist eine Annahme (Norm nicht im Volltext geprüft). Laternen an Kantonsstrassen ohne OSM-Laterne sind ergänzt (alle 32 m, Annahme).
+- Fahrbahnbreite = Streifen × 3.1 m (+ 1.5 m je Velostreifen), nicht gemessen.

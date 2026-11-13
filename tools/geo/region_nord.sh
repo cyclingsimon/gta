@@ -31,3 +31,4 @@ cp public/data/horizon.json public/data/horizon.bin public/data/nord/
 LR_TUN=data/e2/merged/tunnels.json python3 tools/geo/build_trains.py
 python3 tools/geo/plazas.py && python3 tools/geo/crossings.py
 python3 tools/geo/roadtags.py public/data/nord
+python3 tools/geo/gaps.py public/data/nord && python3 tools/geo/umfang.py

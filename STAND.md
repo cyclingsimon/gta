@@ -5,6 +5,17 @@ Stand: 13.11.2026 07:55. **Live: 2026-11-13b** (von Claude per FileZilla hochgel
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+## Version 13c (13.11. tagsüber, nicht hochgeladen)
+- Simons Prioritäten (13.11. 08:28): 1 Luzerner Kantonsstrassen, Bahnhof, Europaplatz · 2 Optik bestehender Gegenden (Kantonsstrassen) · 3 bestehende Regionen verbessern · 4 LUKS realistisch · 50 neue Regionen. Dazu: Spielumfang-Anzeige, Android-Meldung verdeckt Sicht, Schiffe in der Bucht, Geschwindigkeiten 90/150/269 (mit Blaulicht; ohne 70/120/200, Entscheid Claude nach Art. 100 Ziff. 4 SVG).
+- Strassen-Details: `tools/geo/roadtags.py` hängt OSM-Tags (Abfrage `data/e4/osm/strassen.json`: alle trunk–tertiary im Raum Luzern) an Hauptstrassen: L, sw, cy, bu, v, ref, tf/tb (Abbiegepfeile), setzt w aus Streifen (w0 = alte Breite, Skript wiederholbar) und markiert separate Gehwege neben Fahrstrassen als Trottoir (`tr`). Muss nach build_city laufen (in den region_*.sh angehängt; Luzern von Hand: roadtags.py, danach bahnhof.py).
+- world.ts `mainMarkings`: Leitlinien 3/6 (ausserorts 6/12, Annahme), Sicherheitslinie ab 4 Streifen, Rad-/Busstreifen gelb + Velo/BUS-Zeichen, Randlinien nur ausserorts, Leitpfosten, Bankett, Trottoir mit Randstein; dazu Haltelinien an Ampeln, Abbiegepfeile, Hauptstrassen-Signale vor Knoten, Bushalte-Markierungen, ergänzte Laternen innerorts (alle 32 m, wo OSM keine kennt).
+- Bahnhofplatz/Europaplatz: `tools/geo/bahnhof.py` (Abfrage `data/e4/osm/bahnhof.json`) → city.json bhfFill, busIslands, shelters, wagenbach, Plätze «Europaplatz» und «Bahnhof Fussgänger». Muss nach plazas.py laufen. Torbogen: swissBUILDINGS3D-Form mit Sandstein-Stil (eigenes Modell `torbogen()` nur ohne 3D-Daten).
+- LUKS: Stil `luks` (Haus 36, Neubau Kinderspital/Frauenklinik, weisses Betonraster, rote/orange/gelbe Faschen; Quelle Projektbeschrieb «Les Terrasses») und `luksTurm` (Haus 31).
+- Region Süd: `sh tools/geo/region_sued.sh` → `public/data/sued/` (Rohdaten `data/e4/`). Feld x −3000..4600, z 6100..11000. Wechsel Luzern → Süd bei z > 6230 (−2900 < x < 2650, nicht ≤ 120 m um Einsätze), zurück bei z < 6170. Ziel Spital Nidwalden (3753, 10146, echt, LUKS Gruppe). Einsätze s1–s9, Herzen `save.heartsS`.
+- Seetalbahn: Nord-Zugstrecken nach OSM-Streckennummer (500 Rothenburg bei x −2026, 651 Seetal bei x −1998 am Nordrand).
+- Spielumfang: `tools/geo/umfang.py` → `public/data/umfang.json` (nach jedem Regionsbau neu laufen lassen).
+- Tests 13c (Zwischenstand 09:50): qa Luzern grün (P1 2.13 Mio., P2 0.69), region_sued.py ok, qa Süd grün (P1 0.84), ui_check.py (Pause-Menü mit Umfang, Funk auf 800×380) ok.
+
 ## Version 13b (13.11. morgens)
 - Fotovergleich mit 20 Commons-Fotos (data/ref/, Titel in titles.json): Altstadt-Tönung in Fotofarben (linear, withRows Anteil 0.85/0.8), Wasserturm mit Stil «stone» + eigener Dachfarbe auch mit 3D-Daten, See #2F86A0, Fresnel 0.45.
 - qa Luzern grün (P1 2.06 Mio., P2 0.68 Mio.).

@@ -24,3 +24,4 @@ LR_TUN=data/e3/merged_ost/tunnels.json python3 tools/geo/build_trains.py
 python3 tools/geo/crossings.py
 python3 tools/geo/plazas.py
 python3 tools/geo/roadtags.py public/data/ost
+python3 tools/geo/gaps.py public/data/ost && python3 tools/geo/umfang.py

@@ -11,7 +11,7 @@ export interface CityData {
   rail: number[][][];
   pois: Record<string, [number, number]>;
   plazas?: { p: number[][]; h: number[][][]; n: string }[];
-  busIslands?: number[][][]; bhfFill?: { p: number[][]; h: number[][][] }[]; shelters?: { p: number[][]; h: number }[]; wagenbach?: number[][] | null;
+  gapFill?: number[][][]; busIslands?: number[][][]; bhfFill?: { p: number[][]; h: number[][][] }[]; shelters?: { p: number[][]; h: number }[]; wagenbach?: number[][] | null;
 }
 
 // ---------- Toon-Material ----------
@@ -445,7 +445,7 @@ export const MINI_RES = 2;
 const ROAD_COL: Record<string, string> = {
   motorway: '#5c6064', trunk: '#5c6064', primary: '#606367', secondary: '#64676b', tertiary: '#6a6d71', // Kantonsstrassen: dunkler Belag (Luftbild/Fotos)
   primary_link: '#606367', secondary_link: '#64676b', tertiary_link: '#6a6d71',
-  unclassified: '#959aa1', residential: '#979ba2', living_street: '#bdb5a8', service: '#a2a5ab',
+  unclassified: '#6d7074', residential: '#6f7276', living_street: '#bdb5a8', service: '#7a7d80', // gleicher Belag wie Hauptstrassen (Knoten ohne Farbsprung)
   pedestrian: '#bcb8b0', footway: '#a9a7a1', path: '#d9c79f', cycleway: '#86888b', // Fuss- und Velowege in Luzern meist Asphalt (Fotos) steps: '#cdbfa6', track: '#c9b48c',
 };
 const ROAD_LAYER: Record<string, number> = { footway: 0.3, path: 0.3, steps: 0.3, cycleway: 0.31, track: 0.3, pedestrian: 0.32, service: 0.33, living_street: 0.33 };
@@ -649,7 +649,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const dashes: number[] = [];
     // Plätze als Pflasterfläche (OSM-Fussgängerflächen): statt Luftbild mit Dächern/Schatten liegt auf Kapellplatz, Weinmarkt, Europaplatz … Pflaster
     { const pc = new THREE.Color('#D9CFBF'), gr = new THREE.Color('#C6C4BE'); for (const pl of d.plazas || []) addFlat(cobble.pos, cobble.col, pl.p, pl.h || [], 0.29, pl.n === 'Europaplatz' || pl.n === 'Bahnhof Fussgänger' ? gr : pc); } // Europaplatz: heller Granit
-    { const c = new THREE.Color('#5d6064'); for (const f of d.bhfFill || []) addFlat(asph.pos, asph.col, f.p, f.h, 0.31, c); } // Bahnhofplatz-Belag unter den Fahrbahnen
+    { const c = new THREE.Color('#5d6064'); for (const f of d.bhfFill || []) addFlat(asph.pos, asph.col, f.p, f.h, 0.31, c); for (const f of d.gapFill || []) addFlat(asph.pos, asph.col, f, [], 0.32, c); } // tools/geo/gaps.py // Bahnhofplatz-Belag unter den Fahrbahnen
     // Bus-Perrons am Bahnhofplatz (OSM highway=platform): 18 cm hohe Inseln, Randstein hell (Foto Bahnhofplatz)
     { const top = new THREE.Color('#A3A29E'), curb = new THREE.Color('#C9C5BB');
       for (const q of d.busIslands || []) { addFlat(asphIsl.pos, asphIsl.col, q, [], 0.53, top);
@@ -684,7 +684,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         continue;
       }
       if (r.L && !r.b && r.n !== 'Kapellbrücke') { // Kantons- und Hauptstrassen mit OSM-Details: Markierung nach Schweizer Norm, Trottoirs mit Randstein
-        const c = new THREE.Color(ROAD_COL[r.c] || '#777'); const y = 0.35;
+        const c = new THREE.Color(ROAD_COL[r.c] || '#777'); const y = 0.36; // Hauptstrassen 1 cm über Nebenstrassen: an Knoten kein Flimmern
         ribbon(asph.pos, asph.col, r.p, r.w, y, c, true); const last = r.p[r.p.length - 1]; capEnd(asph.pos, asph.col, last[0], last[1], r.w / 2, y, c);
         const j0 = (nodeCnt.get(nk(r.p[0])) || 0) >= 3, j1 = (nodeCnt.get(nk(last)) || 0) >= 3;
         mainMarkings(r, y + 0.012, dashes, yellow, sideW, decals, j0, j1, leitpf);
@@ -790,7 +790,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         if (!best) continue; const [, ux, uz, px, pz, r] = best; const nx = -uz, nz = ux; const sd = (sx - px) * nx + (sz - pz) * nz >= 0 ? 1 : -1;
         if ((sd > 0 ? r.bu?.[1] : r.bu?.[0]) || (sd > 0 ? r.cy?.[1] : r.cy?.[0])) continue;
         const o1 = sd * (r.w / 2 - 0.15), o2 = sd * (r.w / 2 - 2.75); const P = (s0: number, o: number) => [px + ux * s0 + nx * o, pz + uz * s0 + nz * o];
-        strokeLine(yellow, [P(-10, o2), P(10, o2)], 0.362, 0.15, 1, 1); strokeLine(yellow, [P(-10, o1), P(-10, o2)], 0.362, 0.15); strokeLine(yellow, [P(10, o1), P(10, o2)], 0.362, 0.15);
+        strokeLine(yellow, [P(-10, o2), P(10, o2)], 0.372, 0.15, 1, 1); strokeLine(yellow, [P(-10, o1), P(-10, o2)], 0.372, 0.15); strokeLine(yellow, [P(10, o1), P(10, o2)], 0.372, 0.15);
         const c = P(0, (o1 + o2) / 2); decals.push([1, c[0], c[1], sd > 0 ? ux : -ux, sd > 0 ? uz : -uz]); done.push([sx, sz]); } }
     if (arrows.length) group.add(roadDecals(arrows, terrain, true));
     if (hsSigns.length) { // Hauptstrassen-Signale: Stange + Rhombus (Textur gelb mit weissem Rand, Rückseite grau)
@@ -801,6 +801,22 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
       hsSigns.forEach(([x, z, h], k) => { q.setFromEuler(e.set(0, h + Math.PI, 0)); m4.compose(v.set(x, terrain.height(x, z), z), q, one); ms.setMatrixAt(k, m4); mp.setMatrixAt(k, m4); });
       for (const im of [ms, mp]) { im.computeBoundingSphere(); im.name = 'hauptstrasse'; group.add(chunkInstanced(im, 1000)); } }
+    // Leitplanken ausserorts, wo das Gelände neben der Fahrbahn mehr als 2.5 m abfällt (Böschung, Hang): verzinkte Planke 0.6–0.9 m, Pfosten alle 4 m
+    { const beam: number[] = [], posts: number[][] = [];
+      for (const r of d.roads) { if (!r.L || r.b || (r.v || 50) <= 50) continue;
+        for (const sd of [-1, 1]) { const e = offsetLine(r.p, sd * (r.w / 2 + 0.9)); let run: number[][] = [];
+          const flush = () => { if (run.length >= 2) { for (let i = 0; i < run.length - 1; i++) { const A = run[i], B = run[i + 1];
+              beam.push(A[0], A[2] + 0.6, A[1], B[0], B[2] + 0.6, B[1], B[0], B[2] + 0.9, B[1], A[0], A[2] + 0.6, A[1], B[0], B[2] + 0.9, B[1], A[0], A[2] + 0.9, A[1]); } } run = []; };
+          for (let i = 0; i < e.length - 1; i++) { const L = Math.hypot(e[i + 1][0] - e[i][0], e[i + 1][1] - e[i][1]), n = Math.max(1, Math.ceil(L / 4));
+            for (let k = 0; k < n; k++) { const t = k / n, x = e[i][0] + (e[i + 1][0] - e[i][0]) * t, z = e[i][1] + (e[i + 1][1] - e[i][1]) * t;
+              const q = r.p[i], qq = r.p[i + 1], rx = q[0] + (qq[0] - q[0]) * t, rz = q[1] + (qq[1] - q[1]) * t; const hr = terrain.height(rx, rz), hg = terrain.ground(x + (x - rx) * 0.8, z + (z - rz) * 0.8);
+              if (hr - hg > 2.5) { const y = Math.max(terrain.height(x, z), hr - 0.3); run.push([x, z, y]); posts.push([x, z, y]); } else flush(); } }
+          flush(); } }
+      if (beam.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(beam, 3)); g.computeVertexNormals();
+        const m = new THREE.Mesh(g, toon('#B9BEC3', { side: THREE.DoubleSide })); m.name = 'leitplanken'; group.add(m);
+        const pg = new THREE.BoxGeometry(0.1, 1.6, 0.1); pg.translate(0, 0.1, 0); const im = new THREE.InstancedMesh(pg, toon('#8E9399'), posts.length); const m4 = new THREE.Matrix4();
+        posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
+      console.log('[bau] Leitplanken-Pfosten', posts.length); }
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
       const pa = g.getAttribute('position'); for (let k = 0; k < pa.count; k++) { const yy = pa.getY(k); const dark = yy > 0.72 && yy < 0.92; ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = dark ? 0.08 : 0.95; } g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
       const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
@@ -1293,7 +1309,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const e = offsetLine(r.p, r.w / 2 + (r.sw?.[1] ? 1.6 : 0.5)); let acc = 16;
       for (let i = 1; i < e.length; i++) { const L = Math.hypot(e[i][0] - e[i - 1][0], e[i][1] - e[i - 1][1]);
         while (acc < L) { const t = acc / L, x = e[i - 1][0] + (e[i][0] - e[i - 1][0]) * t, z = e[i - 1][1] + (e[i][1] - e[i - 1][1]) * t;
-          if (!near(x, z) && mask.at(x, z) !== 2) { props.lamps.push([x, z]); const k = ck(x, z); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push([x, z]); add++; } acc += 32; }
+          if (!near(x, z) && mask.at(x, z) !== 2) { props.lamps.push([x, z, 1]); const k = ck(x, z); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push([x, z]); add++; } acc += 32; }
         acc -= L; } }
     console.log('[bau] Laternen ergänzt', add);
     await onProgress('Stege und Laternen …'); group.add(buildProps(props, terrain, mask)); }
@@ -1659,7 +1675,7 @@ function roadDecals(list: number[][], terrain: Terrain, arrows = false) {
   if (arrows) { const tex = arrowTex(); const pos: number[] = [], uv: number[] = [];
     for (const [k, x, z, ux, uz] of list) { const hw = 0.6, hl = 2.5, nx = -uz, nz = ux, u0 = k / 6, u1 = (k + 1) / 6;
       const P = [[x - nx * hw - ux * hl, z - nz * hw - uz * hl, u0, 0], [x + nx * hw - ux * hl, z + nz * hw - uz * hl, u1, 0], [x + nx * hw + ux * hl, z + nz * hw + uz * hl, u1, 1], [x - nx * hw + ux * hl, z - nz * hw + uz * hl, u0, 1]];
-      for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.37, pz); uv.push(u, v); } }
+      for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.385, pz); uv.push(u, v); } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); m.name = 'arrows'; return m; }
   const tex = canvasTex(256, 128, (g) => {
@@ -1674,7 +1690,7 @@ function roadDecals(list: number[][], terrain: Terrain, arrows = false) {
   for (const [k, x, z, ux, uz] of list) {
     const hw = k ? 1.0 : 0.6, hl = k ? 2.4 : 1.2, nx = -uz, nz = ux, u0 = k ? 0.5 : 0, u1 = k ? 1 : 0.5;
     const P = [[x - nx * hw - ux * hl, z - nz * hw - uz * hl, u0, 0], [x + nx * hw - ux * hl, z + nz * hw - uz * hl, u1, 0], [x + nx * hw + ux * hl, z + nz * hw + uz * hl, u1, 1], [x - nx * hw + ux * hl, z - nz * hw + uz * hl, u0, 1]];
-    for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.37, pz); uv.push(u, v); }
+    for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.385, pz); uv.push(u, v); }
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
@@ -2215,7 +2231,11 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
     const headG = new THREE.BoxGeometry(0.7, 0.22, 0.32); headG.translate(0.25, 4.65, 0);
     const pole = new THREE.InstancedMesh(poleG, toon('#3E4A45'), P.lamps.length);
     const head = new THREE.InstancedMesh(headG, toon('#FFF2B8', { emissive: new THREE.Color('#5A4E20') }), P.lamps.length); head.material.name = 'lampHead';
-    P.lamps.forEach(([x, z], i) => { m4.makeRotationY(hash(x, z) * Math.PI * 2); m4.setPosition(x, terrain.height(x, z), z); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); });
+    // Leuchtenkopf zur Fahrbahn drehen (Richtung mit den meisten Strassen-Zellen im Umkreis 2–6 m); Laternen an Hauptstrassen (3. Wert) 1.6× höher
+    const sc = new THREE.Matrix4();
+    P.lamps.forEach((l, i) => { const [x, z] = l; let best = hash(x, z) * Math.PI * 2, bn = 0;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; let n = 0; for (const d of [2, 4, 6]) if (mask.isRoad(x + Math.cos(a) * d, z + Math.sin(a) * d)) n++; if (n > bn) { bn = n; best = a; } }
+      m4.makeRotationY(-best); if (l[2]) m4.multiply(sc.makeScale(1, 1.6, 1)); m4.setPosition(x, terrain.height(x, z), z); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); });
     pole.name = 'lamps'; G.add(pole, head);
     (G as any).counts = { lamps: P.lamps.length, signals: P.signals.length, stops: P.stops.length };
   }
