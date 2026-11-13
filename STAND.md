@@ -1,9 +1,13 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 13.11.2026 (Nachtschicht). Live: **2026-11-12x** (12z und 13a nicht hochgeladen, Simon: «Mach weiter ohne Upload»). Fertig: **2026-11-13a** = Vollpaket `Luksi Rescue 2026-11-13a.zip` (72 MB, im Chat am 13.11. ca. 04:10 geliefert) (enthält z: Etappe 2, Statistik, neue Mini-Spiele; dazu Region Ost, neues Aussehen, Schatten, Gelände-Fix). Hochladen: ganzen Ordnerinhalt nach `/www/luksi-rescue`, überschreiben (data/nord/ und data/ost/ sind neu, fonts/ neu). stats/config.php liegt im Paket; stats/data/ auf dem Server schreibbar (775).
+Stand: 13.11.2026 07:55. **Live: 2026-11-13b** (von Claude per FileZilla hochgeladen, 13.11. ca. 07:50, Simon: «Lade 13b dann hoch»; geprüft: ausgelieferte JS enthält 13b, data/west, data/ost, aerial_hr, Schrift vorhanden, stats/config.php und stats/data/stats.sqlite liefern 403). 12z und 13a waren nie live. Lokal auf dem PC: `Downloads\luksi-rescue\web-13b` (Vollstand).
 Lokal auf dem PC: `Downloads\luksi-rescue\web-n` (Vollstand w), `web-x` (nur die in x geänderten Dateien). Vollpakete: `Luksi Rescue 2026-11-12x.zip`, ZIP 12z/13a liegen nur in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 13b (13.11. morgens)
+- Fotovergleich mit 20 Commons-Fotos (data/ref/, Titel in titles.json): Altstadt-Tönung in Fotofarben (linear, withRows Anteil 0.85/0.8), Wasserturm mit Stil «stone» + eigener Dachfarbe auch mit 3D-Daten, See #2F86A0, Fresnel 0.45.
+- qa Luzern grün (P1 2.06 Mio., P2 0.68 Mio.).
 
 ## Nachtschicht 12./13.11. (Version 13a)
 - **Fix schwebende Bäume/Strassen** (Simon 23:24): `THREE.LOD` der Bodenkacheln stand im Ursprung → ab 650 m von der Kapellbrücke überall das grobe 10-m-Gitter (Minimum-Filter + −0.45 m, bis 7.5 m zu tief). Jetzt LOD in Kachelmitte (Wechsel ab 933 m Kachelmitte). Test `tests/gdiff.py [qs] ['x,z']`: sichtbarer Boden ≤ 600 m um die Kamera vs. `groundAt`, Schwelle 1.5 m → 0 Abweichungen (Start, Gütsch-Hang).
