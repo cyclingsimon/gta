@@ -1359,6 +1359,7 @@ if (location.search.includes('test')) {
     styles: () => STYLE_COUNT,
     erkerCam: (k = 0) => { const e = ERKER[k]; if (!e) return ERKER.length; const [x, z, y, , rot] = e; (window as any).__cam = [x + Math.sin(rot) * 18 + Math.cos(rot) * 6, y + 1, z + Math.cos(rot) * 18 - Math.sin(rot) * 6, x, y + 2, z]; return [ERKER.length, Math.round(x), Math.round(z)]; },
     qa: () => qaReport(),
+    obj: (name: string) => { let n = 0, v = 0; world.group.traverse((o: any) => { if (o.name === name) { n++; v += o.geometry?.getAttribute('position')?.count || 0; } }); return { n, v, crossings: propsData?.crossings?.length || 0 }; },
     sunShadow: (on: boolean) => { sun.castShadow = on; return on; },
     shadowInfo: () => { const o: Record<string, number> = {}; scene.traverse((m: any) => { if (!m.isMesh) return; const k = (m.castShadow ? 'C' : '-') + (m.receiveShadow ? 'R' : '-') + ':' + m.material.type; o[k] = (o[k] || 0) + 1; }); return { on: renderer.shadowMap.enabled, sun: sun.castShadow, pos: sun.position.toArray().map(Math.round), tgt: sun.target.position.toArray().map(Math.round), o }; },
     gdiff: (thr = 1.5) => { const out: any = { n: 0, bad: 0, worst: [] as any[], byMesh: {} as Record<string, number> }; world.group.updateMatrixWorld(true);

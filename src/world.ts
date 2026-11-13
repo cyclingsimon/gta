@@ -697,12 +697,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         for (let o = -half; o + 0.5 <= half; o += 1.0) { // Balken quer über die Fahrbahn verteilt, jeder 3 m lang entlang der Strasse
           const bx = cx + vx * (o + 0.25), bz = cz + vz * (o + 0.25);
           const q = [[bx - ux * len - vx * 0.25, bz - uz * len - vz * 0.25], [bx + ux * len - vx * 0.25, bz + uz * len - vz * 0.25], [bx + ux * len + vx * 0.25, bz + uz * len + vz * 0.25], [bx - ux * len + vx * 0.25, bz - uz * len + vz * 0.25]];
-          for (const k of [0, 2, 1, 0, 3, 2]) zebra.push(q[k][0], 0.37, q[k][1]);
+          for (const k of [0, 2, 1, 0, 3, 2]) zebra.push(q[k][0], 0.43, q[k][1]);
         }
       }
     }
-    if (zebra.length) { const zd = drape(zebra, null, terrain, 11, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
-      const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide })); zm.name = 'zebra'; group.add(zm); }
+    if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
+      const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
     const dd = drape(dashes, null, terrain, 11, true);
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
     dg.computeVertexNormals();
@@ -2085,8 +2085,10 @@ function withWater(m: THREE.MeshToonMaterial) {
         vec3 v = normalize(cameraPosition - vWP);
         float fr = pow(1.0 - max(dot(n, v), 0.0), 4.0);
         diffuseColor.rgb = mix(diffuseColor.rgb, uWSky, fr * 0.55);
-        float sp = pow(max(dot(reflect(-v, n), uWSun), 0.0), 220.0);
-        totalEmissiveRadiance += vec3(1.0, 0.97, 0.88) * smoothstep(0.35, 0.6, sp) * 1.4;
+        // Glitzern nur als kleine Funken und vor allem bei flachem Blick (von oben sah es sonst wie Schaumflecken aus)
+        float sp = pow(max(dot(reflect(-v, n), uWSun), 0.0), 900.0);
+        float graze = clamp(1.0 - v.y * 1.15, 0.0, 1.0);
+        totalEmissiveRadiance += vec3(1.0, 0.97, 0.88) * smoothstep(0.5, 0.8, sp) * graze * 1.2;
       }`);
   };
   m.customProgramCacheKey = () => 'water';
