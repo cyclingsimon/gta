@@ -102,10 +102,14 @@ export function churchBell(ctx: AudioContext, out: AudioNode, when: number, f: n
   strike(ctx, out, when, f, [[0.5, 0.7, 7], [1, 1, 5.5], [1.19, 0.55, 3.5], [1.5, 0.35, 2.8], [2, 0.45, 2.4], [2.52, 0.2, 1.4], [3, 0.12, 1]], vol);
 }
 
-/** Bahnhof-Gong: drei weiche Glockentöne abwärts (Annahme, nicht das Original-Jingle) */
+/** Bahnhof-Gong der SBB, Deutschschweiz: drei «dun» tief–hoch–mittel, Es – B – Akkord (B/Ges/Es).
+ *  Quelle: Klavier-Analyse in https://www.galaxus.ch/en/page/how-the-sbb-jingle-represents-switzerland-36939 (inoffiziell, SBB bestätigt nicht).
+ *  Lage (Es4 = 311 Hz) ist eine Annahme; Klang weich wie ein Glockenspiel. */
 export function stationGong(ctx: AudioContext, out: AudioNode, vol: number) {
-  const t = ctx.currentTime;
-  [659.3, 523.3, 392].forEach((f, i) => strike(ctx, out, t + i * 0.55, f, [[1, 1, 1.8], [2, 0.25, 1], [3, 0.08, 0.6]], vol));
+  const t = ctx.currentTime, P: [number, number, number][] = [[1, 1, 1.6], [2, 0.22, 0.9], [3, 0.06, 0.5]];
+  strike(ctx, out, t, 311.13, P, vol);
+  strike(ctx, out, t + 0.5, 466.16, P, vol);
+  for (const f of [311.13, 369.99, 466.16]) strike(ctx, out, t + 1.0, f, P, vol * 0.6);
 }
 
 /** Zug fährt ein/vorbei: tiefes Rollen, Schienenstösse (ta-tam … ta-tam), leises Bremsquietschen */

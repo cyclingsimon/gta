@@ -487,3 +487,41 @@ body.touch #radio kbd { display: none; }
   body.touch #t-pedals button { width: 92px; height: 92px; }
   body.touch #t-gas { height: 124px !important; }
 }
+
+/* ---- P-B Lauf 2 ---- */
+/* Pause-Menü: Tastatur/Gamepad-Fokus darf nicht unter der klebenden Titelzeile verschwinden (main.ts nutzt scrollIntoView 'nearest') */
+#pause .panel { scroll-padding-top: 84px; scroll-padding-bottom: 12px; }
+.mg.tr .tr-list { scroll-padding: 8px; }
+
+/* Schnellreise am Handy/Tablet: nicht verkleinern (sonst Touch-Ziele < 48 px), Liste scrollt, Karte kleiner */
+body.touch .mg.tr .tr-card { transform: none; max-height: calc(100vh - 12px); padding: 0 12px 10px; }
+body.touch .tr-list button { min-height: 48px; padding: 4px 8px; }
+body.touch .tr-list { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+body.touch .mg.tr #tr-close { min-height: 48px; }
+body.touch .mg.tr .mg-buttons { margin-top: 4px; }
+body.touch .mg.tr .tr-msg { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; }
+@media (orientation: landscape) and (max-height: 560px) {
+  body.touch .mg.tr .tr-card h2 { font-size: 20px; margin: 0 -12px 6px; padding: 8px 12px 4px; }
+  body.touch .mg.tr .mg-hint { display: none; }
+  body.touch .tr-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+  body.touch .tr-map, body.touch .tr-list { max-height: calc(100vh - 128px); }
+}
+@media (orientation: portrait) {
+  body.touch .mg.tr .tr-card { width: 98vw; max-width: 98vw; min-width: 0; }
+  body.touch .tr-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  body.touch .tr-map { max-height: 30vh; }
+  body.touch .tr-list { max-height: calc(100vh - 30vh - 190px); }
+  body.touch .mg.tr .tr-card h2 { font-size: 22px; }
+}
+
+/* Hinweis «Bauarbeiter …» (#lazy-ind) und Meldungen am Handy: weder Fahrbahn noch Knöpfe verdecken */
+@media (orientation: landscape) {
+  /* Platz zwischen Minimap (links, bis 148 px) und Knopfleiste (rechts, 4 × 48 px + Rand ≈ 226 px) */
+  body.touch #lazy-ind { left: 156px; top: 12px; bottom: auto; transform: none; max-width: calc(50vw - 210px); font-size: 11px; padding: 3px 8px; }
+  body.touch .toast { left: calc((156px + 100vw - 236px) / 2); max-width: calc(100vw - 156px - 236px - 8px); }
+  body.touch .toast.out { transform: translate(-50%, -20px); }
+}
+@media (orientation: portrait) {
+  body.touch #lazy-ind { left: 12px; top: 262px; bottom: auto; transform: none; max-width: 62vw; font-size: 11px; padding: 3px 8px; }
+}
+body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Handy */

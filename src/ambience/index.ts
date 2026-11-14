@@ -8,6 +8,9 @@
 import { noiseBed, lfo, carPass, gull, bird, cowbell, churchBell, stationGong, trainPass, tunnelImpulse } from './synth';
 import { HOFKIRCHE, STATIONS, townWeight, shoreWeight } from './zones';
 
+/** EIN Regler für die ganze Geräuschkulisse (0 = aus, 1 = Stand Lauf 2). Lieber zu leise als Lärm: im Zweifel senken. */
+export const AMB_GAIN = 0.7;
+
 /** Abfragen aus der Spielwelt (alle optional). mask: 0 frei, 1 Wasser, 2 Gebäude, 3 ausserhalb (wie World.mask.at) */
 export interface AmbienceProbe {
   mask?: (x: number, z: number) => number;
@@ -28,8 +31,8 @@ let tSample = -1, lastHour = -1, nearStation = '', forced: Layer | null = null, 
 let saved: AmbienceProbe | null = null;
 let lastX = 0, lastZ = 0, mix: AmbienceMix = { music: 0, venue: 0, siren: false, muted: false, hidden: false };
 
-/** Lautstärken (vor Master 0.6). Bewusst leise: Kulisse, keine Hauptsache. */
-const VOL = { bus: 0.5, stadt: 0.10, see: 0.09, wald: 0.05, tunnel: 0.16, car: 0.05, gull: 0.035, bird: 0.022, cow: 0.03, gong: 0.05, train: 0.08, bell: 0.06 };
+/** Lautstärken je Schicht (relativ; vor AMB_GAIN und Master 0.6). Lauf 2: konservativ – Stadtverkehr deutlich leiser und seltener. */
+const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05 };
 
 export function initAmbience(c: AudioContext, master: AudioNode, sfx: AudioNode) {
   if (ctx) return; ctx = c;
@@ -92,7 +95,7 @@ function sample(x: number, z: number) {
 function busTarget() {
   if (mix.muted || mix.hidden) return 0;
   const paused = document.body.classList.contains('paused') || !!document.querySelector('#pause.show');
-  return VOL.bus * (1 - 0.45 * mix.music) * (1 - 0.85 * mix.venue) * (mix.siren ? 0.6 : 1) * (paused ? 0.35 : 1);
+  return AMB_GAIN * VOL.bus * (1 - 0.45 * mix.music) * (1 - 0.85 * mix.venue) * (mix.siren ? 0.6 : 1) * (paused ? 0.35 : 1);
 }
 
 /** Pro Bild aufrufen (über audio.ts/updateVenues). mix: Musiklautstärke 0..1, Konzertnähe 0..1, Sirene, Ton aus, Tab verborgen */
@@ -104,7 +107,7 @@ export function updateAmbience(x: number, z: number, m: AmbienceMix) {
   bus.gain.setTargetAtTime(busTarget(), t, 0.4);
   if (mix.muted || mix.hidden) return; // keine Ereignisse, wenn man nichts hört
   // Ereignisse (Abstände in Sekunden, dichter je stärker die Schicht)
-  if (w.stadt > 0.15 && t > next.car) { fire('car'); next.car = t + (3 + Math.random() * 5) / (0.4 + w.stadt); }
+  if (w.stadt > 0.3 && t > next.car) { fire('car'); next.car = t + (7 + Math.random() * 10) / (0.5 + w.stadt); } // Lauf 2: ausgedünnt (~1 Auto / 5–11 s im Zentrum)
   if (w.see > 0.2 && t > next.gull) { fire('gull'); next.gull = t + 6 + Math.random() * 12; }
   if (w.wald > 0.2 && t > next.bird) { fire('bird'); next.bird = t + (1.5 + Math.random() * 4) / (0.5 + w.wald) * (nightish() ? 4 : 1); }
   if (w.land > 0.35 && t > next.cow) { fire('cow'); next.cow = t + (2.5 + Math.random() * 6) / (0.4 + w.land) * (nightish() ? 2.5 : 1); }
@@ -153,16 +156,17 @@ function fire(kind: string) {
 }
 
 /** Stundenschläge der Hofkirche (n Schläge, d = Entfernung in m → leiser und dumpfer) */
+const HOUR_BELL = 261.6; // c1 (deutsche Glockennotation: c1 = 261,6 Hz)
 function ringHour(n: number, d: number) {
   if (!ctx) return;
   events.bell = (events.bell || 0) + n;
   const t = ctx.currentTime + 0.2, near = clamp01(1 - d / HOFKIRCHE.r);
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900 + 3000 * near; lp.connect(bus);
   const v = VOL.bell * (0.3 + 0.7 * near);
-  // Vorschlag (Viertelstunden-Glocke, hell) vor den Stundenschlägen – Annahme
-  churchBell(ctx, lp, t, 392, v * 0.5); churchBell(ctx, lp, t + 1.4, 330, v * 0.5);
-  for (let i = 0; i < n; i++) churchBell(ctx, lp, t + 3.6 + i * 2.4, 196, v);
-  setTimeout(() => lp.disconnect(), (3.6 + n * 2.4 + 8) * 1000);
+  // Geläut (Wikipedia «St. Leodegar im Hof»): 8 Glocken g0 a0 h0 c1 cis1 dis1 f1 g1. Die Stunden schlug früher die Theodulglocke (g0),
+  // heute «nur noch einige der kleineren Glocken» (Luzerner Zeitung). Welche genau: unbekannt → Annahme c1 (Festglocke, 261,6 Hz).
+  for (let i = 0; i < n; i++) churchBell(ctx, lp, t + i * 2.4, HOUR_BELL, v);
+  setTimeout(() => lp.disconnect(), (n * 2.4 + 8) * 1000);
 }
 
 /** Für Tests (window.__amb.state()) und die Leistungsanzeige */

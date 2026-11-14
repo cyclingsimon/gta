@@ -1,6 +1,49 @@
 # P-B «Atmosphäre, Ton, Oberfläche» – Laufprotokoll
 
-## 14.11.2026 20:05 – Lauf 1
+## 14.11.2026 20:10 – Lauf 2
+
+Vorab `claude/13i-gebiet-a` hineingemergt (Merge-Commit 7c1c805, keine Konflikte). Einbau 1 (bindAmbience) bewusst **nicht** selbst gemacht.
+
+### Gemacht
+1. **Quellen** (Websuche):
+   - **Hofkirche St. Leodegar** – Geläut laut Wikipedia (https://de.wikipedia.org/wiki/St._Leodegar_im_Hof): 8 Glocken, Schlagtöne g0 (Theodulglocke 1633, 5150 kg), a0, h0, c1, cis1, dis1, f1 (Museggglocke 1381), g1. Die vollen Stunden schlug früher die Theodulglocke, neu «nur noch einige der kleineren Glocken» (Luzerner Zeitung: https://www.luzernerzeitung.ch/zentralschweiz/luzern/5-tonnen-glocke-in-der-hofkirche-luzern-laeutet-kuenftig-seltener-ld.1109797). Umgesetzt: Stundenschlag auf **c1 = 261,6 Hz**; welche kleinere Glocke genau schlägt, ist nicht belegt → **Annahme c1** (Vertrauen mittel). Die erfundenen Vorschläge aus Lauf 1 sind entfernt.
+   - **SBB-Gong** (Deutschschweiz): drei «dun», tief–hoch–mittel, Es – B – Akkord B/Ges/Es; Westschweiz C–F–F, Tessin F–F–Es (https://www.galaxus.ch/en/page/how-the-sbb-jingle-represents-switzerland-36939 – Klavier-Analyse eines Journalisten, SBB hat es nicht bestätigt). Umgesetzt: Es4 311 Hz → B4 466 Hz → Akkord Es4/Ges4/B4; Oktavlage und Klangfarbe sind Annahme (Vertrauen mittel). Hinweis: kurzes Soundlogo der SBB, hier nachgespielt für ein privates Familienspiel.
+   - **Sirene – zweite Quelle**: AMAG-Blog (https://www.amag-group.ch/blog/was-haben-blaulicht-und-sirene-mit-der-amag-zu-tun/): Wechselklanghorn ist das vorgeschriebene Signal für Polizei, Feuerwehr und Ambulanz, «allerdings auf verschiedenen Tonlagen», die beiden Töne bilden «eine Quarte». Das bestätigt das 3:4-Verhältnis aus VTS Anhang 11. Konkrete Ambulanz-Frequenzen habe ich nicht gefunden → 440/586,7 Hz bleibt **Annahme** (in der vorgeschriebenen Spanne 360–630 Hz, Vertrauen mittel).
+2. **Leiser, weniger Stadtverkehr**: ein Regler `AMB_GAIN = 0.7` oben in `src/ambience/index.ts` (0 = Kulisse aus). Alle Schichten leiser (Stadt-Rauschen 0,10 → 0,045, Autos 0,05 → 0,022 usw.). Autos erst ab Stadt-Gewicht 0,3, im Zentrum rund 1 Auto alle 5–11 s statt 2–4 s. Gemessen in Kriens: 3 Autos in 20 s.
+3. **Tablets und Fokus**:
+   - Geprüft bei 1024×768, 768×1024 und 1180×820 (Touch): nichts überdeckt die Fahrbahn, alle Touch-Ziele ≥ 48 px.
+   - Pause-Menü: `scroll-padding` sorgt dafür, dass der Tastatur-/Gamepad-Fokus nicht unter der klebenden Titelzeile verschwindet.
+   - **Schnellreise am Handy/Tablet**: wird nicht mehr verkleinert (vorher scale .82). Listenknöpfe und «Zurück» sind ≥ 48 px, die Liste scrollt.
+   - Schnellreise hochkant: Karte oben, Liste darunter. Quer: Karte links, Liste rechts, Höhe passend zum Bildschirm. Das «Esc» im Knopf ist am Handy ausgeblendet.
+4. **Ladebild** (`src/ui/loadSteps.ts`):
+   - Kindgerechte Schrittnamen, z. B. «Strassen werden geteert», «Bäume werden gepflanzt», «Das Navi lernt die Strassen». Am Ende steht «Fertig! Geladen in m:ss».
+   - Die Schrittzahl berücksichtigt jetzt Stufe B: Im Echt-Modus kommen die 9 Bauschritte «Echte Häuser: …» bzw. in A-Gegenden «Feines Gelände: …» dazu, also 21 statt 12 Schritte. Ob Echt- oder Leicht-Modus gilt, wird mit derselben Regel wie `QUALITY_` in main.ts vorhergesagt. Liegt die Vorhersage falsch, wird die Gesamtzahl einmal angepasst.
+   - Der Balken bleibt unter 100 %, bis der Start-Knopf sichtbar ist. Das behebt den Lauf-1-Fehler: Dort zählten alle Meldungen von Stufe B als ein einziger Schritt, der Balken stand dann lange bei 92 %.
+5. **Toasts und `#lazy-ind` am Handy**:
+   - Querformat: zwischen Minimap und Knopfleiste, `#lazy-ind` oben neben der Minimap.
+   - Hochformat: `#lazy-ind` unter dem Auftragstext. Gemessen: keine Überlappung mit Knöpfen, Pedalen, Lenkrad, Minimap oder Fahrbahn.
+
+### Geprüft
+- `tests/par/ui_pb2.py`: ein Seitenaufruf, Leicht-Stufe, Touch-Emulation, Bildschirmgrössen 800×380, 390×844, 1024×768, 768×1024 und 1180×820.
+  - Gemessen wurden freie Fahrt, eingesetzter Toast mit `#lazy-ind`, Funk und Schnellreise. Ergebnis: 0 Überdeckungen der Fahrbahn, 0 Touch-Ziele unter 48 px, 0 Überlappungen von Meldungen mit Bedienelementen.
+  - Schnellreise: Liste scrollbar, Karte und «Zurück» ganz im Bild.
+  - Pause-Fokus mit Pfeiltasten (14 × runter, 14 × hoch) bei 800×380 und 768×1024: 28 von 28 sichtbar.
+  - Echtes Laden (Leicht): 12 Schritte, monoton, «Fertig! Geladen in 0:24».
+  - Keine Seitenfehler. Screenshots angesehen: Schnellreise quer und hoch, Toasts quer und hoch, Funk auf dem Tablet, Pause-Fokus.
+- `tests/par/ui_steps_sim.py`: Die Logik der Ladeschritte wurde mit nachgestellten Statusfolgen aus main.ts geprüft – Echt Luzern, Echt A-Gegend (a1), Leicht und Standard am Desktop. Alle monoton, vor dem Knopf höchstens 95,2 % bzw. 91,7 %, danach 100 %. **Der Echt-Modus wurde nicht im echten Spiel geladen** (zu schwer für die geteilte Maschine), nur nachgestellt.
+- `tests/par/amb_check.py`: Kulissen-Zustände nach der Lautstärke-Änderung, Gong und Stundenschlag lösen ohne Fehler aus. Bus bei Spielmusik 0,19 statt 0,28. **Hörprobe weiterhin keine** (keine Tonausgabe).
+- `npx tsc --noEmit -p .` fehlerfrei; Build OUT=dist_pb läuft durch.
+
+### Einbau-Hinweise
+Unverändert aus Lauf 1 (siehe unten): `bindAmbience(...)` in `main.ts` (Einbau 1), optional `import './ui'` verschieben, optional Kriechen in `loader.ts` entfernen. Neu nichts.
+
+### Offen / nächster Lauf
+- Echt-Modus einmal real laden (am besten in einem Volltest der Hauptsitzung mitlaufen lassen) und `window.__ldSteps()` beobachten.
+- Hörprobe auf echtem Gerät; `AMB_GAIN` bei Bedarf senken.
+- Nach Einbau 1: Wald-, Ufer- und Tunnelgewichte in der echten Welt prüfen.
+- Glocke der Stundenschläge belegen (Pfarramt Hofkirche anfragen oder Aufnahme von SRF «Glocken der Heimat»; die Seite war per Abruf nicht erreichbar).
+
+## 14.11.2026 19:38 – Lauf 1
 
 Branch `par/oberflaeche` (Worktree `/home/claude/wt-pb`), Basis `claude/13i-gebiet-a`, Stand f936979 hineingemergt (Fast-Forward).
 
