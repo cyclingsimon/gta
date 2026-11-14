@@ -2,6 +2,7 @@
 // Regionen werden weiterhin einzeln geladen; Reise in eine andere Region = Neuladen mit Zielort.
 
 import { REGIONS_A } from './regionsA';
+import './ui'; // P-B: Oberflächen-Zusätze (ehrlicher Ladefortschritt) – Einbau-Hinweis: Import nach main.ts verschieben
 
 export type RegionId = 'luzern' | 'nord' | 'ost' | 'west' | 'sued';
 export interface TravelRegion { id: RegionId | string; name: string; b: [number, number, number, number]; ready: boolean }
