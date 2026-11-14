@@ -331,5 +331,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -20013.5
   },
   "welcome": "Willkommen in Knutwil und Triengen! Treffpunkt ist die Haltestelle Triengen Dorf. Sie ist auf der Karte blau markiert."
+ },
+ "a16": {
+  "name": "Rotkreuz und Hünenberg",
+  "b": [
+   7300,
+   -14000,
+   13300,
+   -8400
+  ],
+  "aerial": {
+   "E0": 2673078,
+   "E1": 2679339,
+   "N0": 1219986,
+   "N1": 1225883
+  },
+  "hosp": {
+   "label": "Bahnhof Rotkreuz",
+   "kind": "rp",
+   "x": 9317.9,
+   "z": -9951.9
+  },
+  "welcome": "Willkommen in Rotkreuz und Hünenberg! Treffpunkt ist der Bahnhof Rotkreuz. Er ist auf der Karte blau markiert."
  }
 };

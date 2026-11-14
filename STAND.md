@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 07:00. Fertig: **2026-11-14u** = 14t + Region a15 Knutwil/Triengen. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 07:45. Fertig: **2026-11-14v** = 14u + Region a16 Rotkreuz/Hünenberg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14v (14.11. 06:05–07:45, nicht hochgeladen)
+- Region **a16 «Rotkreuz und Hünenberg»** (Kanton Zug) x 7300..13300, z −14000..−8400 (LV95 E 2673078–2679339, N 1219986–1225883), überlappt a10 (200 m, nur z −9100..−8400) und a11 (200 m). Westrand z < −9100 ohne Nachbarn (a12 endet bei x 2300). b3dm x 1104–1140 / y 1352–1404 (1961 Kacheln, 598 mit Inhalt), 28 neue Höhenkacheln. Treffpunkt Bahnhof Rotkreuz (BHF-Tabelle).
+- Bus-Relationen waren 25 MB (Fernbusse mit ganzer Geometrie) → im Browser vor der Übertragung gefiltert: nur Betreiber-Whitelist mit Linien-Nr. ≤ 3 Stellen, Mitglieder nur im Gebiet ±0.02° (38 Relationen, 0.7 MB). Gleiche Regel wie build_bus.py, also kein Verlust.
+- Ergebnis: 5211 Gebäude (3D), 8 Einsätze, Hecken 134 / 9.4 km, 863 Obst-/Reihenbäume. Zugersee als OSM-Wasser sichtbar (Sichtprüfung Hünenberg See). Spielumfang 691.9 km², 92 710 Gebäude (OSM-Zählung).
+- Tests 14v: smoke_a a16 ok (8/8, keine Fehler); tests/region_a16.py a16↔a10 (Luzernerstrasse Gisikon) und a16↔a11 (Küssnachterstrasse) je beide Richtungen ok, am Stück; Sichtprüfung Zugersee und Bahnhof Rotkreuz von oben.
 
 ## Version 14u (14.11. 05:05–07:00, nicht hochgeladen)
 - Region **a15 «Knutwil und Triengen»** (Surental) x −20000..−13500, z −20300..−14400 (LV95 E 2645746–2652477, N 1225746–1231921), überlappt a1/a2 (200 m) und a14 (200 m) → schliesst die Lücke nordöstlich a14. b3dm x 941–980 / y 1408–1463 (2240 Kacheln, 738 mit Inhalt), 34 neue Höhenkacheln, bus_a15.json.

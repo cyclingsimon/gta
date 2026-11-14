@@ -16,4 +16,5 @@ REGIONS_A = {
     'a13': ('Willisau und Ettiswil', (-26200, -11000, -19800, -5000)),  # 14s
     'a14': ('Dagmersellen und Wauwil', (-26200, -18300, -19800, -10800)),  # 14t: Wiggertal
     'a15': ('Knutwil und Triengen', (-20000, -20300, -13500, -14400)),  # 14u: Surental
+    'a16': ('Rotkreuz und Hünenberg', (7300, -14000, 13300, -8400)),  # 14v: Kanton Zug, Einzugsgebiet Kinderspital
 }
