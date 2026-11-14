@@ -1,3 +1,4 @@
+import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
 import { buildStops, buildLamps, realBenchGeometry } from './real/props';
 import { buildParkedCars, buildParkedVelos } from './real/cars';
@@ -1476,6 +1477,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // ---- Bäume (instanziert) ----
   group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
   group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), 100, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6, vorerst 100
+  group.add(...buildStreetFurniture(props, d.roads, mask, (x, z) => terrain.height(x, z), 12000)); // P-A E8: Kleinmöbel, Deckel 12 000 Dreiecke
   // 14q: Hecken (OSM barrier=hedge): Reihe aus Büschen (alle 1.6 m, 1.3–2.1 m hoch), nicht auf Strassen, Wasser oder in Häusern
   if (props?.hedges?.length) {
     const bp: number[][] = [];
