@@ -1,12 +1,12 @@
 # Luksi Rescue Luzern – STAND
 
 Stand: 14.11.2026 18:35. Letztes ZIP: **2026-11-14zj** (an Simon, nicht hochgeladen). Code-Stand 14zk gepusht, kommt mit ZIP 2026-11-15a.
-**Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. Diese Sitzung = Hauptstrang mit Geodaten + Nachtintegration 03:30 (send_later hier; die fremd angelegte Nachtintegration trig_01EyhFTq… auf Simons Wunsch deaktiviert). Ein ZIP pro Tag um 06:00 («YYYY-MM-TTa»). Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B – hier nicht mehr ändern. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
+**Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
-## Version 14zk (2026-11-14, Code gepusht, ZIP folgt als 15a)
+## Version 14zk (2026-11-14, Opus-Sitzung, Streaming; mit 15a zusammengeführt dec9989)
 - Navi über die Grenze: `crossRoute()` – Übergänge = Fahrknoten der aktiven Gegend ≤120 m vom Feldrand, die in der Zielgegend liegen und dort einen Fahrknoten ≤25 m haben (je 50-m-Feld einer); 8 beste nach Luftlinie durchgerechnet. Test tests/cross_route.py: Kriens→Malters 6.8 km, Luzern→Emmenbrücke 4.7 km, beide bis zum Zielknoten, ALLES OK.
 - activate: unterwegs ins Spital → näheres Spital (altes bleibt, wenn näher). Entladen schont die Gegend mit dem aktuellen Ziel.
 - Ruckeln: `addGradually()` (compileAsync + 4 Teile/Bild, Handy 2), `prepNav()` 2.5 s nach dem Laden. Messung unter Software-Rendering nicht aussagekräftig (Median 1.1–1.6 s/Bild) – echte Wirkung erst auf Gerät. Annahme, Vertrauen mittel.
