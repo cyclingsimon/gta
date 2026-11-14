@@ -155,12 +155,12 @@ export function buildAmbulance(kind = 'standard') {
   return { root, body, lights, blueOn, blueOff, dizzy, wheels, steerPivots, mats: { white, yellow, red, rear: rearPlane.material } };
 }
 
-/** P-A Lauf 1 (14.11.2026): Rettungswagen nach Vorbild Rettungsdienst LUKS.
- *  Belegt (LUKS-Medienmitteilung 27.09.2017): Grundfahrzeug Mercedes Sprinter 519 CDI, Wechselkoffer von WAS
- *  (Wietmarscher Ambulanz- und Sonderfahrzeuge); WAS 500: Radstand 3665 mm, Front-/Heck-Warnanlage im Koffer integriert,
- *  Blitzer im Kühlergrill, Seiteneinstieg rechts. Doppelbereifung hinten (519 = 5 t) [Annahme, typisch für 5-t-Sprinter].
- *  [Annahme, Vertrauen mittel] Farbschema: weisser Koffer, Battenberg-Band leuchtgelb/rot (2 Reihen) rundum,
- *  rote Konturlinie an der Dachkante, Heck-Warnwinkel rot/gelb, Spiegelschrift «AMBULANZ» vorne – ohne Logos, nur «144» und «Ambulanz».
+/** P-A: Rettungswagen nach Vorbild Rettungsdienst LUKS.
+ *  Referenz Aussehen: 3 Fotos von Simon, 14.11.2026 (vorne rechts, hinten links, vorne vor dem KKL) – nicht im Repo.
+ *  Belegt (LUKS-Medienmitteilung 27.09.2017): Mercedes Sprinter 519 CDI mit WAS-Wechselkoffer; WAS 500: Radstand 3665 mm.
+ *  Lauf 4: Beschriftung nach den Fotos (weiss, rot-oranges Gürtelband mit blauem Streifen, rote Bögen/Dachkontur, blaues Schriftband
+ *  «Ambulance», blaue «144», Star of Life, rote Haube mit Spiegelschrift). Bewusst weggelassen: Teddybär-Grafik, «BABY», LUKS-Logo,
+ *  Mercedes-Stern. Doppelbereifung hinten [Annahme, auf den Fotos nicht eindeutig].
  *  Front zeigt nach +z, Radaufstand y = 0 (wie bisher). Physik/Hitbox liegen in Vehicle und bleiben unverändert. */
 function buildLuksRtw() {
   const root = new THREE.Group();
@@ -195,13 +195,14 @@ function buildLuksRtw() {
   { const ws = add(new THREE.BoxGeometry(1.86, 1.02, 0.04), glass, 0, 2.0, 2.45, false); ws.rotation.x = -Math.atan2(2.78 - 2.08, 2.42 - 1.6); }
   add(new THREE.BoxGeometry(1.3, 0.34, 0.05), black, 0, 1.1, 3.5, false);
   for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(1.2, 0.03, 0.06), chrome, 0, 1.0 + i * 0.1, 3.51, false);
-  add(new THREE.BoxGeometry(2.06, 0.32, 0.22), dark, 0, 0.6, 3.46, false);
+  add(new THREE.BoxGeometry(2.06, 0.32, 0.22), white, 0, 0.6, 3.46, false);  // Stossfänger weiss (Fotos)
   for (const sx of [-1, 1]) {
     add(new THREE.BoxGeometry(0.08, 0.32, 0.22), black, sx * 1.12, 2.0, 2.55, false);
     add(new THREE.BoxGeometry(0.14, 0.04, 0.04), black, sx * 1.05, 2.0, 2.5, false);
   }
   // Fahrgestell, Kotflügel/Radläufe (dunkel), Trittstufe rechts (Seiteneinstieg)
   add(new THREE.BoxGeometry(1.9, 0.3, 6.3), dark, 0, 0.6, 0.15, false);
+  add(new THREE.BoxGeometry(2.2, 0.16, 0.42), black, 0, 0.6, KZ0 - 0.2, false); // Heck-Trittstufe/Stossfänger schwarz (Fotos)
   add(new THREE.BoxGeometry(0.9, 0.12, 0.45), grey, 1.0, 0.5, 0.45, false);
   // Dach: Klimagerät + Dachluke
   add(new THREE.BoxGeometry(0.9, 0.22, 1.0), grey, 0, KY1 + 0.11, -1.6);
@@ -222,7 +223,7 @@ function buildLuksRtw() {
   for (const s of [-1, 1]) {
     const hl = add(new THREE.BoxGeometry(0.42, 0.2, 0.06), headM, s * 0.78, 1.24, 3.46, false); hl.rotation.x = -0.25;
     add(new THREE.BoxGeometry(0.1, 0.12, 0.06), amberM, s * 0.98, 1.2, 3.44, false);
-    add(new THREE.BoxGeometry(0.22, 0.5, 0.05), tailM, s * 1.03, 1.15, KZ0 - 0.02, false);
+    add(new THREE.BoxGeometry(0.3, 0.2, 0.05), tailM, s * 0.95, 0.86, KZ0 - 0.02, false);  // Rückleuchten unten (Fotos)
     add(new THREE.BoxGeometry(0.16, 0.08, 0.04), tailM, s * 0.9, KY1 - 0.08, KZ0 - 0.02, false); // obere Begrenzungsleuchten
   }
   // Warnanlage: Lichtbalken im Alkoven (vorne), Blitzer im Grill, Heck oben links/rechts; Reihenfolge = Wechseltakt
@@ -234,80 +235,102 @@ function buildLuksRtw() {
     [-0.98, KY1 - 0.24, KZ0 - 0.03, 0.26, 0.2], [0.98, KY1 - 0.24, KZ0 - 0.03, 0.26, 0.2], [-1.16, KY1 - 0.18, KZ1 - 0.25, 0.04, 0.16], [1.16, KY1 - 0.18, KZ1 - 0.25, 0.04, 0.16]]) {
     lights.push(add(new THREE.BoxGeometry(w, h, x * x > 1.3 ? 0.3 : 0.06), blueOff, x, y, z, false));
   }
-  // --- Beschriftung/Markierung: EIN Canvas-Atlas (220 px/m) für Koffer links/rechts, Kabine links/rechts, Heck, Alkoven-Front → 1 Zeichenaufruf
+  // --- Beschriftung/Markierung nach 3 Fotos von Simon (14.11.2026): EIN Canvas-Atlas (220 px/m) → 1 Zeichenaufruf
+  // Weiss; leuchtrot-oranges Gürtelband mit schmalem blauem Mittelstreifen rundum; rote Bögen an Koffer-Vorder- und -Hinterkante,
+  // rote Dachkontur; blaues schräges Schriftband «Ambulance»; blaue «144»; Star of Life; Haube rot mit blauer Kante + Spiegelschrift.
   const PX = 220, A = document.createElement('canvas'); A.width = 1024; A.height = 2048;
   const g = A.getContext('2d')!;
-  const REG = { sL: [0, 0, 968, 513], sR: [0, 520, 968, 513], cL: [0, 1040, 517, 451], cR: [520, 1040, 517, 451], rear: [0, 1500, 506, 513], front: [520, 1500, 506, 115] } as Record<string, number[]>;
-  const YEL = '#E3EE3A', RED = '#D8343A', BLUE = '#0E4C92', FROST = '#C9D6DF', GL = '#4F6F8C', INK = '#3b302b';
-  const batten = (x0: number, x1: number, yTop: number, flip: boolean) => { // 2 Reihen Battenberg, Feld 0.3 m (Koordinaten in px im Bereich)
-    const q = 0.3 * PX; let k = 0;
-    for (let x = x0; x < x1; x += q, k++) for (let r = 0; r < 2; r++) { g.fillStyle = ((k + r + (flip ? 1 : 0)) % 2) ? RED : YEL; g.fillRect(x, yTop + r * q, Math.min(q, x1 - x), q); }
+  const REG = { sL: [0, 0, 968, 513], sR: [0, 520, 968, 513], cL: [0, 1040, 517, 451], cR: [520, 1040, 517, 451], rear: [0, 1500, 506, 513],
+    front: [520, 1500, 506, 115], hood: [520, 1630, 440, 157], star: [520, 1800, 128, 128], nose: [520, 1940, 440, 84] } as Record<string, number[]>;
+  const RED = '#E8472B', BLUE = '#1F5FAE', WIN = '#26313B', INK = '#3b302b';
+  const BAND = [0.45, 0.82], STRIPE = [0.6, 0.67];           // Gürtelband (m über Koffer-Unterkante) und blauer Streifen
+  const starOfLife = (cx: number, cy: number, r: number) => { // sechsarmiger Stern (3 Balken), blau, weiss umrandet
+    g.save(); g.translate(cx, cy);
+    for (const pass of [0, 1]) for (let k = 0; k < 3; k++) { g.save(); g.rotate(k * Math.PI / 3); g.fillStyle = pass ? BLUE : '#FFFFFF';
+      const bw = r * (pass ? 0.36 : 0.5), bl = r * (pass ? 0.92 : 1.0); g.fillRect(-bw / 2, -bl, bw, bl * 2); g.restore(); }
+    g.restore();
   };
-  // Koffer-Seite: s = Meter ab Heck (0..4.4), v = Meter ab Koffer-Unterkante (0..2.33)
+  const banner = (x0: number, x1: number, yTop: number, hgt: number, slantLeft: boolean, font: number) => { // schräg geschnittenes Schriftband
+    const sl = hgt * 0.6; g.fillStyle = BLUE; g.beginPath();
+    if (slantLeft) { g.moveTo(x0 + sl, yTop); g.lineTo(x1, yTop); g.lineTo(x1, yTop + hgt); g.lineTo(x0, yTop + hgt); }
+    else { g.moveTo(x0, yTop); g.lineTo(x1 - sl, yTop); g.lineTo(x1, yTop + hgt); g.lineTo(x0, yTop + hgt); }
+    g.fill(); g.fillStyle = '#FFFFFF'; g.font = `bold ${font}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ambulance', (x0 + x1) / 2, yTop + hgt * 0.55);
+  };
+  // Koffer-Seite: s = Meter ab Heck (0..4.4), v = Meter ab Koffer-Unterkante (0..2.33); frontRight = Fahrzeugfront rechts im Bild (linke Seite)
   const kofferSeite = (key: string, frontRight: boolean) => {
     const [ox, oy, w, h] = REG[key]; g.save(); g.translate(ox, oy); g.beginPath(); g.rect(0, 0, w, h); g.clip();
     const X = (s: number) => (frontRight ? s : 4.4 - s) * PX, Y = (v: number) => h - v * PX;
     const rectS = (s0: number, s1: number, v0: number, v1: number) => { const a = X(s0), b = X(s1); g.fillRect(Math.min(a, b), Y(v1), Math.abs(b - a), (v1 - v0) * PX); };
-    g.fillStyle = RED; rectS(0, 4.4, 2.2, 2.27);                                     // Konturlinie Dachkante [Annahme]
-    batten(0, w, Y(0.95), !frontRight);                                                // Battenberg-Band v 0.35..0.95
-    g.fillStyle = RED; rectS(0, 4.4, 0.95, 1.0);
-    if (frontRight) { // linke Fahrzeugseite: zwei Milchglasfenster
-      g.fillStyle = FROST; rectS(2.3, 3.3, 1.45, 2.0); rectS(3.5, 4.2, 1.45, 2.0);
-    } else {          // rechte Seite: Seiteneinstieg vorne (Tür mit Fenster), Schrankklappe hinten
-      g.strokeStyle = INK; g.lineWidth = 3; const a = X(3.15), b = X(4.25); g.strokeRect(Math.min(a, b), Y(2.1), Math.abs(b - a), 2.1 * PX - 4);
-      g.fillStyle = FROST; rectS(3.3, 4.1, 1.35, 1.95); g.fillStyle = '#9AA0A6'; rectS(3.25, 3.4, 1.05, 1.15);
-      const c = X(0.2), d = X(1.2); g.strokeRect(Math.min(c, d), Y(1.9), Math.abs(d - c), 0.85 * PX);
+    g.fillStyle = RED; rectS(0, 4.4, BAND[0], BAND[1]); rectS(0, 4.4, 2.2, 2.3);                       // Gürtelband, Dachkontur
+    g.beginPath(); g.moveTo(X(0), Y(2.3)); g.lineTo(X(0.22), Y(2.3)); g.quadraticCurveTo(X(0.4), Y(1.15), X(1.45), Y(BAND[1])); g.lineTo(X(0), Y(BAND[1])); g.closePath(); g.fill(); // Heck-Bogen
+    g.strokeStyle = RED; g.lineWidth = 0.15 * PX; g.beginPath(); g.moveTo(X(3.8), Y(BAND[1] - 0.06)); g.quadraticCurveTo(X(4.32), Y(0.9), X(4.33), Y(2.25)); g.stroke(); // Front-Bogen zur Dachkante
+    g.fillStyle = BLUE; rectS(0, 4.4, STRIPE[0], STRIPE[1]);
+    g.fillStyle = WIN;
+    if (frontRight) { // linke Seite (Foto Heck): Fenster Mitte, Klappe hinten unten, Band vorne oben
+      rectS(2.05, 2.5, 1.2, 1.95); rectS(2.7, 3.15, 1.2, 1.95);
+      g.strokeStyle = INK; g.lineWidth = 3; { const a = X(0.55), b = X(1.25); g.strokeRect(Math.min(a, b), Y(1.25), Math.abs(b - a), 1.1 * PX); }
+      const a = X(1.7), b = X(3.95); banner(Math.min(a, b), Math.max(a, b), Y(2.17), 0.27 * PX, false, 46);
+      g.fillStyle = BLUE; g.font = 'bold 110px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText('144', X(1.15), Y(1.45));
+    } else {          // rechte Seite (Foto vorne rechts): Band hinten oben, 144 darunter, 2 Fenster, Seitentür vorne
+      rectS(2.2, 2.65, 1.2, 1.95); rectS(2.8, 3.25, 1.2, 1.95);
+      g.strokeStyle = INK; g.lineWidth = 3; { const a = X(3.45), b = X(4.25); g.strokeRect(Math.min(a, b), Y(2.1), Math.abs(b - a), 2.05 * PX); }
+      g.fillStyle = '#9AA0A6'; rectS(3.5, 3.6, 1.0, 1.1);
+      const a = X(0.35), b = X(2.1); banner(Math.min(a, b), Math.max(a, b), Y(2.17), 0.27 * PX, true, 46);
+      g.fillStyle = BLUE; g.font = 'bold 110px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText('144', X(1.05), Y(1.4));
     }
-    g.fillStyle = BLUE; g.font = 'bold 120px system-ui, sans-serif'; g.textBaseline = 'alphabetic'; g.textAlign = 'center';
-    g.fillText('144', X(frontRight ? 1.15 : 1.9), Y(1.15)); // gross, Mitte hinten
-    g.font = 'bold 54px system-ui, sans-serif'; g.fillStyle = RED; g.fillText('Ambulanz', X(frontRight ? 1.15 : 1.9), Y(1.95));
     g.fillStyle = '#15181C'; g.beginPath(); g.arc(X(1.85), Y(-0.27), 0.6 * PX, Math.PI, 0); g.fill(); // Radlauf hinten
     g.restore();
   };
   kofferSeite('sL', true); kofferSeite('sR', false);
-  // Kabinen-Seite: Bereich z 1.15..3.5 (2.35 m), y 0.42..2.47; auf das Kabinenprofil zugeschnitten
+  // Kabinen-Seite: Bereich z 1.15..3.5 (2.35 m), y 0.42..2.47; auf das Kabinenprofil zugeschnitten; Band auf gleicher Höhe wie am Koffer
   const kabine = (key: string, frontRight: boolean) => {
     const [ox, oy, w, h] = REG[key]; g.save(); g.translate(ox, oy);
     const X = (z: number) => (frontRight ? z - 1.15 : 3.5 - z) * PX, Y = (y: number) => h - (y - 0.42) * PX;
     const P = [[3.45, 0.42], [3.52, 0.95], [3.44, 1.33], [2.78, 1.6], [2.08, 2.42], [1.95, 2.5], [1.15, 2.5], [1.15, 0.42]];
     g.beginPath(); P.forEach(([z, y], i) => (i ? g.lineTo(X(z), Y(y)) : g.moveTo(X(z), Y(y)))); g.closePath(); g.clip();
-    batten(0, w, Y(1.47), !frontRight);
-    g.fillStyle = RED; g.fillRect(0, Y(0.87), w, 0.05 * PX);
-    g.fillStyle = GL; g.beginPath(); for (const [i, [z, y]] of ([[1.3, 1.62], [2.62, 1.62], [2.04, 2.33], [1.3, 2.33]] as number[][]).entries()) (i ? g.lineTo(X(z), Y(y)) : g.moveTo(X(z), Y(y))); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(Math.min(X(1.45), X(1.6)), Y(2.25), 0.15 * PX, 0.55 * PX);
+    g.fillStyle = RED; g.fillRect(0, Y(KY0 + BAND[1]), w, (BAND[1] - BAND[0]) * PX);
+    g.fillStyle = BLUE; g.fillRect(0, Y(KY0 + STRIPE[1]), w, (STRIPE[1] - STRIPE[0]) * PX);
+    g.fillStyle = WIN; g.beginPath(); for (const [i, [z, y]] of ([[1.3, 1.62], [2.62, 1.62], [2.04, 2.33], [1.3, 2.33]] as number[][]).entries()) (i ? g.lineTo(X(z), Y(y)) : g.moveTo(X(z), Y(y))); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(Math.min(X(1.45), X(1.6)), Y(2.25), 0.15 * PX, 0.55 * PX);
+    starOfLife(X(1.68), Y(0.93), 0.16 * PX);
     g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.moveTo(X(2.7), Y(0.55)); g.lineTo(X(2.7), Y(1.6)); g.moveTo(X(1.25), Y(0.55)); g.lineTo(X(1.25), Y(2.4)); g.stroke(); // Türfugen
     g.fillStyle = '#15181C'; g.beginPath(); g.arc(X(2.25), Y(0.45), 0.58 * PX, Math.PI, 0); g.fill(); // Radlauf vorne
     g.restore();
   };
   kabine('cL', true); kabine('cR', false);
-  { // Heck: zwei Flügeltüren mit Milchglas, Warnwinkel rot/leuchtgelb unten, kleine «144»
+  { // Heck: zwei Flügeltüren mit dunklen Fenstern, Schriftband oben, «144» rechte Tür, rote Bögen unten; Gürtelband läuft durch
     const [ox, oy, w, h] = REG.rear; g.save(); g.translate(ox, oy); g.beginPath(); g.rect(0, 0, w, h); g.clip();
-    g.fillStyle = RED; g.fillRect(0, 0, w, 0.07 * PX);
-    g.fillStyle = FROST; g.fillRect(0.2 * PX, 0.32 * PX, 0.75 * PX, 0.55 * PX); g.fillRect(w - 0.95 * PX, 0.32 * PX, 0.75 * PX, 0.55 * PX);
-    g.save(); g.beginPath(); g.rect(0, h - 1.0 * PX, w, 1.0 * PX); g.clip();
-    for (let x = -w, k = 0; x < 2 * w; x += 0.2 * PX, k++) { g.fillStyle = k % 2 ? RED : YEL; g.beginPath(); const y0 = h - 1.0 * PX;
-      if (x < w / 2) { g.moveTo(x, h); g.lineTo(x + 0.2 * PX, h); g.lineTo(x + 0.2 * PX + 1.0 * PX, y0); g.lineTo(x + 1.0 * PX, y0); }
-      else { g.moveTo(x, h); g.lineTo(x + 0.2 * PX, h); g.lineTo(x + 0.2 * PX - 1.0 * PX, y0); g.lineTo(x - 1.0 * PX, y0); }
-      g.fill(); }
-    g.restore();
+    const Yv = (v: number) => h - v * PX;
+    g.fillStyle = RED; g.fillRect(0, 0, w, 0.08 * PX); g.fillRect(0, Yv(BAND[1]), w, (BAND[1] - BAND[0]) * PX);
+    for (const x0 of [0.05, 1.18]) { g.strokeStyle = RED; g.lineWidth = 0.13 * PX; g.beginPath(); g.moveTo(x0 * PX, Yv(0.12)); g.quadraticCurveTo((x0 + 0.15) * PX, Yv(BAND[0] - 0.02), (x0 + 1.05) * PX, Yv(BAND[0] - 0.05)); g.stroke(); }
+    g.fillStyle = BLUE; g.fillRect(0, Yv(STRIPE[1]), w, (STRIPE[1] - STRIPE[0]) * PX);
+    banner(0.35 * PX, 1.95 * PX, 0.13 * PX, 0.22 * PX, true, 38);
+    g.fillStyle = WIN; g.fillRect(0.28 * PX, 0.5 * PX, 0.55 * PX, 0.55 * PX); g.fillRect(w - 0.83 * PX, 0.5 * PX, 0.55 * PX, 0.55 * PX);
     g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2, 0.1 * PX); g.lineTo(w / 2, h); g.stroke(); g.strokeRect(2, 0.1 * PX, w - 4, h - 0.1 * PX - 2);
-    g.fillStyle = '#9AA0A6'; g.fillRect(w / 2 - 22, 1.1 * PX, 10, 26); g.fillRect(w / 2 + 12, 1.1 * PX, 10, 26);
-    g.fillStyle = BLUE; g.font = 'bold 72px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('144', w / 2, 1.08 * PX);
+    g.fillStyle = '#9AA0A6'; g.fillRect(w / 2 - 22, 1.15 * PX, 10, 26); g.fillRect(w / 2 + 12, 1.15 * PX, 10, 26);
+    g.fillStyle = BLUE; g.font = 'bold 80px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText('144', w * 0.76, 1.32 * PX);
     g.restore();
   }
-  { // Alkoven-Front: Spiegelschrift «AMBULANZ» (im Rückspiegel lesbar)
-    const [ox, oy, w, h] = REG.front; g.save(); g.translate(ox + w, oy); g.scale(-1, 1);
-    g.fillStyle = RED; g.font = 'bold 50px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AMBULANZ', w / 2, h * 0.7);
-    g.restore();
+  { // Alkoven-Front: rote Kontur an den Koffer-Vorderkanten (Fortsetzung der Dachkontur)
+    const [ox, oy, w, h] = REG.front; g.fillStyle = RED; g.fillRect(ox, oy, 0.08 * PX, h); g.fillRect(ox + w - 0.08 * PX, oy, 0.08 * PX, h);
   }
+  { // Motorhaube (Schräge): hinten weiss mit blauer Spiegelschrift «Ambulance», vorne rot
+    const [ox, oy, w, h] = REG.hood; g.fillStyle = RED; g.fillRect(ox, oy + h * 0.5, w, h * 0.5);
+    g.save(); g.translate(ox + w, oy); g.scale(-1, 1); g.fillStyle = BLUE; g.font = 'bold 52px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ambulance', w / 2, h * 0.27); g.restore();
+  }
+  { // Haubenvorderkante (oberer Teil der Front): rot, unten blaue Kante
+    const [ox, oy, w, h] = REG.nose; g.fillStyle = RED; g.fillRect(ox, oy, w, h * 0.75); g.fillStyle = BLUE; g.fillRect(ox, oy + h * 0.75, w, h * 0.2);
+  }
+  { const [ox, oy, w] = REG.star; starOfLife(ox + w / 2, oy + w / 2, w * 0.46); } // Star of Life (Frontscheibe oben)
   const atlasTex = new THREE.CanvasTexture(A); atlasTex.colorSpace = THREE.SRGBColorSpace; atlasTex.anisotropy = 4;
   const decalM = toon('#ffffff', { map: atlasTex, transparent: true, alphaTest: 0.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  const decal = (key: string, w: number, h: number, ry: number, x: number, y: number, z: number) => {
-    const [rx, rY, rw, rh] = REG[key], q = new THREE.PlaneGeometry(w, h), uv = q.getAttribute('uv');
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, (rx + uv.getX(i) * rw) / A.width, 1 - (rY + (1 - uv.getY(i)) * rh) / A.height);
-    q.rotateY(ry); q.translate(x, y, z); return q;
+  const decal = (key: string, w: number, h: number, ry: number, x: number, y: number, z: number, rx = 0) => {
+    const [rx0, rY, rw, rh] = REG[key], q = new THREE.PlaneGeometry(w, h), uv = q.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (rx0 + uv.getX(i) * rw) / A.width, 1 - (rY + (1 - uv.getY(i)) * rh) / A.height);
+    if (rx) q.rotateX(rx); q.rotateY(ry); q.translate(x, y, z); return q;
   };
   const KH = KY1 - KY0, KL = KZ1 - KZ0;
+  const hoodA = Math.atan2(1.6 - 1.33, 3.44 - 2.78), noseA = Math.atan2(3.52 - 3.44, 1.33 - 0.95), wsA = Math.atan2(2.78 - 2.08, 2.42 - 1.6);
   body.add(new THREE.Mesh(mergeGeometries([
     decal('sL', KL, KH, -Math.PI / 2, -KW / 2 - 0.006, KY0 + KH / 2, KZ0 + KL / 2),
     decal('sR', KL, KH, Math.PI / 2, KW / 2 + 0.006, KY0 + KH / 2, KZ0 + KL / 2),
@@ -315,6 +338,9 @@ function buildLuksRtw() {
     decal('cR', 2.35, 2.05, Math.PI / 2, 1.016, 0.42 + 2.05 / 2, 1.15 + 2.35 / 2),
     decal('rear', KW, KH, Math.PI, 0, KY0 + KH / 2, KZ0 - 0.006),
     decal('front', KW, 0.52, 0, 0, 2.77, KZ1 + 0.416),
+    decal('hood', 2.0, Math.hypot(0.66, 0.27), 0, 0, (1.33 + 1.6) / 2 + 0.008, (3.44 + 2.78) / 2 + 0.003, -Math.PI / 2 + hoodA),
+    decal('nose', 2.0, 0.2, 0, 0, 1.235, 3.462 + 0.008, -noseA),
+    decal('star', 0.36, 0.36, 0, 0, 2.0 + 0.36 * Math.cos(wsA) + 0.025 * Math.sin(wsA), 2.45 - 0.36 * Math.sin(wsA) + 0.025 * Math.cos(wsA), -wsA),
   ], false)!, decalM));
   // Schwindel-Sternchen (bei Remplern)
   const dizzy = new THREE.Group();

@@ -4,6 +4,46 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 14.11.2026 22:55 – Lauf 4
+
+### Gemacht
+**Rettungswagen nach Fotos** – Referenz: **3 Fotos von Simon, 14.11.2026** (schräg vorne rechts; schräg hinten links «Baby Ambulance»; vorne vor dem KKL). Fotos nicht im Repo. Umgesetzt im Canvas-Atlas von `buildLuksRtw()` (weiterhin 1 Zeichenaufruf für alle Beschriftungen):
+- Grundfarbe weiss; **kein Battenberg, keine gelben Flächen, keine Warnwinkel** mehr (Lauf-1-Annahme war falsch und ist entfernt).
+- Rot-oranges Gürtelband `#E8472B` rundum (Koffer, Kabinentüren, Heck) auf gleicher Höhe (0.45–0.82 m über Koffer-Unterkante = unter den Fenstern), darin blauer Streifen `#1F5FAE`.
+- Rote Dachkontur; an der Koffer-Vorderkante schwingt ein roter Bogen vom Band zur Dachkante; an der Hinterkante roter Keil/Bogen von der Dachkante bis ins Band.
+- Blaues, schräg geschnittenes Schriftband «Ambulance» oben an beiden Seitenwänden (rechts hinten, links vorne – wie auf den Fotos) und oben am Heck; blaue «144» gross an der Seite und auf der rechten Hecktür.
+- Star of Life (sechsarmig, blau, ohne Äskulapstab) auf beiden Kabinentüren und oben mittig auf der Frontscheibe (neue Atlasfläche, schräg auf der Scheibe).
+- Motorhaube: hinten weiss mit blauer Spiegelschrift «Ambulance», vorne rot; Haubenvorderkante rot mit blauer Unterkante (neue Atlasflächen «hood», «nose»).
+- Dunkle Fenster statt Milchglas (2 je Seite, 2 in den Hecktüren); Seitentür rechts; Klappe links hinten.
+- Geometrie nur wo nötig: Frontstossfänger weiss (war dunkel), Heck-Trittstufe schwarz (neu), Rückleuchten unten statt hoch. Lichtbalken, Grill-Blitzer und Heck-Eckleuchten waren schon an den richtigen Stellen.
+- Unverändert: Schnittstelle, Physik, Hitbox, `vcap`, Anzahl und Reihenfolge der 8 `lights`.
+- Bewusst nicht übernommen: «BABY», Teddybär-Grafik, LUKS-Logo, Mercedes-Stern, Kontrollschild.
+
+**Kleinmöbel** (Nebenaufgabe) – neue Datei `src/real/street.ts`, Schalter `REAL.street`:
+| Art | Dreiecke (Budget ≤ 32) |
+|---|---|
+| Abfallkübel (grau, Rundkübel am Pfosten) | 23 |
+| Robidog (grün) | 20 |
+| Post-Briefkasten (gelb, ohne Logo) | 20 |
+| Hydrant (rot) | 18 |
+Ein InstancedMesh je Art über `realMaterial()` (≤ 4 Zeichenaufrufe ohne Zellteilung). `buildStreetFurniture(props, roads, mask, groundY, budget = 25000)` leitet Standorte her **[Annahme, Vertrauen niedrig–mittel – keine OSM-Standorte in props.json]**: Kübel an jeder Haltestelle und an jeder 8. Bank, Robidog an `path` alle ~1000 m, Hydrant an `residential`/`living_street` alle ~400 m, Briefkasten an ~15 % der Haltestellen im Ortskern (Box x −900..600, z −500..900). Grobe Obergrenze Luzern ohne Maskenfilter: ~470 Kübel, ~160 Robidog, ~450 Hydranten, ~20 Briefkästen ≈ 22 600 Dreiecke; zusätzlich **harter Deckel** (Listen gleichmässig ausdünnen) – Test: 24 839 bei Deckel 25 000, 4 969 bei Deckel 5 000.
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei (nach Merge c65fe23); Build `OUT=dist_pa` läuft durch; Testszene ohne JS-Fehler; `real_shots.py` «BUDGET je Baustein: OK» (inkl. neuer Kleinmöbel- und Deckel-Prüfung). Screenshots (`ambFR` vorne rechts, `ambHL` hinten links, `ambR` rechte Seite, `ambF` vorne) neben die Fotos gehalten.
+**Ehrliche Beurteilung gegen die Fotos:** Farbschema, Band mit blauem Streifen, Schriftband, «144», Star of Life, rote Haube mit Spiegelschrift, dunkle Fenster und weisser Stossfänger stimmen jetzt sichtbar mit den Fotos überein. Abweichungen: (1) der rote Heck-Keil ist auf der rechten Seite eher zu gross/flächig – Foto «vorne rechts» zeigt dort eher einen Bogen; (2) die Rundung des Alkovens/Kofferbugs ist auf den Fotos weicher (Modell kantig); (3) Lichtbalken im Modell schwarz mit 2 blauen Feldern statt durchgehend blau (Anzahl `lights` muss gleich bleiben); (4) Grill ohne silbernen Rahmen mit blauer Linie; (5) die rote Haubenfläche reicht auf dem KKL-Foto weiter nach oben als im Modell. Vertrauen: hoch für Farben und Elemente, mittel für genaue Lage/Grösse der Bögen.
+Ungeprüft: echtes Spiel (kein Weltlauf), Lesbarkeit der Schrift in Fahrtdistanz, Kleinmöbel-Standorte mit echter Maske.
+
+### Einbau
+- Rettungswagen: kein Einbau nötig (wirkt sofort nach Merge).
+- **E8** (Kleinmöbel), world.ts `buildWorld` direkt nach E6:
+  `group.add(...buildStreetFurniture(props, d.roads, mask, (x, z) => terrain.height(x, z)));` mit `import { buildStreetFurniture } from './real/street';` – Erwartung ≤ 25 000 Dreiecke für ganz Luzern, ≤ 4 Netze (InstancedMesh, nicht in Zellen geteilt → immer gezeichnet; falls zu teuer: `budget` auf 12 000 setzen oder die Netze mit `chunkInstanced(im, 1000)` teilen).
+
+### Offen
+- Heck-Keil rechts als Bogen statt Fläche; weichere Alkovenrundung; Grill-Rahmen.
+- Kleinmöbel-Standorte aus OSM (Daten-Pipeline) statt hergeleitet.
+
+---
+
 ## 14.11.2026 21:30 – Lauf 3
 
 Anlass: nach Einbau Lauf 2 Startansicht 2.475 Mio. Dreiecke / 852 Aufrufe (Budget 2.5 Mio.). Ziel: neue Bausteine ≤ +30 000 Dreiecke und ≤ +25 Zeichenaufrufe gegenüber `?real=0`.
@@ -217,7 +257,7 @@ Felder `ctype: CarType[]; cidx: number[]; cmesh: Record<CarType, THREE.Instanced
 | LUKS-Rettungswagen: Mercedes Sprinter 519 CDI, Wechselkoffer, Lieferant WAS; 15 Rettungsfahrzeuge | https://www.luks.ch/sites/default/files/2017-09/Medienmitteilung_neue%20Rettungfahrzeuge_20170927.pdf | belegt (Stand 2017) |
 | WAS 500 Koffer: Radstand 3665 mm, 5 t, integrierte Front-/Heck-LED-Warnanlage, Blitzer im Grill, Seiteneinstieg | https://www.was-vehicles.com/en/vehicles/was-500-box-body-ambulances/was-500-emergency-ambulance | belegt (Hersteller, nicht LUKS-spezifisch) |
 | Battenberg-Markierung wird in der Schweiz verwendet (Farben dort nicht genannt) | https://dewiki.de/Lexikon/Battenberg-Markierung | belegt (allgemein) |
-| LUKS-Farbschema leuchtgelb/rot, rote Konturlinie, Warnwinkel hinten | – | **Annahme, Vertrauen niedrig–mittel** (Fotos nicht einsehbar) |
+| LUKS-Farbschema | 3 Fotos von Simon, 14.11.2026 | **in Lauf 4 korrigiert** – die Lauf-1-Annahme (Battenberg leuchtgelb/rot, Warnwinkel) war falsch |
 | VBL: «mainly white, with blue finish»; lighTram doppelgelenkig, Gelenk-Trolleybusse | https://en.wikipedia.org/wiki/Verkehrsbetriebe_Luzern | belegt; Blauton Annahme |
 | PostAuto: gelbe Busse, Posthorn | https://www.postauto.ch/de/ueber-uns-und-aktuelles/organisation/die-marke | belegt; dunkler Schweller, roter Schriftzug = Annahme |
 | AAGS: rot-weiss | https://en.wikipedia.org/wiki/Auto_AG_Schwyz | belegt; Aufteilung Annahme |

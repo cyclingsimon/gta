@@ -8,6 +8,7 @@ import { tris, hash2 } from '../../src/real/geo';
 import { TREE_SPECIES, treeGeometry, treeTris, buildRealTrees, type TreeSpecies } from '../../src/real/trees';
 import { FURNITURE, furnitureAll, buildFurniture, type FurnitureKind } from '../../src/real/furniture';
 import { buildStops, buildLamps, realBenchGeometry } from '../../src/real/props';
+import { streetTris, streetGeometry, buildStreetFurniture } from '../../src/real/street';
 import { sparTris, sparGeometry, sparCarGeometry, type SparKind } from '../../src/real/spar';
 import { CAR_TYPES, carGeometry, carColor, veloGeometry, veloRiderGeometry, realCarMeshes, buildParkedCars, buildParkedVelos, type CarType } from '../../src/real/cars';
 
@@ -49,9 +50,9 @@ CAR_TYPES.forEach((c: CarType, i: number) => { const { body, fixed } = carGeomet
 { const g = veloGeometry(); for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true })); m.position.set(12 + i * 1.2, 0, 10); m.rotation.y = 1.2; scene.add(m); } stats['velo'] = tris(g); }
 
 const VIEWS: Record<string, number[]> = { // Kamera x,y,z → Ziel x,y,z
-  amb: [-7.5, 3.2, 9, -12, 1.6, 0], amb2: [-17.5, 4.2, -8, -12, 1.6, -1], amb3: [-4, 6, 14, -1, 1.5, 0], ambL: [-22, 2.2, 3, -12, 1.6, -0.5], ambF: [-12, 2.4, 9, -12, 1.6, 0],
+  amb: [-7.5, 3.2, 9, -12, 1.6, 0], amb2: [-17.5, 4.2, -8, -12, 1.6, -1], amb3: [-4, 6, 14, -1, 1.5, 0], ambL: [-22, 2.2, 3, -12, 1.6, -0.5], ambR: [-6.4, 3.4, -0.3, -12, 1.6, -0.3], ambFR: [-8.2, 2.0, 6.5, -12, 1.4, 0.5], ambHL: [-16.2, 2.2, -7.5, -12, 1.5, -1], ambF: [-12, 2.4, 9, -12, 1.6, 0],
   bus: [-42, 5, 50, -26, 2, 28], bus2: [-5, 7, 52, -10, 1.5, 25], bus3: [-36, 9, 0, -30, 2, 24],
-  baum: [-15, 12, -8, -15, 8, -45], moebel: [-6, 4.5, -10, -4, 1, -20], moebel2: [-16, 3, -13, -16, 1, -20], autos: [-2, 4.5, 20, -4, 0.8, 10], total: [-20, 45, 60, -5, 0, 0], spar: [86, 6, 152, 86, 1.5, 140], strasse: [70, 14, 30, 100, 0, 62], strasse2: [92, 4, 48, 80, 1.5, 57], baum2: [70, 14, 120, 90, 4, 92], halle: [86, 3, 68, 82, 1.5, 55], kand: [92, 3.5, 47, 95, 3, 40],
+  baum: [-15, 12, -8, -15, 8, -45], moebel: [-6, 4.5, -10, -4, 1, -20], moebel2: [-16, 3, -13, -16, 1, -20], autos: [-2, 4.5, 20, -4, 0.8, 10], total: [-20, 45, 60, -5, 0, 0], spar: [86, 6, 152, 86, 1.5, 140], klein: [63, 1.6, 150, 63, 0.6, 146], strasse: [70, 14, 30, 100, 0, 62], strasse2: [92, 4, 48, 80, 1.5, 57], baum2: [70, 14, 120, 90, 4, 92], halle: [86, 3, 68, 82, 1.5, 55], kand: [92, 3.5, 47, 95, 3, 40],
 };
 const v = new URLSearchParams(location.search).get('v') || 'amb';
 const cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 2000); const V = VIEWS[v] || VIEWS.amb;
@@ -121,6 +122,14 @@ function stadt(on: boolean) {
 }
 { const a = stadt(false), b = stadt(true); stats['stadt_alt_dreiecke'] = a.t; stats['stadt_neu_dreiecke'] = b.t; stats['stadt_delta_dreiecke'] = b.t - a.t;
   stats['stadt_alt_netze'] = a.calls; stats['stadt_neu_netze'] = b.calls; stats['stadt_delta_netze'] = b.calls - a.calls; (window as any).__stadt = { alt: a.seen, neu: b.seen }; }
+// --- Lauf 4: Kleinmöbel (z = 146) + Budget-Deckel
+{ (['kuebel', 'robidog', 'briefkasten', 'hydrant'] as const).forEach((k, i) => { const m = new THREE.Mesh(streetGeometry(k), (street.find((o: any) => o.name === 'lamps') as any)?.material); m.position.set(60 + i * 2, 0, 146); scene.add(m); });
+  Object.entries(streetTris()).forEach(([k, n]) => (stats['klein_' + k] = n));
+  const mk = { at: () => 0, isRoad: (x: number, z: number) => Math.abs(z - 60) < 4 };
+  const P = { stops: Array.from({ length: 400 }, (_, i) => [i * 3, 50, 'S']), benches: Array.from({ length: 900 }, (_, i) => [i * 2, 40]) };
+  const rd = [{ p: [[0, 60], [200000, 60]], c: 'residential', w: 8 }, { p: [[0, 70], [160000, 70]], c: 'path', w: 2 }];
+  const sum = (L: THREE.InstancedMesh[]) => L.reduce((a, im) => a + tris(im.geometry) * im.count, 0);
+  stats['klein_deckel_25000'] = sum(buildStreetFurniture(P, rd, mk, flat)); stats['klein_deckel_5000'] = sum(buildStreetFurniture(P, rd, mk, flat, 5000)); }
 if (new URLSearchParams(location.search).get('nacht')) NIGHT.value = 1;
 (window as any).__stats = stats; (window as any).__ready = true;
 if (NIGHT.value) { renderer.setClearColor('#2B3060', 1); scene.children.forEach((c: any) => { if (c.isHemisphereLight) c.intensity = 0.5; if (c.isDirectionalLight) c.intensity = 0.4; }); renderer.render(scene, cam); }
