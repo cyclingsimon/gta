@@ -276,7 +276,9 @@ export class Buses {
         const [ax, az] = this.at(b.line, sFront), [bx, bz] = this.at(b.line, sFront - b.segL);
         const cx = (ax + bx) / 2, cz = (az + bz) / 2;
         const sl = Math.hypot(ax - bx, az - bz) || 1, ox = -(az - bz) / sl * b.yo, oz = (ax - bx) / sl * b.yo; // nach rechts ausweichen
-        seg.position.set(cx + ox, Math.max(this.terrain.height(ax, az), this.terrain.height(bx, bz)) , cz + oz);
+        const ref = (b as any).ty ?? (isNaN(this.terrain.tunnelAt(cx, cz)) ? undefined : -1e6); // 14zg: Tunnel
+        const yy = Math.max(this.terrain.height(ax, az, ref), this.terrain.height(bx, bz, ref)); (b as any).ty = yy;
+        seg.position.set(cx + ox, yy, cz + oz);
         seg.rotation.y = Math.atan2(ax - bx, az - bz);
         sFront -= b.segL + b.gap;
       }

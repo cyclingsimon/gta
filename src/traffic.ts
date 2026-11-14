@@ -97,7 +97,7 @@ export class Traffic {
     return best;
   }
 
-  private spawnCar(c: Car, pls: TrafficPlayer[]) {
+  private spawnCar(c: Car, pls: TrafficPlayer[]) { (c as any).ty = undefined;
     const pl = pls[Math.floor(this.rnd() * pls.length)];
     for (let k = 0; k < 40; k++) {
       const a = this.carSpawn[Math.floor(this.rnd() * this.carSpawn.length)];
@@ -257,16 +257,18 @@ export class Traffic {
     this.stars.instanceMatrix.needsUpdate = true;
   }
 
+  /** 14zg: Höhe mit Ebene (Tunnel oder Gelände), gemerkt je Fahrzeug */
+  private hy(c: any, x: number, z: number) { const T = this.terrain; const ref = c.ty ?? (isNaN(T.tunnelAt(x, z)) ? undefined : -1e6); const y = T.height(x, z, ref); c.ty = y; return y; }
   private draw() {
     let i = 0, ib = 0;
     for (const c of this.cars) {
       if (c.bus) {
-        if (c.alive) { this.e.set(0, c.h, 0); this.q.setFromEuler(this.e); this.p.set(c.x, this.terrain.height(c.x, c.z), c.z); this.sc.set(1, 1, 1); } else this.sc.set(0, 0, 0);
+        if (c.alive) { this.e.set(0, c.h, 0); this.q.setFromEuler(this.e); this.p.set(c.x, this.hy(c, c.x, c.z), c.z); this.sc.set(1, 1, 1); } else this.sc.set(0, 0, 0);
         this.m.compose(this.p, this.q, this.sc); this.busBody.setMatrixAt(ib, this.m); this.busWin.setMatrixAt(ib, this.m); ib++; continue;
       }
       if (c.alive) { const f = c.fly! > 0, ox = f ? c.fx! : 0, oz = f ? c.fz! : 0;
         this.e.set(f ? c.roll || 0 : 0, c.h + (f ? c.spin! : 0), 0); this.q.setFromEuler(this.e);
-        this.p.set(c.x + ox, this.terrain.height(c.x + ox, c.z + oz) + (f ? c.fy! : 0), c.z + oz);
+        this.p.set(c.x + ox, this.hy(c, c.x + ox, c.z + oz) + (f ? c.fy! : 0), c.z + oz);
         const sq = f && c.fy! < 0.3 && c.fly! < 1.5 ? 0.85 : 1; this.sc.set(1 / sq, sq, 1 / sq); }
       else this.sc.set(0, 0, 0);
       this.m.compose(this.p, this.q, this.sc); this.body.setMatrixAt(i, this.m); this.cabin.setMatrixAt(i, this.m); i++;

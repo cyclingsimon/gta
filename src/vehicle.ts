@@ -156,6 +156,15 @@ export class Vehicle {
 
   blocked(x: number, z: number, h: number) {
     const fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx;
+    // 14zg: im Tunnel (unter dem Gelände) zählen nur die Tunnelwände, nicht Häuser/Wasser oben auf dem Hügel
+    const T = this.terrain;
+    if (T.tun.size && this.y < T.ground(this.x, this.z) - 2) {
+      for (const [a, b] of [[3.2, 1.0], [3.2, -1.0], [-3.1, 1.0], [-3.1, -1.0], [0, 1.1], [0, -1.1]]) {
+        const px = x + fx * a + rx * b, pz = z + fz * a + rz * b;
+        if (isNaN(T.tunnelAt(px, pz)) && T.ground(px, pz) > this.y + 2) return 1;
+      }
+      return 0;
+    }
     for (const [a, b] of [[3.2, 1.0], [3.2, -1.0], [-3.1, 1.0], [-3.1, -1.0], [0, 1.1], [0, -1.1], [1.6, 1.1], [1.6, -1.1], [-1.6, 1.1], [-1.6, -1.1]]) {
       const v = this.mask.at(x + fx * a + rx * b, z + fz * a + rz * b);
       if (v !== 0) return v;
@@ -216,9 +225,10 @@ export class Vehicle {
     // Gelände: Höhe, Neigung längs und quer
     const T = this.terrain;
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading), rx = fz, rz = -fx;
-    const hf = T.height(this.x + fx * 2.6, this.z + fz * 2.6), hb = T.height(this.x - fx * 2.6, this.z - fz * 2.6);
-    const hl = T.height(this.x + rx * 1.1, this.z + rz * 1.1), hr = T.height(this.x - rx * 1.1, this.z - rz * 1.1);
-    const ty = Math.max((hf + hb) / 2, T.height(this.x, this.z));
+    const Y = this.y; // 14zg: Ebene wählen (Tunnel oder Gelände darüber) nach der bisherigen Höhe
+    const hf = T.height(this.x + fx * 2.6, this.z + fz * 2.6, Y), hb = T.height(this.x - fx * 2.6, this.z - fz * 2.6, Y);
+    const hl = T.height(this.x + rx * 1.1, this.z + rz * 1.1, Y), hr = T.height(this.x - rx * 1.1, this.z - rz * 1.1, Y);
+    const ty = Math.max((hf + hb) / 2, T.height(this.x, this.z, Y));
     this.y += (ty - this.y) * Math.min(1, dt * 14);
     this.pitch += (Math.max(-0.35, Math.min(0.35, Math.atan2(hf - hb, 5.2))) - this.pitch) * Math.min(1, dt * 10);
     this.roll += (Math.max(-0.12, Math.min(0.12, Math.atan2(hl - hr, 2.2) * 0.5)) - this.roll) * Math.min(1, dt * 10);

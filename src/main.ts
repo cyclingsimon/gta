@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14zf';
+export const VERSION = '2026-11-14zg';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -148,8 +148,18 @@ const skyMat = new THREE.ShaderMaterial({
 const skyDome = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), skyMat); skyDome.renderOrder = -1000; skyDome.frustumCulled = false;
 skyDome.onBeforeRender = (_r, _s, cam) => skyDome.position.copy(cam.position);
 farScene.add(skyDome); farScene.background = null;
+// 14zg: Kamera im Berg (Strassentunnel): nur Röhre und Fahrzeuge zeichnen – Gelände, Häuser usw. ausblenden;
+// durch die Ausfahrt sieht man hellen Himmel (wie das Blenden am Tunnelende)
+let underground = false, lightKeep = [1.15, 2.45];
+function setUnderground(on: boolean) {
+  if (on === underground) return; underground = on;
+  for (const o of [world?.group, fun?.group, animals?.group, boats?.group, ships?.group, trains?.group, gondola?.group, propObj]) if (o) o.visible = !on;
+  const hole = world?.tunnels.getObjectByName('tunnel-hole'); if (hole) hole.visible = !on;
+  if (on) { lightKeep = [hemi.intensity, sun.intensity]; hemi.intensity *= 0.6; sun.intensity *= 0.25; } else { hemi.intensity = lightKeep[0]; sun.intensity = lightKeep[1]; }
+}
 function renderView(cam: THREE.PerspectiveCamera) {
-  { farCam.position.copy(cam.position); farCam.quaternion.copy(cam.quaternion); farCam.aspect = cam.aspect; farCam.fov = cam.fov; farCam.updateProjectionMatrix(); renderer.render(farScene, farCam); renderer.clearDepth(); }
+  if (terrain && terrain.tun.size) setUnderground(cam.position.y < terrain.ground(cam.position.x, cam.position.z) - 0.3 && (!isNaN(terrain.tunnelAt(cam.position.x, cam.position.z)) || players.some((p) => terrain.inTunnel(p.car.x, p.car.z, p.car.y))));
+  if (!underground) { farCam.position.copy(cam.position); farCam.quaternion.copy(cam.quaternion); farCam.aspect = cam.aspect; farCam.fov = cam.fov; farCam.updateProjectionMatrix(); renderer.render(farScene, farCam); renderer.clearDepth(); }
   renderer.render(scene, cam);
 }
 /** Split Screen: Rechtecke [x, y(von oben), w, h] in CSS-Pixeln je Spieler */
@@ -810,14 +820,20 @@ function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
   else if (mode === 2) want = new THREE.Vector3(car.x - fx * 8, cy + 3.6, car.z - fz * 8);
   else want = new THREE.Vector3(car.x - fx * (13 + back * 3), cy + 6 + back, car.z - fz * (13 + back * 3));
   if (mode === 1) look.set(car.x + fx * 10, cy, car.z + fz * 10);
+  // 14zg: im Tunnel tief und nah hinter dem Auto (unter der Decke, 5.6 m), egal welche Kamera gewählt ist
+  const inTun = terrain.tun.size > 0 && terrain.inTunnel(car.x, car.z, cy);
+  if (inTun) { want = new THREE.Vector3(car.x - fx * 8.5, cy + 3.1, car.z - fz * 8.5); look.set(car.x + fx * 8, cy + 1.4, car.z + fz * 8); }
   // Kamera nie unter dem Gelände und Sichtlinie zum Auto frei halten (Hänge)
+  if (!inTun) {
   for (let k = 1; k <= 5; k++) {
     const t = k / 5, px = car.x + (want.x - car.x) * t, pz = car.z + (want.z - car.z) * t;
     const need = gy(px, pz) + 1.8 - (cy + 1.8) * (1 - t);
     if (need > 0) want.y = Math.max(want.y, (gy(px, pz) + 1.8 - (cy + 1.8) * (1 - t)) / t);
   }
   want.y = Math.max(want.y, gy(want.x, want.z) + 2.5);
-  const k = snapNow ? 1 : 1 - Math.exp(-dt * 5);
+  }
+  if (inTun !== !!(p as any).wasTun) { (p as any).wasTun = inTun; snapNow = true; } // Ein-/Ausfahrt: Kamera sofort umsetzen (sonst kurz über dem Berg)
+  const k = snapNow ? 1 : 1 - Math.exp(-dt * (inTun ? 9 : 5));
   camPos.lerp(want, k); camLook.lerp(look, k);
   if (snapNow) { camPos.copy(want); camLook.copy(look); }
   if (p.idx === 0 && (window as any).__cam) { const c = (window as any).__cam; p.cam.position.set(c[0], c[1], c[2]); p.cam.lookAt(c[3], c[4], c[5]); } else { p.cam.position.copy(camPos); p.cam.lookAt(camLook); }
@@ -835,7 +851,7 @@ function showLoadUmfang() {
   const r = (UMFANG.regionen as Record<string, { km2: number; gebaeude: number; strassen_km: number }>)[REGION];
   const g = UMFANG.gesamt;
   el.innerHTML = (r ? `<b>Wird gebaut: ${REGION_NAME[REGION]}</b> – ${chZahl(r.km2)} km², ${chZahl(r.gebaeude)} echte Gebäude, ${chZahl(r.strassen_km)} km Strassen<br>` : '')
-    + `Ganze Spielwelt: ${Object.keys(UMFANG.regionen).length} Gegenden · ${chZahl(g.km2)} km² · ${chZahl(g.gebaeude)} Gebäude`;
+    + `Ganze Spielwelt: ${Object.keys(UMFANG.regionen).length} Gegenden · ${chZahl(g.km2)} km² · ${chZahl(g.gebaeude)} Gebäude · ${chZahl(g.strassen_km)} km Strassen`;
 }
 const chZahl = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2019'); // Schweizer Tausendertrenner
 let menuFocus = 0;
@@ -910,6 +926,7 @@ function setPause(p: boolean) {
   if (!world || !car) return;
   paused = p;
   $('#pause').classList.toggle('show', p);
+  document.body.classList.toggle('paused', p); // 14zg: Touch-Knöpfe (Gas, Bremse, Lenkrad) im Pause-Menü ausblenden
   if (p) { menuFocus = 0; menuCol = 0; renderMenu(); setSiren(false); updateEngine(0, 0); }
   else { $('#credits').classList.remove('show'); setSiren(car.siren); }
 }
@@ -933,7 +950,7 @@ function placeCar(x: number, z: number, heading?: number, car: Vehicle = players
   // Falls doch eingeklemmt: Richtung drehen, bis frei
   for (let i = 0; i < 16 && car.blocked(car.x, car.z, car.heading); i++) car.heading += Math.PI / 8;
   car.speed = 0;
-  car.y = terrain.height(car.x, car.z);
+  { const t = terrain.tunnelAt(car.x, car.z); car.y = terrain.height(car.x, car.z, !isNaN(t) && terrain.ground(car.x, car.z) > t + 3 ? -1e6 : undefined); } // 14zg: Strasse im Tunnel → unten
   const pl = players.find((q) => q.car === car); if (pl) updateCamera(0, true, pl);
 }
 
@@ -1225,7 +1242,7 @@ async function boot() {
   cityData = data; propsData = props ? JSON.parse(JSON.stringify(props)) : null;
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
   world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
-  scene.add(world.group); enableShadows(world.group);
+  scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
   if (TEST) (window as any).__dbgWorld = scene;
@@ -1338,7 +1355,7 @@ function swapWorld(nw: World) {
   const old = world.group;
   scene.remove(old);
   old.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
-  world = nw; scene.add(nw.group); enableShadows(nw.group);
+  scene.remove(world.tunnels); world = nw; scene.add(nw.group); enableShadows(nw.group); scene.add(nw.tunnels);
   for (const p of players) { p.car.mask = nw.mask; if (p.car.blocked(p.car.x, p.car.z, p.car.heading)) placeCar(p.car.x, p.car.z, undefined, p.car); }
   if (traffic) { traffic.setMask(nw.mask); const pg = nw.group.getObjectByName('props') as any; if (pg && pg.signalPos) { traffic.setSignals(pg.signalPos, pg.signalLamp); const tr = traffic; buses?.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
   if (save.evening) setEvening(true);
@@ -1467,6 +1484,7 @@ if (location.search.includes('test')) {
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     car: () => ({ x: car.x, z: car.z, heading: car.heading }),
     speed: (v: number) => { car.speed = v; },
+    head: (h: number) => { car.heading = h; }, under: () => underground, // 14zg Tests
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
       return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }
         return { path: n.join('<'), p: [Math.round(h.point.x), Math.round(h.point.y * 10) / 10, Math.round(h.point.z)], d: Math.round(h.distance) }; }); },

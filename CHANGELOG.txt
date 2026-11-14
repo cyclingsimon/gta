@@ -1,5 +1,14 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zg  Strassentunnels, Hofkirche, Ladebild
+- Echte Strassentunnels: Die Ambulanz fährt durch den Berg (Loppertunnel, Kirchenwald, Sonnenberg, Reussport, Spier, Schlund, Eich, Küssnacht u. a.). Röhre mit Lampen, Portale mit Betonrahmen, offener Einschnitt mit Stützmauern bis dorthin, wo der Berg dick genug ist. Vorher lief die Strasse über den Berg
+- Kamera im Tunnel: tief und nah hinter der Ambulanz, alles ausserhalb ausgeblendet; am Tunnelende sieht man hell den Himmel
+- Hofkirche (Grafik «Leicht»): richtige Kirche mit Satteldach, Rundbogenfenstern und zwei Türmen mit spitzem grünem Helm statt Block mit zwei schmalen Türmen
+- Ladebild: «Mit Tatü-Tataa durch die Zentralschweiz. Helfen, retten, Respekt-Sterne sammeln.» und km Strassen der ganzen Spielwelt
+- Handy: Gas, Bremse und Lenkrad verschwinden im Pause-Menü
+- Hecken dichter und gleichmässiger
+- Gegend Süd erstmals hier getestet (alle 9 Einsätze erreichbar)
+
 2026-11-14zf  «Kein Vortritt» an Einmündungen
 - Wo eine Nebenstrasse mit Wartelinie auf eine Hauptstrasse trifft, steht jetzt auch das Signal «Kein Vortritt» (Luzern rund 290, Hochdorf rund 100)
 - Alle 18 Luzerner Einsätze nach den Änderungen nochmals durchgespielt: 54 Sterne, auch nach Neuladen

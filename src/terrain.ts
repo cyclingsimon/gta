@@ -96,11 +96,42 @@ export class Terrain {
     return this.bridge[j * this.bw + i];
   }
 
-  /** Fahrhöhe: Brückendeck, sonst Gelände */
-  height(x: number, z: number) {
+  /** Fahrhöhe: Brückendeck, sonst Gelände. 14zg: mit ref (bisherige Höhe des Fahrzeugs) auch Tunnelfahrbahn unter dem Gelände –
+   *  gewählt wird die Ebene, die näher an ref liegt (so bleibt ein Auto im Tunnel drin und eines auf dem Hügel oben). */
+  height(x: number, z: number, ref?: number) {
     const b = this.bridgeAt(x, z);
     const g = this.ground(x, z);
-    return isNaN(b) ? g : Math.max(b, g);
+    const s = isNaN(b) ? g : Math.max(b, g);
+    if (ref === undefined || !this.tun.size) return s;
+    const t = this.tunnelAt(x, z);
+    return !isNaN(t) && Math.abs(ref - t) < Math.abs(ref - s) ? t : s;
+  }
+  /** 14zg: Tunnelfahrbahn (dünn besetzt, nur Zellen in Tunnels) */
+  tun = new Map<number, number>();
+  tunnelAt(x: number, z: number) {
+    const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes);
+    const v = this.tun.get(j * this.bw + i); return v === undefined ? NaN : v;
+  }
+  /** 14zg: Voreinschnitt – Gelände im Streifen um die Achse auf Fahrbahnhöhe absenken (wo die Überdeckung für die Röhre zu dünn ist) */
+  carved = new Set<number>();
+  carve(x: number, z: number, r: number, y: number) {
+    for (let dx = -r; dx <= r; dx += this.step) for (let dz = -r; dz <= r; dz += this.step) { if (dx * dx + dz * dz > r * r) continue;
+      const i = Math.round((x + dx - this.x0) / this.step), j = Math.round((z + dz - this.z0) / this.step); if (i < 0 || j < 0 || i >= this.nx || j >= this.nz) continue;
+      const k = j * this.nx + i; if (this.h[k] > y) { this.h[k] = y; this.carved.add(k); } }
+  }
+  isCarved(x: number, z: number) { if (!this.carved.size) return false; const i = Math.round((x - this.x0) / this.step), j = Math.round((z - this.z0) / this.step); return this.carved.has(j * this.nx + i); }
+  /** Liegt der Punkt (Höhe y) in einem Tunnel unter dem Gelände? */
+  inTunnel(x: number, z: number, y: number) { const t = this.tunnelAt(x, z); return !isNaN(t) && Math.abs(y - t) < 2.5 && this.ground(x, z) > t + 2; }
+  addTunnel(p: number[][], width: number, h0: number, h1: number) {
+    let total = 0; for (let i = 1; i < p.length; i++) total += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+    let acc = 0; const r = width / 2 + 0.8;
+    for (let i = 1; i < p.length; i++) {
+      const [x1, z1] = p[i - 1], [x2, z2] = p[i], len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(len));
+      for (let k = 0; k <= n; k++) { const t = k / n, x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t, y = h0 + (h1 - h0) * ((acc + len * t) / (total || 1));
+        for (let dx = -r; dx <= r; dx += this.bridgeRes) for (let dz = -r; dz <= r; dz += this.bridgeRes) { if (dx * dx + dz * dz > r * r) continue;
+          const ii = Math.round((x + dx - this.x0) / this.bridgeRes), jj = Math.round((z + dz - this.z0) / this.bridgeRes); if (ii < 0 || jj < 0 || ii >= this.bw || jj >= this.bh) continue;
+          this.tun.set(jj * this.bw + ii, y); } }
+      acc += len; }
   }
 
   /** Brückendeck linear zwischen den Brückenenden eintragen */

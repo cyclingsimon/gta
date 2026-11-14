@@ -434,3 +434,6 @@ body.art-g3 .ic-heart { background-image: var(--g3-heart); }
   .mg.tr .tr-card h2 { font-size: 20px; margin: 0; } .mg.tr .mg-hint { display: none; }
   .tr-list button { padding: 3px 6px; } .tr-list button b { font-size: 12.5px; } .tr-list button small { display: none; }
 }
+
+/* 14zg (Simon): im Pause-Menü keine Touch-Steuerung über den Knöpfen */
+body.paused #touch { display: none !important; }

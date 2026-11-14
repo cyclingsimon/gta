@@ -1,9 +1,18 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 12:45. Fertig: **2026-11-14zf** = 14ze + Kein-Vortritt-Signale. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** PC/Browser aus. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 13:30. Fertig: **2026-11-14zg** = Tunnels, Hofkirche, Ladebild. ZIP an Simon, nicht hochgeladen. **Neuer Hauptfokus (Simon 12:2x, bestätigt): durchgehende Welt ohne Neuladen (Stans → Wolhusen am Stück), Einsätze je Geländekammer.** PC läuft bis Abend. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zg (2026-11-14)
+- **Strassentunnels**: Overpass highway+tunnel (ganzes Gebiet) → `data/old/road_tunnels.json`; `tools/geo/road_tunnels.py` markiert city.json-Strassen `tu:1` (≥ 70 % der Punkte ≤ 4 m neben OSM-Tunnelachse, Autostrassen ohne service). In allen Regionen gelaufen (Luzern 45 Stücke/11.8 km, Süd 22/6.8 km, a2 6/2.3 km, a10, a11, Nord …).
+  - world.ts `tunnelPieces` (Netz ≥ 25 m) + `buildTunnels`: Knotenhöhen an Portalen (Anschluss an normale Strasse oder Sackende) = Gelände, innen längengewichtet geglättet; Stücke ohne jede Überdeckung (Gelände nie > Fahrbahn + 7.6 m) bleiben normale Strasse (Unterführungen unter Bahndämmen). Röhre 5.6 m hoch, Wände/Decke/Lampen/Randlinien als MeshBasic (fog aus); wo Überdeckung < Röhre + 1.5 m: offener Einschnitt, Gelände per `terrain.carve` abgesenkt (auch Echt-Bodennetz), Stützmauern, Portal (Rahmen + dunkle Öffnung `tunnel-hole`) am Übergang.
+  - terrain.ts: `tun` (dünne Map, 2.5-m-Zellen), `addTunnel`, `tunnelAt`, `inTunnel`, `carve/isCarved`, `height(x,z,ref)` wählt Tunnel oder Oberfläche nach Nähe zu ref. vehicle.ts (Höhe mit ref, im Tunnel nur Röhrenwände als Hindernis), traffic.ts/bus.ts (Höhe je Fahrzeug gemerkt), placeCar (Tunnelstrasse → unten).
+  - main.ts: Kamera im Tunnel 8.5 m hinter / 3.1 m über dem Auto, Wechsel ohne Nachziehen; `setUnderground` (Kamera unter Gelände bei Tunnel): Welt, Tiere, Schiffe, Züge usw. aus, Fernsicht aus, Licht gedämpft. Testhaken `__dbg.head(h)`, `__dbg.under()`.
+- Süd-Daten (terrain, aerial_s, forest, bus, trains, roofcolors) vom Server geholt → `public/data/sued/` (Süd jetzt lokal testbar; aerial.jpg/ground/b3d fehlen lokal → Echt-Modus Süd lokal ohne).
+- Hofkirche ohne 3D-Daten: eigenes Modell (Schiff mit Satteldach, Rundbogenfenster, Türme mit Achteck + 22-m-Helm, Kreuz), Türme Richtung See. Ladebild-Text neu, + km Strassen. Pause: `body.paused #touch {display:none}`. Hecken: Abstand 1.25 m, gleichmässiger, Kugel-Normalen.
+- Tests: Lopper-Einfahrt und -Ausfahrt gefahren (Einschnitt, Portal, Röhre innen, «unter Tage»-Modus), qa.py Luzern ganz grün (P1 1.465 Mio./706, G1–G13 ok, Ladezeit 96 s), smoke sued 9/9, a2 8/8, a11 8/8 ohne Fehler. Hofkirche angesehen. Nicht getestet: Tunnel mit Gegenverkehr in Echtzeit, Abend im Tunnel, Handy-Ansicht Pause (nur CSS).
 
 ## Prüfungen nach 14zf (14.11. 11:30–11:45, kein Code geändert)
 - qa.py Luzern ganz grün: P1 1.446 Mio. Dreiecke / 704 Draw Calls (vorher 1.30 / 682), P2 0.615 Mio., G7 18/18, Ladezeit 81 s, keine Fehler. Hecken/Schilder/Kein-Vortritt sprengen das Budget nicht.

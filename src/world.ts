@@ -6,7 +6,7 @@ import { Terrain, drape } from './terrain';
 export interface CityData {
   meta: { bounds: [number, number, number, number]; credits: string };
   buildings: { p: number[][]; h: number; n: string; t: string; roof: string; holes?: number[][][] }[];
-  roads: { p: number[][]; c: string; w: number; n: string; b: number; o?: number; tr?: number; tf?: string[][]; tb?: string[][]; df?: string[]; db?: string[]; L?: number; sw?: number[]; cy?: number[]; bu?: number[]; v?: number; ref?: string }[];
+  roads: { p: number[][]; c: string; w: number; n: string; b: number; o?: number; tr?: number; tf?: string[][]; tb?: string[][]; df?: string[]; db?: string[]; L?: number; sw?: number[]; cy?: number[]; bu?: number[]; v?: number; ref?: string; tu?: number }[];
   water: { p: number[][]; holes: number[][][] }[];
   green: { p: number[][]; k: string }[];
   rail: number[][][];
@@ -442,6 +442,8 @@ export class Mask {
 
 export interface World {
   group: THREE.Group;
+  /** 14zg: Strassentunnels (Röhren, Portale) – eigene Gruppe, bleibt sichtbar, wenn die Kamera im Berg ist */
+  tunnels: THREE.Group;
   mask: Mask;
   minimap: HTMLCanvasElement; // 1 px = MINI_RES m
   bounds: number[];
@@ -473,6 +475,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
   const group = new THREE.Group();
+  // 14zg: Strassentunnels aus der normalen Darstellung nehmen (eigene Röhre, Fahrbahn unter dem Gelände); kurze Unterführungen < 25 m bleiben normale Strassen
+  const tunnels = new THREE.Group(); tunnels.name = 'tunnels';
+  { const tr = tunnelPieces(d); if (tr.length) { const set = new Set(tr); const rest = d.roads.filter((r) => !set.has(r)); const back = buildTunnels(tr, rest, terrain, tunnels); d = { ...d, roads: back.length ? rest.concat(back) : rest }; } }
   const [X0, Z0, X1, Z1] = d.meta.bounds;
   const W = X1 - X0, H = Z1 - Z0;
 
@@ -497,7 +502,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const n = groundMesh.pos.length / 3;
     const pos = new Float32Array(n * 3), uv = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) {
-      const x = groundMesh.pos[i * 3] / 10, y = groundMesh.pos[i * 3 + 1] / 10 - 0.28, z = groundMesh.pos[i * 3 + 2] / 10;
+      const x = groundMesh.pos[i * 3] / 10, z = groundMesh.pos[i * 3 + 2] / 10; let y = groundMesh.pos[i * 3 + 1] / 10 - 0.28; if (terrain.isCarved(x, z)) y = Math.min(y, terrain.ground(x, z) - 0.28); // 14zg Voreinschnitt
       pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z; uv[i * 2] = x / 12; uv[i * 2 + 1] = z / 12;
     }
     groundGeo = new THREE.BufferGeometry();
@@ -951,6 +956,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         continue; }
       if (kind === 'tor') { special.push({ b, kind }); // swissBUILDINGS3D enthält den Bogen (echte Form): nur Sandstein-Stil; ohne 3D-Daten eigenes Modell
         if (b3d) styles.push({ p: b.p, facade: new THREE.Color('#D4C9B1'), roofC: new THREE.Color('#B9AD94'), style: 'stone', flat: false, kind }); continue; }
+      if (kind === 'hofkirche' && !b3d) { special.push({ b, kind }); continue; } // 14zg: ohne 3D-Daten ganz eigenes Kirchenmodell (vorher Wohnblock-Fenster + Minarett-Türme)
       if (kind) special.push({ b, kind });
 
       const [cx, cz] = centroid(b.p);
@@ -1154,15 +1160,34 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       }
     }
     if (s.kind === 'hofkirche') {
-      const zs = s.b.p.map((q) => q[1]); const xs = s.b.p.map((q) => q[0]);
-      const maxz = Math.max(...zs); const minx = Math.min(...xs), maxx = Math.max(...xs);
-      for (const tx of [minx + 3, maxx - 3]) {
-        const t = new THREE.Mesh(new THREE.BoxGeometry(5, 50, 5), toon('#E8E0CF'));
-        t.position.set(tx, 25, maxz - 3);
-        const sp = new THREE.Mesh(new THREE.ConeGeometry(3.6, 16, 4), toon('#4F6E68'));
-        sp.position.set(tx, 58, maxz - 3); sp.rotation.y = Math.PI / 4;
-        G.add(t, sp, outline(t));
-      }
+      // 14zg (Simon: «sieht aus wie eine Moschee»): Hofkirche St. Leodegar nach Fotos – heller Sandstein, steiles dunkles Satteldach,
+      // hohe Rundbogenfenster, zwei Türme an der Westfassade mit achteckigem Aufsatz und spitzem, dunkelgrünem Helm (ca. 69 m)
+      const P2 = s.b.p; let best = 0, ang = 0;
+      for (let i = 0; i < P2.length; i++) { const A = P2[i], Bq = P2[(i + 1) % P2.length], l = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]); if (l > best) { best = l; ang = Math.atan2(Bq[0] - A[0], Bq[1] - A[1]); } }
+      if (Math.cos(ang) > 0) ang += Math.PI; // Türme (lokal −z) zum See hin (Süden, grösseres z) – wie die echte Westfassade über der Treppe
+      const ux = Math.sin(ang), uz = Math.cos(ang), vx = uz, vz = -ux; // u = Längsachse, v = quer
+      let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9; for (const [x, z] of P2) { const u = (x - cx) * ux + (z - cz) * uz, v = (x - cx) * vx + (z - cz) * vz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+      const L = u1 - u0, Wd = v1 - v0, mu = (u0 + u1) / 2, mv = (v0 + v1) / 2, ox = cx + ux * mu + vx * mv, oz = cz + uz * mu + vz * mv;
+      const stone = toon('#E3D8C2'), roofM = toon('#5A524C'), helm = toon('#3F5550'), dark = toon('#3B3A3E'), gold = toon('#D9B44A');
+      const C = new THREE.Group(); C.position.set(ox, 0, oz); C.rotation.y = ang; G.add(C); // lokal: z = Längsachse, x = quer
+      const naveH = 17, tw = Math.min(8, Wd * 0.3), front = -L / 2 + tw / 2; // Türme am einen Ende (Westfassade)
+      const nave = new THREE.Mesh(new THREE.BoxGeometry(Wd, naveH, L - tw), stone); nave.position.set(0, naveH / 2, tw / 2); C.add(nave, outline(nave));
+      { const sh = new THREE.Shape(); sh.moveTo(-Wd / 2 - 0.6, 0); sh.lineTo(0, 11); sh.lineTo(Wd / 2 + 0.6, 0); sh.lineTo(-Wd / 2 - 0.6, 0);
+        const rg = new THREE.ExtrudeGeometry(sh, { depth: L - tw, bevelEnabled: false }); rg.translate(0, naveH, -(L - tw) / 2 + tw / 2); const rm = new THREE.Mesh(rg, roofM); C.add(rm, outline(rm)); }
+      for (const sd of [-1, 1]) for (let k = 0; k < 6; k++) { const wn = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 2.2), dark); wn.position.set(sd * (Wd / 2 + 0.05), 8.5, tw + (k + 0.5) * (L - 2 * tw) / 6 - (L - tw) / 2 + tw / 2 - tw / 2); C.add(wn);
+        const arch = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.4, 10, 1, false, 0, Math.PI), dark); arch.rotation.z = Math.PI / 2; arch.rotation.y = Math.PI / 2; arch.position.set(sd * (Wd / 2 + 0.05), 12, wn.position.z); C.add(arch); }
+      // Giebel zwischen den Türmen und Portal
+      const gab = new THREE.Mesh(new THREE.BoxGeometry(Wd - 2 * tw + 0.5, naveH + 4, tw * 0.6), stone); gab.position.set(0, (naveH + 4) / 2, front); C.add(gab);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(3.2, 5, 0.4), dark); door.position.set(0, 2.5, front - tw * 0.3 - 0.05); C.add(door);
+      for (const sd of [-1, 1]) { const x = sd * (Wd / 2 - tw / 2);
+        const t = new THREE.Mesh(new THREE.BoxGeometry(tw, 36, tw), stone); t.position.set(x, 18, front); C.add(t, outline(t));
+        for (let k = 0; k < 3; k++) { const wn = new THREE.Mesh(new THREE.BoxGeometry(1.4, 3.2, 0.3), dark); wn.position.set(x, 14 + k * 8, front - tw / 2 - 0.05); C.add(wn); }
+        const oct = new THREE.Mesh(new THREE.CylinderGeometry(tw * 0.42, tw * 0.48, 9, 8), stone); oct.position.set(x, 40.5, front); C.add(oct, outline(oct));
+        const ring = new THREE.Mesh(new THREE.CylinderGeometry(tw * 0.55, tw * 0.55, 0.8, 8), stone); ring.position.set(x, 36.4, front); C.add(ring);
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(tw * 0.48, 22, 8), helm); sp.position.set(x, 56, front); C.add(sp, outline(sp));
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 6), gold); ball.position.set(x, 67.3, front); C.add(ball);
+        const cr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.2, 0.18), gold); cr.position.set(x, 68.6, front); const cb = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.18, 0.18), gold); cb.position.set(x, 69, front); C.add(cr, cb); }
+      landmarks.push({ name: 'Hofkirche', x: cx, z: cz });
     }
   }
 
@@ -1407,14 +1432,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     for (const h of props.hedges) { let acc = 0;
       for (let i = 1; i < h.length; i++) { const A = h[i - 1], B = h[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
         while (acc < L) { const t = acc / L, x = A[0] + (B[0] - A[0]) * t, z = A[1] + (B[1] - A[1]) * t;
-          if (!mask.isRoad(x, z) && mask.at(x, z) === 0) bp.push([x, z]); acc += 1.6; }
+          if (!mask.isRoad(x, z) && mask.at(x, z) === 0) bp.push([x, z]); acc += 1.25; }
         acc -= L; } }
-    const bg = new THREE.IcosahedronGeometry(1, 0); bg.translate(0, 0.75, 0);
+    // 14zg (Simon: «Vortexhaufen»): runde Schattierung (Normalen wie eine Kugel) statt kantiger Facetten, gleiche Dreieckszahl
+    const bg = new THREE.IcosahedronGeometry(1, 0).toNonIndexed(); { const pa = bg.getAttribute('position'), na = bg.getAttribute('normal'); for (let i = 0; i < pa.count; i++) { const l = Math.hypot(pa.getX(i), pa.getY(i), pa.getZ(i)) || 1; na.setXYZ(i, pa.getX(i) / l, pa.getY(i) / l, pa.getZ(i) / l); } na.needsUpdate = true; }
+    bg.translate(0, 0.75, 0);
     const bm = new THREE.InstancedMesh(bg, toon('#ffffff'), Math.max(1, bp.length)); bm.count = bp.length;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
     bp.forEach(([x, z], i) => { const r = hash(x, z), r2 = hash(z, x);
-      e.set(0, r * 6.28, 0); q.setFromEuler(e); sc.set(1.0 + r2 * 0.35, 1.1 + r * 0.7, 1.0 + r * 0.35);
-      m.compose(v.set(x, terrain.ground(x, z) - 0.25, z), q, sc); bm.setMatrixAt(i, m); bm.setColorAt(i, c.setHSL(0.27 + r2 * 0.06, 0.5, 0.2 + r * 0.08)); });
+      e.set(0, r * 6.28, 0); q.setFromEuler(e); sc.set(1.15 + r2 * 0.2, 1.0 + r * 0.35, 1.15 + r * 0.2); // dichter und gleichmässiger: liest sich als Hecke
+      m.compose(v.set(x, terrain.ground(x, z) - 0.25, z), q, sc); bm.setMatrixAt(i, m); bm.setColorAt(i, c.setHSL(0.28 + r2 * 0.03, 0.48, 0.21 + r * 0.04)); });
     bm.computeBoundingSphere(); bm.name = 'hecken'; group.add(chunkInstanced(bm, 1500));
     console.log('[bau] Hecken-Büsche', bp.length);
   }
@@ -1469,7 +1496,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   signBacks(group);
-  return { group, mask, minimap, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
+  return { group, tunnels, mask, minimap, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
 
 /** Mesh nach Dreiecks-Schwerpunkt in Kacheln aufteilen (Attribute bleiben geteilt bzw. werden kopiert) */
@@ -2828,4 +2855,84 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
   }
   const nWeg = wegweiser(d, terrain, group, steel);
   console.log('[bau] Kreisel', rbs.length, 'Kreisel-Signale', roundSigns.length, 'Mittelinseln', islGeo.length, 'Ortstafeln', tafeln.length, 'Wegweiser', nWeg);
+}
+
+// ---------------- 14zg: Strassentunnels ----------------
+const tkey = (q: number[]) => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2);
+const plen = (p: number[][]) => { let l = 0; for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return l; };
+/** Tunnelstücke (r.tu), deren zusammenhängendes Netz mindestens 25 m lang ist */
+function tunnelPieces(d: CityData) {
+  const tu = d.roads.filter((r) => r.tu && r.p.length >= 2); if (!tu.length) return [];
+  const at = new Map<string, number[]>(); tu.forEach((r, i) => { for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = tkey(q); if (!at.has(k)) at.set(k, []); at.get(k)!.push(i); } });
+  const comp = new Array(tu.length).fill(-1); let nc = 0; const clen: number[] = [];
+  for (let i = 0; i < tu.length; i++) { if (comp[i] >= 0) continue; const st = [i]; comp[i] = nc; let L = 0;
+    while (st.length) { const a = st.pop()!; L += plen(tu[a].p); for (const q of [tu[a].p[0], tu[a].p[tu[a].p.length - 1]]) for (const b of at.get(tkey(q)) || []) if (comp[b] < 0) { comp[b] = nc; st.push(b); } }
+    clen.push(L); nc++; }
+  return tu.filter((_, i) => clen[comp[i]] >= 25);
+}
+/** Fahrbahnhöhe: an den Portalen (Anschluss an normale Strasse) = Gelände, dazwischen geglättet; Röhre, Lampen, Portale zeichnen */
+function buildTunnels(tr: CityData['roads'], others: CityData['roads'], terrain: Terrain, out: THREE.Group): CityData['roads'] {
+  const back: CityData['roads'] = []; // Stücke ohne Überdeckung (Unterführungen unter Damm/Bahn): normale Strasse wie bisher
+  const deg = new Map<string, number>(), outside = new Set<string>(), H = new Map<string, number>(), fixed = new Set<string>();
+  for (const r of tr) for (const q of [r.p[0], r.p[r.p.length - 1]]) deg.set(tkey(q), (deg.get(tkey(q)) || 0) + 1);
+  for (const r of others) for (const q of r.p) outside.add(tkey(q));
+  const pos = new Map<string, number[]>();
+  for (const r of tr) for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = tkey(q); pos.set(k, q);
+    if (outside.has(k) || deg.get(k) === 1) { fixed.add(k); H.set(k, terrain.ground(q[0], q[1])); } }
+  // innere Knoten: Mittel der Nachbarn (längengewichtet), bis es sich setzt
+  const nb = new Map<string, [string, number][]>(); for (const r of tr) { const a = tkey(r.p[0]), b = tkey(r.p[r.p.length - 1]), L = plen(r.p) || 1;
+    (nb.get(a) || nb.set(a, []).get(a)!).push([b, L]); (nb.get(b) || nb.set(b, []).get(b)!).push([a, L]); }
+  for (const [k, q] of pos) if (!H.has(k)) H.set(k, fixed.size ? [...fixed].reduce((s, f) => s + H.get(f)!, 0) / fixed.size : terrain.ground(q[0], q[1]) - 10);
+  for (let it = 0; it < 300; it++) for (const [k, list] of nb) { if (fixed.has(k)) continue; let sw = 0, sh = 0; for (const [o, L] of list) { sw += 1 / L; sh += H.get(o)! / L; } if (sw) H.set(k, sh / sw); }
+  const C = { floor: new THREE.Color('#2F3134'), line: new THREE.Color('#E8E4D8'), wallLo: new THREE.Color('#B4B0A4'), wallHi: new THREE.Color('#5E5D59'), ceil: new THREE.Color('#38393C'), lamp: new THREE.Color('#FFD27A'), conc: new THREE.Color('#B9B5AB'), hole: new THREE.Color('#15171A') };
+  const P: number[] = [], Cc: number[] = [], PH: number[] = [];
+  const quad = (a: number[], b: number[], c: number[], d2: number[], col: THREE.Color) => { if (col === C.hole) { PH.push(...a, ...b, ...c, ...a, ...c, ...d2); return; } P.push(...a, ...b, ...c, ...a, ...c, ...d2); for (let i = 0; i < 6; i++) Cc.push(col.r, col.g, col.b); };
+  const TH = 5.6; // lichte Höhe der Röhre (m)
+  let nPort = 0;
+  /** Portal: Betonrahmen und dunkle Öffnung, Blick von aussen entgegen dir (dir = Richtung in die Röhre entlang der Stützpunkte) */
+  const portalAt = (Q: number[], dir: number, hw: number) => { nPort++;
+    const ux = Q[3] * dir, uz = Q[4] * dir, n = [-uz, ux], y = Q[2], W = hw + 1.6;
+    const v = (sd: number, yy: number, f = 0) => [Q[0] + n[0] * sd - ux * f, y + yy, Q[1] + n[1] * sd - uz * f];
+    quad(v(-W, -0.4), v(-hw, -0.4), v(-hw, TH + 0.6), v(-W, TH + 0.6), C.conc); quad(v(hw, -0.4), v(W, -0.4), v(W, TH + 0.6), v(hw, TH + 0.6), C.conc);
+    quad(v(-W, TH), v(W, TH), v(W, TH + 2.2), v(-W, TH + 2.2), C.conc);
+    quad(v(-hw, 0.02, 0.15), v(hw, 0.02, 0.15), v(hw, TH, 0.15), v(-hw, TH, 0.15), C.hole); };
+  for (const r of tr) {
+    const h0 = H.get(tkey(r.p[0]))!, h1 = H.get(tkey(r.p[r.p.length - 1]))!, L = plen(r.p) || 1, hw = r.w / 2 + 1.1;
+    { let cv = false, acc2 = 0; for (let i = 1; i < r.p.length && !cv; i++) { const A = r.p[i - 1], B = r.p[i], l = Math.hypot(B[0] - A[0], B[1] - A[1]);
+        for (let t = 0; t <= l; t += 4) { const x = A[0] + (B[0] - A[0]) * t / (l || 1), z = A[1] + (B[1] - A[1]) * t / (l || 1); if (terrain.ground(x, z) > h0 + (h1 - h0) * (acc2 + t) / L + TH + 2) { cv = true; break; } } acc2 += l; }
+      if (!cv) { back.push(r); continue; } }
+    terrain.addTunnel(r.p, r.w + 1.2, h0, h1);
+    // Punkte alle ≤ 6 m mit Höhe und Querrichtung
+    const S: number[][] = []; let acc = 0;
+    for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(l / 6)), ux = (B[0] - A[0]) / (l || 1), uz = (B[1] - A[1]) / (l || 1);
+      for (let k = i === 1 ? 0 : 1; k <= n; k++) { const t = k / n; S.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, h0 + (h1 - h0) * (acc + l * t) / L + 0.35, ux, uz, acc + l * t]); } acc += l; }
+    // Überdeckung: Röhre nur, wo das Gelände ≥ Röhrenhöhe + 1.5 m über der Fahrbahn liegt; sonst offener Einschnitt mit Stützmauern
+    const cov = S.map((q) => terrain.ground(q[0], q[1]) > q[2] + TH + 1.5);
+    S.forEach((q, i) => { if (!cov[i]) terrain.carve(q[0], q[1], hw + 0.5, q[2] - 0.35); });
+    for (let i = 1; i < S.length; i++) { const A = S[i - 1], B = S[i];
+      const nA = [-A[4], A[3]], nB = [-B[4], B[3]];
+      const p = (Q: number[], n: number[], s: number, y: number) => [Q[0] + n[0] * s, Q[2] + y, Q[1] + n[1] * s];
+      quad(p(A, nA, -hw, 0), p(B, nB, -hw, 0), p(B, nB, hw, 0), p(A, nA, hw, 0), C.floor); // Fahrbahn
+      for (const sd of [-1, 1]) { quad(p(A, nA, sd * hw, 0), p(B, nB, sd * hw, 0), p(B, nB, sd * hw, 2.4), p(A, nA, sd * hw, 2.4), C.wallLo); // Wand unten hell (Kacheln)
+        quad(p(A, nA, sd * hw, 2.4), p(B, nB, sd * hw, 2.4), p(B, nB, sd * (hw - 0.9), TH), p(A, nA, sd * (hw - 0.9), TH), C.wallHi);
+        quad(p(A, nA, sd * (r.w / 2 - 0.15), 0.02), p(B, nB, sd * (r.w / 2 - 0.15), 0.02), p(B, nB, sd * (r.w / 2 - 0.3), 0.02), p(A, nA, sd * (r.w / 2 - 0.3), 0.02), C.line); } // Randlinien
+      const roof = cov[i - 1] && cov[i];
+      if (roof) quad(p(A, nA, -(hw - 0.9), TH), p(B, nB, -(hw - 0.9), TH), p(B, nB, hw - 0.9, TH), p(A, nA, hw - 0.9, TH), C.ceil);
+      if (cov[i - 1] !== cov[i]) portalAt(cov[i] ? A : B, cov[i] ? 1 : -1, hw); // Übergang Einschnitt → Röhre: Portal
+      if (Math.floor(B[5] / 12) !== Math.floor(A[5] / 12) && !r.o) { const m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2, B[3], B[4]], nm = [-B[4], B[3]]; // Mittellinie (Gegenverkehr)
+        const q = (s: number, f: number) => [m[0] + nm[0] * s + m[3] * f, m[2] + 0.02, m[1] + nm[1] * s + m[4] * f]; quad(q(-0.08, -2), q(-0.08, 2), q(0.08, 2), q(0.08, -2), C.line); }
+      if (roof && Math.floor(B[5] / 10) !== Math.floor(A[5] / 10)) for (const sd of [-1, 1]) { const m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2, B[3], B[4]], nm = [-B[4], B[3]]; // Lampen an der Decke, beidseitig
+        const q = (s: number, f: number, y: number) => [m[0] + nm[0] * s + m[3] * f, m[2] + y, m[1] + nm[1] * s + m[4] * f]; const s0 = sd * (hw - 1.4);
+        quad(q(s0 - 0.25, -1.2, TH - 0.05), q(s0 - 0.25, 1.2, TH - 0.05), q(s0 + 0.25, 1.2, TH - 0.05), q(s0 + 0.25, -1.2, TH - 0.05), C.lamp); }
+    }
+  }
+  if (!P.length) return back;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(Cc, 3));
+  g.computeBoundingSphere();
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  m.name = 'tunnel'; out.add(m);
+  if (PH.length) { const gh = new THREE.BufferGeometry(); gh.setAttribute('position', new THREE.Float32BufferAttribute(PH, 3)); gh.computeBoundingSphere();
+    const mh = new THREE.Mesh(gh, new THREE.MeshBasicMaterial({ color: '#15171A', side: THREE.DoubleSide, fog: false })); mh.name = 'tunnel-hole'; out.add(mh); } // aussen: dunkle Öffnung; innen ausgeblendet
+  console.log('[bau] Tunnels', tr.length - back.length, 'Stücke', Math.round(tr.filter((r) => !back.includes(r)).reduce((a, r) => a + plen(r.p), 0)), 'm, Portale', nPort, '· ohne Überdeckung (normale Strasse)', back.length);
+  return back;
 }
