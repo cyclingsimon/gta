@@ -5,7 +5,7 @@
 // Einbindung: src/audio.ts ruft initAmbience() in initAudio() und updateAmbience() in updateVenues() auf (läuft also ohne
 // Änderung in main.ts). Für echte Orte (Wasser, Häuser, Wald, Tunnel aus der Welt) ruft main.ts einmal bindAmbience(...) auf –
 // ohne diesen Aufruf gilt ein Ersatz aus festen Orten (zones.ts).
-import { noiseBed, lfo, carPass, gull, bird, cowbell, churchBell, stationGong, trainPass, tunnelImpulse } from './synth';
+import { noiseBed, lfo, carPass, gull, bird, cowbell, churchBell, stationGong, trainPass, tunnelImpulse, trolleybus, shipHorn } from './synth';
 import { HOFKIRCHE, STATIONS, townWeight, shoreWeight } from './zones';
 
 /** EIN Regler für die ganze Geräuschkulisse (0 = aus, 1 = Stand Lauf 2). Lieber zu leise als Lärm: im Zweifel senken. */
@@ -26,13 +26,13 @@ let ctx: AudioContext | null = null, bus: GainNode, probe: AmbienceProbe = {};
 let beds: Record<'stadt' | 'see' | 'wald' | 'tunnel', GainNode>;
 let wet: GainNode, conv: ConvolverNode | null = null, sfxIn: AudioNode | null = null, wetOn = false;
 const w: Record<Layer, number> = { stadt: 0, see: 0, wald: 0, land: 0, bahnhof: 0, tunnel: 0 };
-const next: Record<string, number> = { car: 3, gull: 5, bird: 2, cow: 3, gong: 20, train: 35 };
+const next: Record<string, number> = { car: 3, gull: 5, bird: 2, cow: 3, gong: 20, train: 35, trolley: 12, ship: 40 };
 let tSample = -1, lastHour = -1, nearStation = '', forced: Layer | null = null, events: Record<string, number> = {};
 let saved: AmbienceProbe | null = null;
 let lastX = 0, lastZ = 0, mix: AmbienceMix = { music: 0, venue: 0, siren: false, muted: false, hidden: false };
 
 /** Lautstärken je Schicht (relativ; vor AMB_GAIN und Master 0.6). Lauf 2: konservativ – Stadtverkehr deutlich leiser und seltener. */
-const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05 };
+const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05, trolley: 0.02, ship: 0.03 };
 
 export function initAmbience(c: AudioContext, master: AudioNode, sfx: AudioNode) {
   if (ctx) return; ctx = c;
@@ -51,7 +51,7 @@ export function initAmbience(c: AudioContext, master: AudioNode, sfx: AudioNode)
   wet = c.createGain(); wet.gain.value = 0; wet.connect(master); sfxIn = sfx;
   // Pause/Menü: Hauptschleife ruft updateAmbience dann nicht auf → Lautstärke separat nachführen (2× pro Sekunde, billig)
   window.setInterval(() => { if (ctx && ctx.state === 'running') bus.gain.setTargetAtTime(busTarget(), ctx.currentTime, 0.4); }, 500);
-  (window as any).__amb = { state: ambienceState, force: (l: Layer | null) => { forced = l; tSample = -1; }, chime: (n?: number) => ringHour(n ?? 3, 0), gong: () => fire('gong'),
+  (window as any).__amb = { state: ambienceState, force: (l: Layer | null) => { forced = l; tSample = -1; }, chime: (n?: number) => ringHour(n ?? 3, 0), gong: () => fire('gong'), fire: (k: string) => fire(k),
     bind: (p: AmbienceProbe) => { saved = saved || probe; bindAmbience(p); }, unbind: () => { if (saved) bindAmbience(saved); saved = null; } };
 }
 
@@ -111,6 +111,8 @@ export function updateAmbience(x: number, z: number, m: AmbienceMix) {
   if (w.see > 0.2 && t > next.gull) { fire('gull'); next.gull = t + 6 + Math.random() * 12; }
   if (w.wald > 0.2 && t > next.bird) { fire('bird'); next.bird = t + (1.5 + Math.random() * 4) / (0.5 + w.wald) * (nightish() ? 4 : 1); }
   if (w.land > 0.35 && t > next.cow) { fire('cow'); next.cow = t + (2.5 + Math.random() * 6) / (0.4 + w.land) * (nightish() ? 2.5 : 1); }
+  if (w.stadt > 0.5 && t > next.trolley) { fire('trolley'); next.trolley = t + 20 + Math.random() * 25; } // Lauf 3: VBL-Trolleybus
+  if (w.see > 0.4 && t > next.ship) { fire('ship'); next.ship = t + 120 + Math.random() * 180; } // Lauf 3: Kursschiff, selten
   if (w.bahnhof > 0.2 && t > next.gong) { fire('gong'); next.gong = t + 50 + Math.random() * 50; }
   if (w.bahnhof > 0.15 && t > next.train) { fire('train'); next.train = t + 30 + Math.random() * 45; }
   // Hofkirche: zur vollen Stunde (echte Uhrzeit des Geräts, Annahme) – Stundenschläge 1–12
@@ -151,6 +153,8 @@ function fire(kind: string) {
     case 'bird': bird(ctx, bus, VOL.bird * k(w.wald)); break;
     case 'cow': cowbell(ctx, bus, VOL.cow * k(w.land)); break;
     case 'gong': stationGong(ctx, bus, VOL.gong * k(w.bahnhof)); break;
+    case 'trolley': trolleybus(ctx, bus, VOL.trolley * k(w.stadt)); break;
+    case 'ship': shipHorn(ctx, bus, VOL.ship * k(w.see)); break;
     case 'train': trainPass(ctx, bus, VOL.train * k(w.bahnhof), Math.random() < 0.6); break;
   }
 }

@@ -2,22 +2,27 @@
 // Jede Funktion erzeugt kurzlebige Knoten, die sich nach dem Ausklingen selbst beenden.
 
 let noiseBuf: AudioBuffer | null = null;
-/** 3 s weisses Rauschen (einmal erzeugt, von allen Schleifen geteilt) */
+/** Lauf 3: 7,3 s weisses Rauschen (vorher 3 s – die Wiederholung war in gefiltertem Rauschen hörbar), Schleifenstelle per
+ *  80-ms-Überblendung nahtlos: Anfang = Mischung aus Anfang und dem Stück direkt nach dem Ende → kein Sprung beim Zurückspringen. */
+export const NOISE_SEC = 7.3;
 export function noise(ctx: BaseAudioContext): AudioBuffer {
   if (noiseBuf && noiseBuf.sampleRate === ctx.sampleRate) return noiseBuf;
-  const n = Math.floor(ctx.sampleRate * 3), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
-  let s = 12345; for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; d[i] = (s / 0x3fffffff) - 1; }
+  const sr = ctx.sampleRate, n = Math.floor(sr * NOISE_SEC), F = Math.floor(sr * 0.08), raw = new Float32Array(n + F);
+  let s = 12345; for (let i = 0; i < n + F; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; raw[i] = (s / 0x3fffffff) - 1; }
+  const b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = raw[i];
+  for (let i = 0; i < F; i++) { const k = (i + 0.5) / F; d[i] = raw[i] * Math.sqrt(k) + raw[n + i] * Math.sqrt(1 - k); }
   noiseBuf = b; return b;
 }
 
 /** Endlose Rausch-Schleife → Filter → Gain (Gain startet bei 0) */
 export function noiseBed(ctx: AudioContext, out: AudioNode, filters: { type: BiquadFilterType; f: number; q?: number }[], startAt = 0) {
-  const src = ctx.createBufferSource(); src.buffer = noise(ctx); src.loop = true; src.loopStart = 0; src.loopEnd = 3;
+  const src = ctx.createBufferSource(); src.buffer = noise(ctx); src.loop = true; src.loopStart = 0; src.loopEnd = src.buffer.duration;
   let last: AudioNode = src;
   const fl: BiquadFilterNode[] = [];
   for (const f of filters) { const b = ctx.createBiquadFilter(); b.type = f.type; b.frequency.value = f.f; if (f.q != null) b.Q.value = f.q; last.connect(b); last = b; fl.push(b); }
   const g = ctx.createGain(); g.gain.value = 0; last.connect(g); g.connect(out);
-  src.start(ctx.currentTime, startAt % 3);
+  src.start(ctx.currentTime, startAt % NOISE_SEC);
   return { src, g, fl };
 }
 
@@ -44,7 +49,7 @@ export function carPass(ctx: AudioContext, out: AudioNode, vol: number) {
   let p: StereoPannerNode | null = null;
   if (ctx.createStereoPanner) { p = ctx.createStereoPanner(); const d = Math.random() < 0.5 ? -1 : 1; p.pan.setValueAtTime(-0.8 * d, t); p.pan.linearRampToValueAtTime(0.8 * d, t + dur); p.connect(out); }
   src.connect(bp); bp.connect(g); g.connect(p || out);
-  src.start(t, rnd(0, 2.5)); src.stop(t + dur + 0.05);
+  src.start(t, rnd(0, NOISE_SEC - 0.5)); src.stop(t + dur + 0.05);
 }
 
 /** Möwe: 2–4 «kiää»-Rufe, Sägezahn durch Bandpass, Tonhöhe fällt */
@@ -127,7 +132,7 @@ export function trainPass(ctx: AudioContext, out: AudioNode, vol: number, brakin
       const s = ctx.createBufferSource(); s.buffer = noise(ctx);
       const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 180; bp.Q.value = 1.5;
       const sg = ctx.createGain(); sg.gain.setValueAtTime(vol * 1.6 * env + 0.0001, k + dk); sg.gain.exponentialRampToValueAtTime(0.0001, k + dk + 0.07);
-      s.connect(bp); bp.connect(sg); sg.connect(out); s.start(k + dk, rnd(0, 2)); s.stop(k + dk + 0.1);
+      s.connect(bp); bp.connect(sg); sg.connect(out); s.start(k + dk, rnd(0, NOISE_SEC - 0.5)); s.stop(k + dk + 0.1);
     }
     k += gap; if (braking) gap *= 1.06;
   }
@@ -136,6 +141,40 @@ export function trainPass(ctx: AudioContext, out: AudioNode, vol: number, brakin
     q.frequency.setValueAtTime(2900, tq); q.frequency.linearRampToValueAtTime(2600, t + dur * 0.92);
     const qg = ctx.createGain(); qg.gain.setValueAtTime(0.0001, tq); qg.gain.exponentialRampToValueAtTime(vol * 0.18, tq + 0.6); qg.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
     q.connect(qg); qg.connect(out); q.start(tq); q.stop(t + dur);
+  }
+}
+
+/** Lauf 3 – Trolleybus der VBL (Luzern fährt viele Linien elektrisch mit Fahrleitung, https://en.wikipedia.org/wiki/Trolleybuses_in_Lucerne):
+ *  leises Singen des Fahrmotors, das beim Anfahren steigt, dazu Abrollen der Reifen. Tonhöhen sind eine Annahme (Vertrauen gering). */
+export function trolleybus(ctx: AudioContext, out: AudioNode, vol: number) {
+  const t = ctx.currentTime, dur = rnd(5, 7.5), f0 = rnd(180, 240), up = Math.random() < 0.6; // meist Anfahren (Haltestelle), sonst Vorbeifahrt
+  let p: StereoPannerNode | null = null;
+  if (ctx.createStereoPanner) { p = ctx.createStereoPanner(); const d = Math.random() < 0.5 ? -1 : 1; p.pan.setValueAtTime(-0.7 * d, t); p.pan.linearRampToValueAtTime(0.7 * d, t + dur); p.connect(out); }
+  const o = p || out;
+  const env = ctx.createGain(); env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(vol, t + dur * 0.45); env.gain.exponentialRampToValueAtTime(0.0001, t + dur); env.connect(o);
+  for (const [m, a] of [[1, 1], [2, 0.35], [3.02, 0.12]] as const) { // Motorsingen: Grundton + Obertöne
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0 * m * (up ? 1 : 2.4), t); osc.frequency.linearRampToValueAtTime(f0 * m * (up ? 3.2 : 2.6), t + dur);
+    const g = ctx.createGain(); g.gain.value = 0.22 * a; osc.connect(g); g.connect(env); osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  const src = ctx.createBufferSource(); src.buffer = noise(ctx); src.loop = true; // Reifen
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.7;
+  const ng = ctx.createGain(); ng.gain.value = 0.9; src.connect(bp); bp.connect(ng); ng.connect(env);
+  src.start(t, rnd(0, NOISE_SEC - 0.5)); src.stop(t + dur + 0.05);
+}
+
+/** Lauf 3 – Schiffshorn eines Kursschiffs auf dem Vierwaldstättersee (SGV, Dampf- und Motorschiffe, https://www.lakelucerne.ch/):
+ *  ein langer, tiefer Ton aus der Ferne, gelegentlich zweimal. Tonhöhe/Länge sind eine Annahme (Vertrauen gering). */
+export function shipHorn(ctx: AudioContext, out: AudioNode, vol: number) {
+  const n = Math.random() < 0.35 ? 2 : 1, f = rnd(150, 185), o = pan(ctx, out, rnd(-0.6, 0.6));
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(o); // weit weg → dumpf
+  for (let i = 0; i < n; i++) {
+    const t = ctx.currentTime + i * 3.2, d = i ? 1.4 : rnd(2.2, 3);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.25); g.gain.setValueAtTime(vol, t + d - 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + d); g.connect(lp);
+    for (const [m, a] of [[1, 1], [1.5, 0.5], [2, 0.3], [3, 0.12]] as const) { // leicht hohler Akkord wie eine Dampfpfeife
+      const osc = ctx.createOscillator(); osc.type = m === 1 ? 'triangle' : 'sine'; osc.frequency.setValueAtTime(f * m * 0.97, t); osc.frequency.linearRampToValueAtTime(f * m, t + 0.3);
+      const og = ctx.createGain(); og.gain.value = a * 0.5; osc.connect(og); og.connect(g); osc.start(t); osc.stop(t + d + 0.05);
+    }
   }
 }
 

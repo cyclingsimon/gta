@@ -2,18 +2,11 @@
 // P-B (14.11.): Geräuschkulisse nach Ort → src/ambience/ (läuft über updateVenues mit); Sirene = Schweizer Wechselklanghorn.
 // Ausnahme 14z (Simon): Musik «Spitalradio LuZ» – nur wenn im Menü gewählt, dann Live-Stream vom offiziellen Server (radioluz.ch/empfang).
 import { initAmbience, updateAmbience } from './ambience';
+import { buildSiren, blipTo } from './ambience/horn';
 let ctx: AudioContext | null = null;
 let master: GainNode, sfx: GainNode, music: GainNode;
 let engineOsc: OscillatorNode | null = null, engineGain: GainNode;
-let sirenOsc: OscillatorNode | null = null, sirenGain: GainNode, sirenLfo: OscillatorNode | null = null, sirenFreq: GainNode, sirenSmooth: BiquadFilterNode;
-const SIREN_HI = 586.7, SIREN_LO = 440, SIREN_MID = (SIREN_HI + SIREN_LO) / 2, SIREN_DEV = (SIREN_HI - SIREN_LO) / 2, SIREN_TONE = 0.7;
-/** Wechselklang neu beginnen (Vorschrift: bei jeder Betätigung beginnt der Zyklus neu, mit dem hohen Ton) */
-function restartSirenCycle() {
-  if (!ctx) return;
-  if (sirenLfo) { try { sirenLfo.stop(); sirenLfo.disconnect(); } catch { /* schon gestoppt */ } }
-  sirenLfo = ctx.createOscillator(); sirenLfo.type = 'square'; sirenLfo.frequency.value = 1 / (2 * SIREN_TONE); // Rechteck startet positiv → hoher Ton zuerst
-  sirenLfo.connect(sirenSmooth); sirenLfo.start();
-}
+let siren: ReturnType<typeof buildSiren> | null = null;
 let muted = false;
 let musicTimer: number | null = null;
 
@@ -34,20 +27,8 @@ export function initAudio() {
   engineOsc.start(); o2.start();
   (engineOsc as any)._sub = o2;
 
-  // Sirene = Schweizer Wechselklanghorn (VTS Anhang 11 Ziff. 3): zwei Töne im Verhältnis 3:4, Grundfrequenzen zwischen 360 und 630 Hz,
-  // ein Zyklus (2 hohe + 2 tiefe Töne) dauert 2,5–3,5 s, keine Überschneidung. Hier: 586,7 Hz (d'') und 440 Hz (a'),
-  // je 0,7 s → Zyklus 2,8 s, beginnt hoch. Die konkreten Töne a'/d'' sind eine Annahme innerhalb der Vorschrift.
-  // Klang: Sägezahn + leiser Rechteck durch Tiefpass (blechern wie ein Kompressorhorn), aber gedämpft für Kinderohren.
-  sirenGain = ctx.createGain(); sirenGain.gain.value = 0;
-  sirenOsc = ctx.createOscillator(); sirenOsc.type = 'sawtooth'; sirenOsc.frequency.value = SIREN_MID;
-  const sq = ctx.createOscillator(); sq.type = 'square'; sq.frequency.value = SIREN_MID; const sqG = ctx.createGain(); sqG.gain.value = 0.35;
-  sirenFreq = ctx.createGain(); sirenFreq.gain.value = SIREN_DEV; // LFO → Frequenz beider Oszillatoren
-  sirenFreq.connect(sirenOsc.frequency); sirenFreq.connect(sq.frequency);
-  sirenSmooth = ctx.createBiquadFilter(); sirenSmooth.type = 'lowpass'; sirenSmooth.frequency.value = 28; sirenSmooth.connect(sirenFreq); // kurzer Gleitübergang statt Knacks
-  const sLp = ctx.createBiquadFilter(); sLp.type = 'lowpass'; sLp.frequency.value = 2200; sLp.Q.value = 0.8;
-  sirenOsc.connect(sLp); sq.connect(sqG); sqG.connect(sLp); sLp.connect(sirenGain); sirenGain.connect(sfx);
-  sirenOsc.start(); sq.start();
-  restartSirenCycle();
+  // Sirene = Schweizer Wechselklanghorn (VTS Anhang 11 Ziff. 3) – Baustein in src/ambience/horn.ts (Lauf 3: testbar per OfflineAudioContext)
+  siren = buildSiren(ctx, sfx);
 
   initAmbience(ctx, master, sfx);
   startMusic();
@@ -70,19 +51,13 @@ export function updateEngine(speed: number, throttle: number) {
 }
 
 export function setSiren(on: boolean) {
-  const was = sirenOn; sirenOn = on; radioApply();
+  sirenOn = on; radioApply();
   if (!ctx) return;
-  if (on && !was) restartSirenCycle();
-  sirenGain.gain.setTargetAtTime(on ? 0.11 : 0, ctx.currentTime, 0.15);
+  siren?.set(on);
 }
 
 function blip(freq: number, dur: number, type: OscillatorType = 'square', vol = 0.15, slide = 0, when = 0) {
-  if (!ctx) return;
-  const t = ctx.currentTime + when;
-  const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t);
-  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
-  const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(sfx); o.start(t); o.stop(t + dur + 0.02);
+  if (ctx) blipTo(ctx, sfx, freq, dur, type, vol, slide, when);
 }
 
 export const sfxPlay = {
@@ -118,11 +93,11 @@ function startMusic() {
     const sc = mission ? scaleMission : scaleFree;
     const t = ctx.currentTime;
     const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = sc[step % sc.length];
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.25, t + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35); g.gain.linearRampToValueAtTime(0, t + 0.38);
     o.connect(g); g.connect(music); o.start(t); o.stop(t + 0.4);
     if (step % 4 === 0) {
       const b = ctx.createOscillator(); b.type = 'sine'; b.frequency.value = (mission ? bassMission : bassFree)[(step / 4) % 4];
-      const bg = ctx.createGain(); bg.gain.setValueAtTime(0.5, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+      const bg = ctx.createGain(); bg.gain.setValueAtTime(0, t); bg.gain.linearRampToValueAtTime(0.5, t + 0.008); bg.gain.exponentialRampToValueAtTime(0.001, t + 1.1); bg.gain.linearRampToValueAtTime(0, t + 1.18);
       b.connect(bg); bg.connect(music); b.start(t); b.stop(t + 1.2);
     }
     step++;
