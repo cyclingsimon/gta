@@ -1,9 +1,19 @@
 // Alle Klänge werden live mit WebAudio erzeugt – keine Dateien, keine Netzaufrufe.
+// P-B (14.11.): Geräuschkulisse nach Ort → src/ambience/ (läuft über updateVenues mit); Sirene = Schweizer Wechselklanghorn.
 // Ausnahme 14z (Simon): Musik «Spitalradio LuZ» – nur wenn im Menü gewählt, dann Live-Stream vom offiziellen Server (radioluz.ch/empfang).
+import { initAmbience, updateAmbience } from './ambience';
 let ctx: AudioContext | null = null;
 let master: GainNode, sfx: GainNode, music: GainNode;
 let engineOsc: OscillatorNode | null = null, engineGain: GainNode;
-let sirenOsc: OscillatorNode | null = null, sirenGain: GainNode, sirenLfo: OscillatorNode | null = null;
+let sirenOsc: OscillatorNode | null = null, sirenGain: GainNode, sirenLfo: OscillatorNode | null = null, sirenFreq: GainNode, sirenSmooth: BiquadFilterNode;
+const SIREN_HI = 586.7, SIREN_LO = 440, SIREN_MID = (SIREN_HI + SIREN_LO) / 2, SIREN_DEV = (SIREN_HI - SIREN_LO) / 2, SIREN_TONE = 0.7;
+/** Wechselklang neu beginnen (Vorschrift: bei jeder Betätigung beginnt der Zyklus neu, mit dem hohen Ton) */
+function restartSirenCycle() {
+  if (!ctx) return;
+  if (sirenLfo) { try { sirenLfo.stop(); sirenLfo.disconnect(); } catch { /* schon gestoppt */ } }
+  sirenLfo = ctx.createOscillator(); sirenLfo.type = 'square'; sirenLfo.frequency.value = 1 / (2 * SIREN_TONE); // Rechteck startet positiv → hoher Ton zuerst
+  sirenLfo.connect(sirenSmooth); sirenLfo.start();
+}
 let muted = false;
 let musicTimer: number | null = null;
 
@@ -24,16 +34,22 @@ export function initAudio() {
   engineOsc.start(); o2.start();
   (engineOsc as any)._sub = o2;
 
-  // Sirene: weich, zwei Töne (Tatü-tata), über einen Rechteck-LFO
+  // Sirene = Schweizer Wechselklanghorn (VTS Anhang 11 Ziff. 3): zwei Töne im Verhältnis 3:4, Grundfrequenzen zwischen 360 und 630 Hz,
+  // ein Zyklus (2 hohe + 2 tiefe Töne) dauert 2,5–3,5 s, keine Überschneidung. Hier: 586,7 Hz (d'') und 440 Hz (a'),
+  // je 0,7 s → Zyklus 2,8 s, beginnt hoch. Die konkreten Töne a'/d'' sind eine Annahme innerhalb der Vorschrift.
+  // Klang: Sägezahn + leiser Rechteck durch Tiefpass (blechern wie ein Kompressorhorn), aber gedämpft für Kinderohren.
   sirenGain = ctx.createGain(); sirenGain.gain.value = 0;
-  sirenOsc = ctx.createOscillator(); sirenOsc.type = 'triangle'; sirenOsc.frequency.value = 520;
-  sirenLfo = ctx.createOscillator(); sirenLfo.type = 'square'; sirenLfo.frequency.value = 0.75;
-  const lfoG = ctx.createGain(); lfoG.gain.value = 95;
-  sirenLfo.connect(lfoG); lfoG.connect(sirenOsc.frequency);
-  const sLp = ctx.createBiquadFilter(); sLp.type = 'lowpass'; sLp.frequency.value = 1400;
-  sirenOsc.connect(sLp); sLp.connect(sirenGain); sirenGain.connect(sfx);
-  sirenOsc.start(); sirenLfo.start();
+  sirenOsc = ctx.createOscillator(); sirenOsc.type = 'sawtooth'; sirenOsc.frequency.value = SIREN_MID;
+  const sq = ctx.createOscillator(); sq.type = 'square'; sq.frequency.value = SIREN_MID; const sqG = ctx.createGain(); sqG.gain.value = 0.35;
+  sirenFreq = ctx.createGain(); sirenFreq.gain.value = SIREN_DEV; // LFO → Frequenz beider Oszillatoren
+  sirenFreq.connect(sirenOsc.frequency); sirenFreq.connect(sq.frequency);
+  sirenSmooth = ctx.createBiquadFilter(); sirenSmooth.type = 'lowpass'; sirenSmooth.frequency.value = 28; sirenSmooth.connect(sirenFreq); // kurzer Gleitübergang statt Knacks
+  const sLp = ctx.createBiquadFilter(); sLp.type = 'lowpass'; sLp.frequency.value = 2200; sLp.Q.value = 0.8;
+  sirenOsc.connect(sLp); sq.connect(sqG); sqG.connect(sLp); sLp.connect(sirenGain); sirenGain.connect(sfx);
+  sirenOsc.start(); sq.start();
+  restartSirenCycle();
 
+  initAmbience(ctx, master, sfx);
   startMusic();
 }
 
@@ -54,8 +70,9 @@ export function updateEngine(speed: number, throttle: number) {
 }
 
 export function setSiren(on: boolean) {
-  sirenOn = on; radioApply();
+  const was = sirenOn; sirenOn = on; radioApply();
   if (!ctx) return;
+  if (on && !was) restartSirenCycle();
   sirenGain.gain.setTargetAtTime(on ? 0.11 : 0, ctx.currentTime, 0.15);
 }
 
@@ -170,5 +187,7 @@ export function updateVenues(x: number, z: number) {
   duck = top;
   if (music) music.gain.setTargetAtTime(musicSrc === 'spiel' ? 0.18 * (1 - top) : 0, ctx.currentTime, 0.2);
   if (radio) radio.volume = (sirenOn ? 0.18 : 0.45) * (1 - 0.85 * top);
+  // P-B: Geräuschkulisse nach Ort (duckt unter Spielmusik/Radio, Konzert und Sirene)
+  updateAmbience(x, z, { music: musicSrc === 'aus' ? 0 : 1, venue: top, siren: sirenOn, muted, hidden });
 }
 let duck = 0;
