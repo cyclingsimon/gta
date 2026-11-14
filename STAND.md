@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 01:00. Fertig: **2026-11-14s** = 14r + Region a13 Willisau/Ettiswil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 05:00. Fertig: **2026-11-14t** = 14s + Region a14 Dagmersellen/Wauwil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14t (14.11. 03:30–05:00, nicht hochgeladen)
+- Region **a14 «Dagmersellen und Wauwil»** (Wiggertal) x −26200..−19800, z −18300..−10800 (LV95 E 2639570–2646210, N 1222082–1229858, 46 km²), überlappt a13 (200 m) und a1 (200 m, nur z −14600..−10800). b3dm x 904–943 / y 1374–1444 (2840 Kacheln, 1063 mit Inhalt), 42 neue Höhenkacheln, bus_a14.json (Linien 63/66/80/82/271/275/277). Treffpunkt Bahnhof Wauwil (BHF-Tabelle; OSM kennt «Nebikon» station und «Wauwil» halt, Dagmersellen nicht als railway=station in der bbox).
+- Ergebnis: 6678 Gebäude (3D), 8 Einsätze, 9 Kreisel, Hecken 43 / 1.2 km. Spielumfang 623.1 km², 83 859 Gebäude (OSM-Zählung).
+- Lücke: Nordostrand von a14 (z < −14600) hat keinen Nachbarn (Knutwil/St. Erhard/Triengen nördlich a1/a2) → Kandidat für a15.
+- Tests 14t: smoke_a a14 ok (8/8, keine Fehler); tests/region_a14.py a14↔a1 (Kantonsstrasse bei Kaltbach) und a14↔a13 (Surseestrasse) je beide Richtungen ok. Testfehler behoben: wait_for_url mit Glob «**region=a1**» passte auch auf «region=a14» → Regex. Ältere Regionstests (a13 usw.) nutzen noch den Glob (nur relevant, wenn Ziel a1 ist).
 
 ## Version 14s (14.11. 02:50–03:45, nicht hochgeladen)
 - [Entscheid Claude] Statt der Lücke Adligenswil/Dottenberg (liegt grösstenteils schon in Nord, Rest Wald/Hügel, wenig Kinder) zuerst **a13 «Willisau und Ettiswil»** x −26200..−19800, z −11000..−5000 (LV95 E 2639619–2646255, N 1216250–1222519), überlappt a4 (200 m) und a1-Ecke. b3dm x 904–943 / y 1319–1377 (809 Kacheln), 63 neue Höhenkacheln, Bus-Relationen bus_a13.json. Treffpunkt Bahnhof Willisau.

@@ -287,5 +287,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -7840.7
   },
   "welcome": "Willkommen in Willisau und Ettiswil! Treffpunkt ist der Bahnhof Willisau. Er ist auf der Karte blau markiert."
+ },
+ "a14": {
+  "name": "Dagmersellen und Wauwil",
+  "b": [
+   -26200,
+   -18300,
+   -19800,
+   -10800
+  ],
+  "aerial": {
+   "E0": 2639570,
+   "E1": 2646210,
+   "N0": 1222082,
+   "N1": 1229858
+  },
+  "hosp": {
+   "label": "Bahnhof Wauwil",
+   "kind": "rp",
+   "x": -21890.2,
+   "z": -14613.9
+  },
+  "welcome": "Willkommen in Dagmersellen und Wauwil! Treffpunkt ist der Bahnhof Wauwil. Er ist auf der Karte blau markiert."
  }
 };

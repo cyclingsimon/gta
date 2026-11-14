@@ -14,4 +14,5 @@ REGIONS_A = {
     'a11': ('Küssnacht und Meierskappel', (7300, -8600, 12300, -1800)),  # 13o
     'a12': ('Hochdorf und Ballwil', (-3700, -14800, 2300, -8900)),  # 14r: Seetal
     'a13': ('Willisau und Ettiswil', (-26200, -11000, -19800, -5000)),  # 14s
+    'a14': ('Dagmersellen und Wauwil', (-26200, -18300, -19800, -10800)),  # 14t: Wiggertal
 }
