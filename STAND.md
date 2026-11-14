@@ -5,6 +5,13 @@ Stand: 14.11.2026 09:15. Fertig: **2026-11-14y** = 14x + Region a19 Hitzkirch/Ba
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+## Version 14z (2026-11-14)
+- Neue Gegend a20 «Entlebuch und Hasle» (x −21000..−14300, z 2800..9000), 2682 3D-Häuser, 8 Einsätze, Treffpunkt Bhf Entlebuch.
+- Übergang a20↔a7 (Hauptstrasse Entlebuch–Wolhusen) beidseitig getestet; smoke a20 8/8, keine Seitenfehler.
+- missions_a: Ortsnamen ohne Restaurant/Gasthaus/Hotel/Wirtschaft.
+- **Kurswechsel Simon 14.11. 08:37: keine neuen Gegenden mehr – Qualität statt Grösse, Verteilung 45/30/20/5 bleibt** (45 % = Qualität der bestehenden Umgebung).
+- Neuer Wunsch 08:40: Spital Radio LuZ als Hintergrundsound (in Arbeit).
+
 ## Version 14y (14.11. 07:30–09:15, nicht hochgeladen)
 - Region **a19 «Hitzkirch und Baldegg»** (Seetal-Nord) x −6200..2300, z −20300..−14600 (LV95 E 2659523–2668264, N 1226069–1232081), überlappt a12 (200 m), a17 (200 m); zu a3 **keine** Überlappung (a3 beginnt bei z −14600). b3dm x 1024–1074 / y 1410–1463 (2754 Kacheln, 672 mit Inhalt), 47 neue Höhenkacheln. Treffpunkt Bahnhof Hitzkirch (BHF). Ortsnamen geprüft (Hitzkirch, Baldegg, Gelfingen, Ermensee, Retschwil im Feld).
 - **Fix Randwechsel** (`main.ts edgeNeighbor`): Nachbarfeld wurde nur gefunden, wenn die Ambulanz ≥ 10 m drin war. Bei aneinanderstossenden Feldern (a19/a3) endet die Strasse am eigenen Rand → nie drin. Jetzt zweiter Durchgang mit 40 m Toleranz; placeCar() setzt drüben auf die nächste Strasse. Gilt für alle A-Regionen [Annahme: keine Nebenwirkung an Ecken, weil die Fahrtrichtung nach aussen zeigen muss].

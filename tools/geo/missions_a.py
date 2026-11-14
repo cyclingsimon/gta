@@ -22,7 +22,8 @@ RANK = {'town': 3, 'village': 2, 'suburb': 1, 'hamlet': 0}
 POP = {}  # Einwohnerzahl (OSM population), um den Hauptort zu wählen
 for e in els:
     t = e.get('tags', {})
-    if e['type'] == 'node' and t.get('place') in RANK and t.get('name'):
+    # 14z: Weiler, die eigentlich Gasthäuser sind («Restaurant Rengg»), nicht als Ortsname verwenden
+    if e['type'] == 'node' and t.get('place') in RANK and t.get('name') and not any(w in t['name'] for w in ('Restaurant', 'Gasthaus', 'Hotel', 'Wirtschaft')) and not t.get('amenity'):
         p = pos(e); places.append((t['name'], p[0], p[1], RANK[t['place']]))
         try: POP[t['name']] = int(str(t.get('population', '0')).replace("'", '').split()[0])
         except ValueError: pass
@@ -42,7 +43,7 @@ for e in els:
 # 14o (Simon): keine erfundenen Rettungsposten mehr. Ohne LUKS-Spital ist das Ziel der Bahnhof des Hauptorts (OSM railway=station/halt),
 # wo es keinen gibt, die Bushaltestelle im Dorfzentrum. Übergabe dort an die Eltern (Spieltext), Schnellreise-Station ebenda.
 HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter', 'a15': 'Triengen Dorf', 'a17': 'Beromünster Flecken', 'a18': 'Schwarzenberg Rössli'}  # Hauptort des Regionsnamens; a15: Triengen-Winikon ist nur Güterbahnhof (Personenverkehr seit 1971 eingestellt)
-BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi', 'a12': 'Hochdorf', 'a13': 'Willisau', 'a14': 'Wauwil', 'a16': 'Rotkreuz', 'a19': 'Hitzkirch'}
+BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi', 'a12': 'Hochdorf', 'a13': 'Willisau', 'a14': 'Wauwil', 'a16': 'Rotkreuz', 'a19': 'Hitzkirch', 'a20': 'Entlebuch'}
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]
     big.sort(key=lambda q: (-q[3], -POP.get(q[0], 0), math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))

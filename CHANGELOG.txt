@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14z  Neue Gegend Entlebuch und Hasle
+- Neue Gegend «Entlebuch und Hasle» (rund 42 km², mit Doppleschwand, Ebnet und Finsterwald): 2682 echte 3D-Häuser, Berggelände, Luftbild, Hecken, 8 Einsätze (u. a. Bahnhof Hasle, Sportplatz Entlebuch, Kirche Doppleschwand), Treffpunkt Bahnhof Entlebuch, 40 Luksi-Herzen, Busse und S-Bahn. Anschluss an Wolhusen über die Kantonsstrasse
+- Einsatz-Ortsnamen nicht mehr nach Gasthäusern («Restaurant …»)
+- Spielwelt jetzt 25 Gegenden, rund 864 km² mit rund 104 000 Gebäuden
+
 2026-11-14y  Neue Gegend Hitzkirch und Baldegg (Seetal-Nord)
 - Neue Gegend «Hitzkirch und Baldegg» (rund 48 km², mit Gelfingen, Ermensee, Retschwil und dem Nordende des Baldeggersees): 3328 echte 3D-Häuser, Gelände, Luftbild, Obstgärten, 8 Einsätze (u. a. Bahnhof Gelfingen, Badi Wolfetschwil, Sportplatz Hitzkirch), Treffpunkt Bahnhof Hitzkirch, 40 Luksi-Herzen, Busse und Seetalbahn. Anschluss an Hochdorf (Seetal-Hauptstrasse), Hildisrieden und Beromünster
 - Wechsel in eine Nachbargegend klappt jetzt auch dort, wo zwei Gegenden nur aneinanderstossen (vorher kam man von Hitzkirch nicht nach Hildisrieden)

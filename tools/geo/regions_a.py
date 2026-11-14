@@ -20,4 +20,5 @@ REGIONS_A = {
     'a17': ('Beromünster und Gunzwil', (-13700, -20300, -6000, -14400)),  # 14w: Michelsamt
     'a18': ('Eigenthal und Schwarzenberg', (-11000, 2800, -3600, 8800)),  # 14x: Pilatus-Nordseite
     'a19': ('Hitzkirch und Baldegg', (-6200, -20300, 2300, -14600)),  # 14y: Seetal-Nord
+    'a20': ('Entlebuch und Hasle', (-21000, 2800, -14300, 9000)),  # 14z: Entlebuch
 }

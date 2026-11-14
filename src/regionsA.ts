@@ -419,5 +419,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -18934.0
   },
   "welcome": "Willkommen in Hitzkirch und Baldegg! Treffpunkt ist der Bahnhof Hitzkirch. Er ist auf der Karte blau markiert."
+ },
+ "a20": {
+  "name": "Entlebuch und Hasle",
+  "b": [
+   -21000,
+   2800,
+   -14300,
+   9000
+  ],
+  "aerial": {
+   "E0": 2644923,
+   "E1": 2651882,
+   "N0": 1202212,
+   "N1": 1208690
+  },
+  "hosp": {
+   "label": "Bahnhof Entlebuch",
+   "kind": "rp",
+   "x": -18603.9,
+   "z": 6415.9
+  },
+  "welcome": "Willkommen in Entlebuch und Hasle! Treffpunkt ist der Bahnhof Entlebuch. Er ist auf der Karte blau markiert."
  }
 };
