@@ -13,15 +13,15 @@ import { Terrain } from './terrain';
 import { Vehicle, textSprite, type Difficulty } from './vehicle';
 import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepadName } from './input';
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
-import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
+import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14z';
+export const VERSION = '2026-11-14za';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht' }
+interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -860,6 +860,7 @@ function menuRows(): MenuRow[] {
     { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '👀 Nah dran'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
     { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
     { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
+    { kind: 'opt', label: 'Musik', note: getMusicSrc() === 'radio' ? 'Live aus dem Luzerner Kantonsspital (braucht Internet).' : undefined, btns: ([['spiel', '🎵 Spielmusik'], ['radio', '📻 Spitalradio LuZ'], ['aus', '🔕 Keine']] as [MusicSrc, string][]).map(([m, t]) => ({ t, on: getMusicSrc() === m, f: () => { save.music = m; setMusicSrc(m); writeSave(); } })) },
     { kind: 'opt', label: 'Ambulanz', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Lackierungen gibt es mit Luksi-Herzen.' : undefined,
       btns: SKIN_NEED.map(([sk, need]) => ({ t: skinN >= need ? SKIN_LABEL[sk] : `🔒 ${need} ♥`, on: (car?.skin || 'standard') === sk, off: skinN < need, f: () => { if (skinN >= need) setSkin(sk); else toast(`${SKIN_LABEL[sk]} gibt es ab ${need} Luksi-Herzen.`, 2500); } })) },
     { kind: 'opt', label: 'Grafik', note: 'Wechseln lädt das Spiel neu (Spielstand bleibt).', btns: [
@@ -1128,6 +1129,7 @@ function frame(now: number) {
     for (const p of players) p.car.animateSkin(dt);
     updateComics(dt);
     updateEngine(car.speed, c.throttle);
+    updateVenues(car.x, car.z);
     phaseTime += dt;
     playTime += dt; if (playTime > 90) $('#keys').classList.add('hide');
 
@@ -1344,7 +1346,8 @@ function swapWorld(nw: World) {
 
 function start() {
   goFullscreen();
-  initAudio(); setMuted(save.muted);
+  initAudio(); if (REGION === 'luzern') setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500));
+  for (const ev of ['keydown', 'pointerdown']) addEventListener(ev, radioKick);
   $('#start').classList.add('hide');
   setTimeout(() => $('#start').remove(), 600);
   paused = false;

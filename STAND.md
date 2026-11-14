@@ -5,6 +5,11 @@ Stand: 14.11.2026 09:15. Fertig: **2026-11-14y** = 14x + Region a19 Hitzkirch/Ba
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+## Version 14za (2026-11-14)
+- src/audio.ts: Musikquelle spiel|radio|aus (save.music, Pause-Menü «Musik»). Radio = HTMLAudio auf https://s10.streamingcloud.online:13552/radioluz128.mp3 (offiziell laut radioluz.ch/empfang); nur bei Wahl, getrennt bei Ton aus/Tab verdeckt; Fehler oder 15 s ohne Daten → Spielmusik + Hinweis. **Einzige Netzverbindung ausser eigenem Server, von Simon gewünscht (14.11. 08:40).**
+- Ortsmusik (setVenues/updateVenues): Schüür (270,785) r 190 m audio/schuur.mp3 (232 s, Simon «De Luksi»), KKL (327,128) r 150 m audio/kkl.mp3 (75 s, «De Luksi isch für dech do»), 96 kbps, Schleife, Tiefpass 500–3000 Hz nach Nähe, Spielmusik/Radio ducken. Nur Region luzern.
+- Test tests/audio_14za.py: Nähe/Lautstärke/Start/Stopp ok, Menü-Wahl gespeichert. **Echte Radiowiedergabe hier nicht prüfbar (kein Internet im Testrechner)** – Simon bitte am PC testen.
+
 ## Version 14z (2026-11-14)
 - Neue Gegend a20 «Entlebuch und Hasle» (x −21000..−14300, z 2800..9000), 2682 3D-Häuser, 8 Einsätze, Treffpunkt Bhf Entlebuch.
 - Übergang a20↔a7 (Hauptstrasse Entlebuch–Wolhusen) beidseitig getestet; smoke a20 8/8, keine Seitenfehler.
