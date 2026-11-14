@@ -1516,7 +1516,7 @@ if (location.search.includes('test')) {
     offer: () => { offerTimer = 0; },
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
-    car: () => ({ x: car.x, z: car.z, heading: car.heading }),
+    car: () => ({ x: car.x, z: car.z, heading: car.heading, speed: car.speed }),
     speed: (v: number) => { car.speed = v; },
     head: (h: number) => { car.heading = h; }, warp: (x: number, z: number, h: number) => { car.x = x; car.z = z; car.heading = h; car.speed = 0; car.y = terrain.height(x, z); updateCamera(0, true); }, under: () => underground, // 14zg Tests
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
@@ -1686,7 +1686,19 @@ function activate(s: Slot) {
   if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
   console.log('[welt] aktiv', s.id, 'von', from);
 }
+/** 15a: Strecke bis zum Rand der geladenen Welt in Fahrtrichtung (nur wo dahinter eine bekannte, noch nicht geladene Gegend liegt) → Tempo-Deckel.
+ *  400 m voraus frei = kein Deckel; 100 m = 36 km/h; am Rand Schritttempo. Am echten Weltrand (keine Gegend dahinter) greift das nicht. */
+function streamCap() {
+  for (const pl of players) {
+    const c = pl.car; let cap = Infinity;
+    const loaded = (x: number, z: number) => { const r = regionAt(x, z); return r.length === 0 || r.some((k) => slots.has(k)); };
+    if (!loaded(c.x, c.z)) cap = 3;
+    else if (c.speed > 1) for (let f = 40; f <= 400; f += 40) if (!loaded(c.x + c.fx * f, c.z + c.fz * f)) { cap = Math.max(4, (f - 40) / 6); break; }
+    c.vcap = cap;
+  }
+}
 function streamTick(dt: number) {
+  streamCap();
   streamT -= dt; if (streamT > 0) return; streamT = 0.5;
   const c = players[0].car;
   // 1) Wechsel: Ambulanz hat das aktive Feld verlassen und steht in einer geladenen Nachbargegend
@@ -1697,20 +1709,26 @@ function streamTick(dt: number) {
   }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && Math.abs(c.speed) > 2) {
-    const look = [[0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
+    const look = [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
     let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r)); if (k) { want = k; break; } }
-    if (want) { loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
+    if (want) { streamTrim((MOBILE ? 2 : 3) - 1); // 15a: zuerst Platz schaffen – sonst lagen kurz 4 Gegenden im Speicher
+      loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
       const t0 = performance.now();
       loadSlot(want).then((s) => { slots.set(s.id, s); scene.add(s.world.group); scene.add(s.world.tunnels); linkSlots();
         ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit!`; setTimeout(() => ind.remove(), 2200);
         console.log('[welt] geladen', s.id, (performance.now() - t0).toFixed(0), 'ms');
       }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); }).finally(() => { loadingSlot = ''; }); }
   }
-  // 3) Entladen: höchstens 3 Gegenden; weit entfernte (> 2.5 km vom Feldrand) zuerst
-  if (slots.size > (MOBILE ? 2 : 3)) { // Handy: höchstens 2 Gegenden im Speicher
+  // 3) Entladen: höchstens 3 Gegenden (Handy 2); weit entfernte (> 1.5 km vom Feldrand) zuerst
+  streamTrim(MOBILE ? 2 : 3);
+}
+/** Entlädt die am weitesten entfernten, nicht aktiven Gegenden (> 1.5 km), bis höchstens `keep` geladen sind */
+function streamTrim(keep: number) {
+  const c = players[0].car;
+  while (slots.size > keep) {
     const far = [...slots.values()].filter((s) => s.id !== REGION).map((s) => { const b = REG_BOUNDS[s.id]; const dx = Math.max(b[0] - c.x, 0, c.x - b[2]), dz = Math.max(b[1] - c.z, 0, c.z - b[3]); return [Math.hypot(dx, dz), s] as [number, Slot]; }).sort((a, b) => b[0] - a[0]);
-    if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]);
+    if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]); else break;
   }
 }
-if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot });
+if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot, vcap: players[0].car.vcap, drin: regionAt(players[0].car.x, players[0].car.z).some((k) => slots.has(k)) });
   (window as any).__weltLoad = (id: string) => loadSlot(id).then((sl) => { slots.set(sl.id, sl); scene.add(sl.world.group); scene.add(sl.world.tunnels); linkSlots(); return renderer.info.memory; }); }

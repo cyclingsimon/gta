@@ -202,9 +202,13 @@ export class Vehicle {
     for (let i = 0; i < n; i++) this.step(dt / n, c, diff, onBump, i === n - 1);
   }
 
+  /** Tempo-Deckel in m/s (Infinity = keiner); von main.ts gesetzt, solange die Nachbargegend voraus noch nicht geladen ist */
+  vcap = Infinity;
   private step(dt: number, c: Controls, diff: Difficulty, onBump: (hard: boolean) => void, render: boolean) {
     this.t += dt;
-    const vmax = this.siren ? VMAX[diff] : VMAX_RUHIG[diff];
+    const vmax = Math.min(this.siren ? VMAX[diff] : VMAX_RUHIG[diff], this.vcap);
+    // 15a Baustellen-Bremse: nähert sich die Ambulanz einer Gegend, die noch gebaut wird, rollt sie sanft aus (kein Scheitern, kein Stopp-Schild)
+    if (this.speed > this.vcap) this.speed = Math.max(this.vcap, this.speed - 22 * dt);
     // Längsdynamik
     if (c.throttle > 0) {
       if (this.speed < -0.3) this.speed += 20 * dt * c.throttle; // aus Rückwärts bremsen
