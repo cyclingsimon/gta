@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14ze
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14zf
+Neu in 14zf: Signal «Kein Vortritt» an Einmündungen.
 Neu in 14ze: Schilder mit richtiger Rückseite, Ortstafeln mit Ortsende.
 Neu in 14zd: weicherer Übergang zur Fernsicht.
 Neu in 14zc: Fernsicht im Westen, Begleitwege an Kantonsstrassen aus Asphalt.

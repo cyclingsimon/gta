@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 12:00. Fertig: **2026-11-14ze** = 14zd + Schilder-Rückseiten. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** PC/Browser ab jetzt aus. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 12:45. Fertig: **2026-11-14zf** = 14ze + Kein-Vortritt-Signale. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** PC/Browser aus. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zf (2026-11-14)
+- world.ts: an jeder Wartelinie (SSV 6.13, Nebenstrasse → Hauptstrasse mit L, ohne Ampel ≤ 25 m) Signal 3.02 «Kein Vortritt» rechts, 2 m davor (`sideVortritt`, gerendert in kantonsPaket mit den Kreisel-Vortrittsignalen, Rückseite grau). Luzern 290, a12 98 (inkl. Kreisel).
+- Tests: missions.py Luzern 18/18, 54 Sterne, nach Neuladen erhalten; einzige Konsolenfehler = 404 data/aerial_hr.jpg (liegt nur auf dem Server, bekannt). Sichtprüfung Kein-Vortritt Luzern und Hochdorf.
+- Geprüft, nicht geändert: Spielfeldränder von oben – ab 700 m Höhe alles im Nebel, kein sinnvoller Prüfblick; Wegweiser-Logik (Richtung ±40°, Rang) plausibel.
+- Testhinweis: dist ersetzen während ein Test läuft zerstört den Test → `OUT=dist_next sh tools/dist.sh`, Prüfung auf Port 8766, danach `sh tools/swap.sh`. look_spots.py liest PORT und EVE (Abend).
 
 ## Version 14ze (2026-11-14)
 - world.ts `signBacks()` (am Ende von buildWorld): Meshes fgsSignal, tempo, wegweiser, hauptstrasse, kreisel-signal, umfahren mit MeshBasicMaterial+map+DoubleSide → FrontSide + Klon mit BackSide-Material (graue Farbe, Alpha aus der Textur). Ortstafeln: zwei Ebenen Rücken an Rücken, Rückseite = Gegenstück (Ortsbeginn ↔ Ortsende).

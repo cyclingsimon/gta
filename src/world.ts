@@ -701,13 +701,15 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       for (let i = 1; i < r.p.length - 1; i++) nodeCnt.set(nk(r.p[i]), (nodeCnt.get(nk(r.p[i])) || 0) + 2); }
     // Wartelinien (SSV 6.13, unterbrochen 0.5 m / 0.25 m): wo eine Neben- auf eine Hauptstrasse (mit OSM-Streifen) trifft und keine Ampel steht
     const mainHalf = new Map<string, number>(); for (const r of d.roads) if (r.L && !r.b) for (const q of r.p) mainHalf.set(nk(q), Math.max(mainHalf.get(nk(q)) || 0, r.w / 2));
-    const wartel: number[] = [];
+    const wartel: number[] = [], sideVortritt: number[][] = [];
     for (const r of d.roads) { if (r.L || r.b || !['residential', 'unclassified', 'living_street', 'tertiary_link'].includes(r.c) || r.p.length < 2) continue;
       for (const end of [0, 1]) { const q = end ? r.p[r.p.length - 1] : r.p[0]; const mh = mainHalf.get(nk(q)); if (!mh) continue;
         if (props?.signals?.some((sg) => Math.hypot(sg[0] - q[0], sg[1] - q[1]) < 25)) continue;
         const pp = end ? r.p : r.p.slice().reverse(); const A = pp[pp.length - 2], B = pp[pp.length - 1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < mh + 2) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, nx = -uz, nz = ux, back = mh + 0.6, cx = B[0] - ux * back, cz = B[1] - uz * back, hw = r.w / 2 - 0.2;
-        strokeLine(wartel, [[cx - nx * hw, cz - nz * hw], [cx + nx * hw, cz + nz * hw]], 0.36, 0.4, 0.5, 0.25); } }
+        strokeLine(wartel, [[cx - nx * hw, cz - nz * hw], [cx + nx * hw, cz + nz * hw]], 0.36, 0.4, 0.5, 0.25);
+        // 14zf: zur Wartelinie gehört das Signal «Kein Vortritt» (SSV 3.02) rechts, ca. 2 m davor
+        const so = r.w / 2 + 0.9; sideVortritt.push([cx - ux * 2 - uz * so, cz - uz * 2 + ux * so, Math.atan2(ux, uz)]); } }
     // Höchstgeschwindigkeit (SSV 2.30): Signal 12 m nach einem Punkt, an dem das Tempo laut OSM wechselt, rechts in Fahrtrichtung
     const vAt = new Map<string, Set<number>>(); for (const r of d.roads) if (r.L && r.v && !r.b) for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = nk(q); if (!vAt.has(k)) vAt.set(k, new Set()); vAt.get(k)!.add(r.v); }
     const vSigns: number[][] = [];
@@ -903,7 +905,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const pg = new THREE.BoxGeometry(0.1, 1.6, 0.1); pg.translate(0, 0.1, 0); const im = new THREE.InstancedMesh(pg, toon('#8E9399'), posts.length); const m4 = new THREE.Matrix4();
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
-    kantonsPaket(d, props, terrain, group, vAt, nk);
+    kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
       if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
@@ -2281,7 +2283,7 @@ function colorMerge(parts: [THREE.BufferGeometry, string][]) {
 }
 /** InstancedMesh räumlich aufteilen (Zellgrösse in m) – bessere Sichtbarkeitsprüfung */
 /** 14ze: Verkehrsschilder nur vorne bedruckt, Rückseite grau (vorher beidseitig → Spiegelschrift, Kreiselpfeile verkehrt herum) */
-const SIGN_NAMES = new Set(['fgsSignal', 'tempo', 'wegweiser', 'hauptstrasse', 'kreisel-signal', 'umfahren']);
+const SIGN_NAMES = new Set(['kein-vortritt', 'fgsSignal', 'tempo', 'wegweiser', 'hauptstrasse', 'kreisel-signal', 'umfahren']);
 function signBacks(root: THREE.Object3D) {
   const backs = new Map<THREE.Material, THREE.Material>(), add: [THREE.Object3D, THREE.Mesh][] = [];
   root.traverse((o: any) => {
@@ -2731,7 +2733,7 @@ function wegweiser(d: CityData, terrain: Terrain, group: THREE.Group, steel: THR
   return poles.length;
 }
 
-function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, group: THREE.Group, vAt: Map<string, Set<number>>, nk: (q: number[]) => string) {
+function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, group: THREE.Group, vAt: Map<string, Set<number>>, nk: (q: number[]) => string, sideVortritt: number[][] = []) {
   const CAR = ['primary', 'secondary', 'tertiary', 'trunk', 'residential', 'unclassified', 'living_street', 'primary_link', 'secondary_link', 'tertiary_link', 'trunk_link'];
   const roundSigns: number[][] = [], vortritt: number[][] = [], umfahren: number[][] = [], dashGeo: THREE.BufferGeometry[] = [];
   const islGeo: THREE.BufferGeometry[] = [];
@@ -2795,7 +2797,7 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
     list.forEach(([x, z, hh], k) => { q.setFromEuler(e.set(0, hh + Math.PI, 0)); m4.compose(v.set(x, terrain.height(x, z), z), q, one); ms.setMatrixAt(k, m4); mp.setMatrixAt(k, m4); });
     for (const im of [ms, mp]) { im.computeBoundingSphere(); im.name = name; group.add(chunkInstanced(im, 1000)); } };
   put(roundSigns, signTex('kreisel'), 0.64, 2.3, 'kreisel-signal');
-  put(vortritt.map(([x, z, h]) => [x, z, h]), signTex('vortritt'), 0.7, 1.55, 'kein-vortritt');
+  put([...vortritt.map(([x, z, h]) => [x, z, h]), ...sideVortritt], signTex('vortritt'), 0.7, 1.55, 'kein-vortritt');
   put(umfahren, signTex('umfahren'), 0.5, 1.0, 'umfahren');
   // --- Ortstafeln (SSV 4.27 Ortsbeginn, 4.28 Ortsende): wo eine Hauptstrasse von > 50 auf 50 km/h wechselt (OSM maxspeed) ---
   const places = d.places || [];

@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zf  «Kein Vortritt» an Einmündungen
+- Wo eine Nebenstrasse mit Wartelinie auf eine Hauptstrasse trifft, steht jetzt auch das Signal «Kein Vortritt» (Luzern rund 290, Hochdorf rund 100)
+- Alle 18 Luzerner Einsätze nach den Änderungen nochmals durchgespielt: 54 Sterne, auch nach Neuladen
+
 2026-11-14ze  Schilder mit richtiger Rückseite
 - Ortstafeln: Rückseite zeigt jetzt das Ortsende (rot durchgestrichen) bzw. den Ortsbeginn – wie in der Schweiz. Vorher stand der Name hinten in Spiegelschrift
 - Tempo-, Kreisel-, Hauptstrassen-, Fussgängerstreifen-Signale und Wegweiser: hinten grau statt spiegelverkehrt (Kreiselpfeile zeigten von hinten in die falsche Richtung)
