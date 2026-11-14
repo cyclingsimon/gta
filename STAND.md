@@ -5,6 +5,12 @@ Stand: 14.11.2026 12:45. Fertig: **2026-11-14zf** = 14ze + Kein-Vortritt-Signale
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+## Prüfungen nach 14zf (14.11. 11:30–11:45, kein Code geändert)
+- qa.py Luzern ganz grün: P1 1.446 Mio. Dreiecke / 704 Draw Calls (vorher 1.30 / 682), P2 0.615 Mio., G7 18/18, Ladezeit 81 s, keine Fehler. Hecken/Schilder/Kein-Vortritt sprengen das Budget nicht.
+- Hecken Luzern: 0 von 10 054 Buschpunkten liegen auf Plätzen (plazas); Strassen/Wege/Wasser/Häuser schliesst world.ts ohnehin aus.
+- Leitplanken an Brücken a7: tp() rastet neben die Brücken ein, airCam-Blick traf Wald → nicht beurteilt, offen.
+- Simon 11:41: PC wird nicht mehr gebraucht (bestätigt).
+
 ## Version 14zf (2026-11-14)
 - world.ts: an jeder Wartelinie (SSV 6.13, Nebenstrasse → Hauptstrasse mit L, ohne Ampel ≤ 25 m) Signal 3.02 «Kein Vortritt» rechts, 2 m davor (`sideVortritt`, gerendert in kantonsPaket mit den Kreisel-Vortrittsignalen, Rückseite grau). Luzern 290, a12 98 (inkl. Kreisel).
 - Tests: missions.py Luzern 18/18, 54 Sterne, nach Neuladen erhalten; einzige Konsolenfehler = 404 data/aerial_hr.jpg (liegt nur auf dem Server, bekannt). Sichtprüfung Kein-Vortritt Luzern und Hochdorf.
