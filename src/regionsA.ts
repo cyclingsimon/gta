@@ -243,5 +243,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -3523.1
   },
   "welcome": "Willkommen in Küssnacht und Meierskappel! Treffpunkt ist der Bahnhof Küssnacht am Rigi. Er ist auf der Karte blau markiert."
+ },
+ "a12": {
+  "name": "Hochdorf und Ballwil",
+  "b": [
+   -3700,
+   -14800,
+   2300,
+   -8900
+  ],
+  "aerial": {
+   "E0": 2662077,
+   "E1": 2668330,
+   "N0": 1220364,
+   "N1": 1226551
+  },
+  "hosp": {
+   "label": "Bahnhof Hochdorf",
+   "kind": "rp",
+   "x": -1435.3,
+   "z": -12745.6
+  },
+  "welcome": "Willkommen in Hochdorf und Ballwil! Treffpunkt ist der Bahnhof Hochdorf. Er ist auf der Karte blau markiert."
  }
 };

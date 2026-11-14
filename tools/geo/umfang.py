@@ -3,7 +3,7 @@ Schreibt public/data/umfang.json. Gebäude = swissBUILDINGS3D-Gebäude (b3d.json
 import json, os
 from shapely.geometry import box, LineString, Point
 from shapely.ops import unary_union
-R = [('luzern', 'public/data'), ('nord', 'public/data/nord'), ('ost', 'public/data/ost'), ('west', 'public/data/west'), ('sued', 'public/data/sued')] + [(f'a{i}', f'public/data/a{i}') for i in range(1, 12)]
+R = [('luzern', 'public/data'), ('nord', 'public/data/nord'), ('ost', 'public/data/ost'), ('west', 'public/data/west'), ('sued', 'public/data/sued')] + [(f'a{i}', f'public/data/a{i}') for i in range(1, 13)]
 # 13i: Regionen, deren Daten hier fehlen (nur auf dem Server), behalten ihre Werte aus der bisherigen umfang.json
 OLD = json.load(open('public/data/umfang.json')).get('regionen', {}) if os.path.exists('public/data/umfang.json') else {}
 OLDB = {'nord': (-3800, -3900, 4600, -550), 'ost': (2500, -2000, 7500, 2500), 'west': (-8500, -1300, -3600, 3000), 'sued': (-3000, 6100, 4600, 11000)}

@@ -1,10 +1,10 @@
 {
  "stand": "2026-11-13",
  "gesamt": {
-  "km2": 506.8,
-  "gebaeude": 69044,
-  "strassen_km": 2701,
-  "wege_km": 3325
+  "km2": 539.9,
+  "gebaeude": 73671,
+  "strassen_km": 2861,
+  "wege_km": 3490
  },
  "regionen": {
   "luzern": {
@@ -102,6 +102,12 @@
    "gebaeude": 4204,
    "strassen_km": 179,
    "wege_km": 170
+  },
+  "a12": {
+   "km2": 33.1,
+   "gebaeude": 4627,
+   "strassen_km": 160,
+   "wege_km": 165
   }
  }
 }

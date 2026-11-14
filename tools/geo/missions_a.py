@@ -42,7 +42,7 @@ for e in els:
 # 14o (Simon): keine erfundenen Rettungsposten mehr. Ohne LUKS-Spital ist das Ziel der Bahnhof des Hauptorts (OSM railway=station/halt),
 # wo es keinen gibt, die Bushaltestelle im Dorfzentrum. Übergabe dort an die Eltern (Spieltext), Schnellreise-Station ebenda.
 HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter'}  # Hauptort des Regionsnamens (Buttisholz, Ruswil)
-BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi'}
+BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi', 'a12': 'Hochdorf'}
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]
     big.sort(key=lambda q: (-q[3], -POP.get(q[0], 0), math.dist(q[1:3], ((X0 + X1) / 2, (Z0 + Z1) / 2))))

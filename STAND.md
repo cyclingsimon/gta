@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 01:00. Fertig: **2026-11-14q** = 14p + Hecken/Obstgärten/Baumreihen in Gebiet A. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 01:00. Fertig: **2026-11-14r** = 14q + Region a12 Seetal (Hochdorf, Ballwil). ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14r (14.11. 02:15–03:20, nicht hochgeladen)
+- Browser war nach Neustart leer (alle Helfer weg). Neu: `tools/browser/helpers.js` (ofetch, gz, b64, packGz, chunk, tileJob, lzw, tif, altiStart, altiDS, overpass) – Inhalt per javascript_exec einspritzen. Geprüft: Kachel 2666-1214 identisch mit lokaler Kopie.
+- Region **a12 «Hochdorf und Ballwil»** x −3700..2300, z −14800..−8900 (LV95 E 2662077–2668330, N 1220364–1226551), überlappt a3 (200 m), a9 und a10 (200 m). b3dm x 1038–1075 / y 1356–1413 (795 Kacheln), 47 neue Höhenkacheln, Bus-Relationen bus_a12.json. Treffpunkt Bahnhof Hochdorf (BHF-Tabelle).
+- Ergebnis: 4852 Gebäude (3D), 8 Einsätze, Hecken 83 / 4.3 km, 2094 Obst-/Reihenbäume. Spielumfang 539.9 km², 73 671 Gebäude.
+- Tests 14r: smoke_a a12 ok (8/8); tests/region_a12.py a9↔a12 (Seetalstrasse) beide Richtungen ok; Luftbilder Hochdorf und Baldegg ok. Nicht getestet: a3↔a12 (Hildisrieden), a10↔a12.
 
 ## Version 14q (14.11. 01:00–01:45, nicht hochgeladen)
 - `tools/geo/greenlines.py <id…>` (in build_region_a.py nach rural.py): OSM barrier=hedge → props.hedges (Polylinien), natural=tree_row → Bäume alle 9 m (trees[i][3] = 3), landuse=orchard → Obstbäume im 11-m-Raster, versetzt, max. 4000 je Region (trees[i][3] = 2). Idempotent.

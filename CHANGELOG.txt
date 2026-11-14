@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14r  Neue Gegend Hochdorf und Ballwil (Seetal)
+- Neue Gegend «Hochdorf und Ballwil» (rund 35 km², mit Eschenbach, Baldegg, Hohenrain und dem Südende des Baldeggersees): 4852 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze an echten Orten, Treffpunkt Bahnhof Hochdorf, 40 Luksi-Herzen, Busse und S-Bahn. Anschluss an Rothenburg/Eschenbach (Seetalstrasse)
+- Spielwelt jetzt 17 Gegenden, rund 540 km² mit rund 74 000 Gebäuden
+
 2026-11-14q  Hecken und Obstgärten in allen neuen Gegenden
 - Hecken aus OpenStreetMap als Reihen aus Büschen entlang von Feldern und Wegen (bis 13 km Hecke je Gegend, insgesamt rund 1 150 Hecken)
 - Hochstamm-Obstgärten: kleine runde Obstbäume im lockeren Raster dort, wo OpenStreetMap einen Obstgarten kennt (z. B. 2 600 Bäume rund um Sempach und Nottwil); Baumreihen als einzelne Bäume
