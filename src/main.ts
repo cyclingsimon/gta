@@ -22,7 +22,7 @@ const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
+interface Save { diffChosen?: boolean; km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -1393,6 +1393,7 @@ async function boot() {
   try { if (sessionStorage.getItem('luksiRegionSwitch')) { sessionStorage.removeItem('luksiRegionSwitch'); $('#start-btn').textContent = 'Weiterfahren ▶'; } } catch { /* privat */ }
   try { const tn = sessionStorage.getItem('luksiTravel'); if (tn) { sessionStorage.removeItem('luksiTravel'); travelArrived = tn; } } catch { /* privat */ }
   $('#start-btn').focus();
+  diffWahl();
 }
 
 /** Stufe B: echte 3D-Häuser (swisstopo) und feiner Boden im Hintergrund bauen, dann austauschen */
@@ -1447,13 +1448,42 @@ function start() {
   toast(RA ? RA.welcome : REGION === 'nord' ? 'Willkommen in Emmenbrücke, Ebikon und Adligenswil! Das Kinderspital ist ganz im Süden.' : REGION === 'ost' ? 'Willkommen in Meggen! Treffpunkt ist der Bahnhof Meggen.' : REGION === 'west' ? 'Willkommen in Littau und Blatten! Treffpunkt ist der Bahnhof Littau.' : REGION === 'sued' ? 'Willkommen in Nidwalden! Das Spital ist in Stans.' : 'Willkommen in Luzern! Fahr los – gleich kommt ein Funkspruch.', 3500);
 }
 $('#start-btn').onclick = start;
+/** 15a (Simon 14.11. 22:12): beim allerersten Start die Schwierigkeit wählen – drei Knöpfe statt «Los geht's». Später im Pause-Menü änderbar.
+ *  In Tests nur mit ?diffwahl (Tests klicken #start-btn). */
+function diffWahl() {
+  if (save.diffChosen || (TEST && !/[?&]diffwahl/.test(location.search)) || document.getElementById('diff-wahl')) return;
+  // Startknopf bleibt «sichtbar» im Sinn von display (das Ladebild von P-B und die Tastatur-Logik lesen das), ist aber unsichtbar und nicht bedienbar
+  const sb = $('#start-btn') as HTMLButtonElement; sb.style.position = 'absolute'; sb.style.opacity = '0'; sb.style.pointerEvents = 'none'; sb.tabIndex = -1;
+  const w = document.createElement('div'); w.id = 'diff-wahl';
+  const eng = innerHeight < 500 || innerWidth < 700; // Handy: alles auf eine Zeile, ohne Hinweistext
+  w.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:6px 0';
+  w.innerHTML = (eng ? '' : '<p class="small" style="margin:0;font-weight:700">Wie möchtest du fahren? (später im Pause-Menü änderbar)</p>') + `<div style="display:flex;gap:${eng ? 6 : 10}px;flex-wrap:nowrap;justify-content:flex-start"></div>`;
+  const row = w.lastElementChild as HTMLElement;
+  const OPT: [Difficulty, string, string][] = [['entdecken', '😊 Einfach', 'mit Navi-Linie'], ['rettung', '🚑 Mittel', 'bis 150 km/h'], ['profi', '⚡ Schnell', 'bis 269 km/h']];
+  for (const [d, t, sub] of OPT) {
+    const b = document.createElement('button'); b.className = 'big'; b.dataset.diff = d;
+    b.style.cssText = `font-size:${eng ? 15 : 19}px;padding:${eng ? '12px 8px' : '10px 14px'};min-height:52px !important;height:auto !important;box-sizing:border-box;line-height:1.15;white-space:nowrap;margin:0`;
+    b.innerHTML = `${t}<br><span style="font:600 12px system-ui,sans-serif;letter-spacing:0;text-transform:none;-webkit-text-stroke:0;text-shadow:none">${sub}</span>`;
+    b.onclick = () => { save.diff = d; save.diffChosen = true; try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat */ } w.remove(); start(); };
+    row.appendChild(b);
+  }
+  sb.parentElement!.insertBefore(w, sb);
+  (row.children[1] as HTMLElement).focus();
+}
+/** Tastatur/Controller auf dem Startbild: mit offener Schwierigkeitswahl den fokussierten Knopf (sonst «Mittel») drücken */
+function startOrPick() {
+  const w = document.getElementById('diff-wahl'); if (!w) { start(); return; }
+  const a = document.activeElement as HTMLElement | null; ((a && w.contains(a) && a.tagName === 'BUTTON' ? a : w.querySelector('[data-diff="rettung"]')) as HTMLElement).click();
+}
 setupTouch();
 if (MOBILE) $('#keys').style.display = 'none';
-window.addEventListener('keydown', (e) => { if ((e.code === 'Enter' || e.code === 'Space') && document.getElementById('start') && $('#start-btn').style.display !== 'none') { e.preventDefault(); start(); } });
+window.addEventListener('keydown', (e) => { const w = document.getElementById('diff-wahl');
+  if (w && document.getElementById('start') && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { const bs = [...w.querySelectorAll('button')] as HTMLElement[]; const i = Math.max(0, bs.indexOf(document.activeElement as HTMLElement)); bs[(i + (e.code === 'ArrowRight' ? 1 : bs.length - 1)) % bs.length].focus(); e.preventDefault(); return; }
+  if ((e.code === 'Enter' || e.code === 'Space') && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || w)) { e.preventDefault(); startOrPick(); } });
 // Gamepad-Start
 const startPoll = setInterval(() => {
   const p = Array.from(navigator.getGamepads?.() || []).find((x) => x && x.buttons.some((b) => b.pressed));
-  if (p && document.getElementById('start') && $('#start-btn').style.display !== 'none') { start(); clearInterval(startPoll); }
+  if (p && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || document.getElementById('diff-wahl'))) { startOrPick(); clearInterval(startPoll); }
   if (!document.getElementById('start')) clearInterval(startPoll);
 }, 200);
 
