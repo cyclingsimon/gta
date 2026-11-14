@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { paint, roundNormals, tris, hash2, weighted } from './geo';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { Mask } from '../world';
+import { toon, type Mask } from '../world';
+import { REAL, type TreeMode } from './config';
 
 export type TreeSpecies = 'linde' | 'rosskastanie' | 'platane' | 'buche' | 'fichte' | 'tanne' | 'obstbaum';
 export const TREE_SPECIES: TreeSpecies[] = ['linde', 'rosskastanie', 'platane', 'buche', 'fichte', 'tanne', 'obstbaum'];
@@ -40,9 +41,12 @@ const BARK = '#6E5038', BARK_GREY = '#8E8E86', BARK_PLAT_A = '#C8BE9C', BARK_PLA
 const CACHE = new Map<string, G>();
 let D1 = 1; // Kronen-Detail (1 = rund, 0 = «lite»)
 /** Geometrie einer Baumart (zwischengespeichert, nicht verändern – für InstancedMesh direkt verwenden) */
-export function treeGeometry(s: TreeSpecies, lite = false): G {
-  const key = s + (lite ? ':lite' : ''); const c = CACHE.get(key); if (c) return c;
-  D1 = lite ? 0 : 1;
+export type TreeQuality = 'min' | 'lite' | 'full';
+export function treeGeometry(s: TreeSpecies, q: TreeQuality | boolean = 'full'): G {
+  const Q: TreeQuality = q === true ? 'lite' : q === false ? 'full' : q;
+  const key = s + ':' + Q; const c = CACHE.get(key); if (c) return c;
+  if (Q === 'min') { const g = minTree(s); CACHE.set(key, g); return g; }
+  D1 = Q === 'lite' ? 0 : 1;
   let L: G[] = [];
   switch (s) {
     case 'linde': // Tilia: aufrechter Stamm, dichte, eiförmig-hochgewölbte Krone, sattgrün
@@ -80,9 +84,26 @@ export function treeGeometry(s: TreeSpecies, lite = false): G {
   }
   const g = mergeGeometries(L, false)!; CACHE.set(key, g); return g;
 }
+/** Sparform für die ganze Stadt (Budget: 3500 Bäume ≤ ~180 000 Dreiecke): Stamm 4-seitig offen (8), Kronen nur Ikosaeder detail 0 (20),
+ *  Nadelbäume 3 Etagen à 5 Seiten (10). Gleiche Umrisse/Farben wie die volle Form, nur gröber. */
+function minTree(s: TreeSpecies): G {
+  const T = (r0: number, r1: number, h: number, col: string, y0 = 0) => trunk(r0, r1, h, col, y0, 4);
+  const C = (r: number, h: number, y0: number, col: string) => tier(r, h, y0, col, 5);
+  let L: G[] = [];
+  switch (s) {
+    case 'linde': L = [T(0.32, 0.24, 5.0, BARK), lobe(1, 3.4, 4.4, 3.4, 0, 8.2, 0, 0, '#5E9A45'), lobe(1, 1.9, 1.8, 1.9, 0.3, 11.6, -0.2, 0, '#66A34C')]; break;
+    case 'rosskastanie': L = [T(0.42, 0.3, 4.0, BARK), lobe(1, 4.6, 3.6, 4.6, 0, 7.6, 0, 0, '#3F7E3A'), lobe(1, 2.6, 2.2, 2.6, 2.4, 6.0, -1.0, 0, '#44843D')]; break;
+    case 'platane': L = [T(0.38, 0.3, 3.0, BARK_PLAT_A), T(0.3, 0.26, 3.0, BARK_PLAT_B, 3.0), lobe(1, 4.4, 3.2, 4.4, 0, 10.8, 0, 0, '#77A24E')]; break;
+    case 'buche': L = [T(0.34, 0.24, 6.5, BARK_GREY), lobe(1, 3.6, 5.2, 3.6, 0, 11.4, 0, 0, '#5F9C3E'), lobe(1, 2.0, 2.0, 2.0, 0, 15.2, 0.3, 0, '#68A645')]; break;
+    case 'fichte': L = [T(0.3, 0.12, 4.0, BARK), C(3.0, 7.0, 1.6, '#2F5E3A'), C(2.2, 6.4, 6.6, '#31633C'), C(1.4, 6.6, 11.2, '#356B40')]; break;
+    case 'tanne': L = [T(0.34, 0.14, 4.0, BARK_GREY), C(3.6, 6.4, 2.2, '#2E5B45'), C(2.7, 5.8, 7.0, '#305F47'), C(1.8, 4.4, 11.4, '#34674B')]; break;
+    case 'obstbaum': L = [T(0.2, 0.15, 2.2, BARK), lobe(1, 2.6, 2.1, 2.6, 0.15, 3.9, 0, 0, '#6FA24A')]; break;
+  }
+  return mergeGeometries(L, false)!;
+}
 /** Dreieckszahl je Art (für Doku/Budget) */
-export function treeTris(lite = false): Record<TreeSpecies, number> {
-  const o = {} as Record<TreeSpecies, number>; for (const s of TREE_SPECIES) o[s] = tris(treeGeometry(s, lite)); return o;
+export function treeTris(q: TreeQuality = 'full'): Record<TreeSpecies, number> {
+  const o = {} as Record<TreeSpecies, number>; for (const s of TREE_SPECIES) o[s] = tris(treeGeometry(s, q)); return o;
 }
 /** Instanz-Farbe: helle Variation um Weiss (multipliziert die Vertex-Farbe) */
 export function treeTint(x: number, z: number, out = new THREE.Color()) {
@@ -131,13 +152,13 @@ export function ctxFromMask(mask: Pick<Mask, 'at' | 'isRoad'>, x: number, z: num
 
 /** Fertige Instanzen: Liste [x, z, Skalierung, Art] → Gruppe mit einem InstancedMesh je Art.
  *  groundY(x, z) = Bodenhöhe; mat = Material (z. B. toon('#ffffff', { vertexColors: true })). */
-export function buildTreeInstances(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, mat: THREE.Material, lite = false) {
+export function buildTreeInstances(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, mat: THREE.Material, qual: TreeQuality | boolean = 'min') {
   const grp = new THREE.Group(); grp.name = 'baeume-arten';
   const by = new Map<TreeSpecies, [number, number, number][]>();
   for (const [x, z, s, sp] of list) { const a = by.get(sp) || []; a.push([x, z, s]); by.set(sp, a); }
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
   for (const [sp, L] of by) {
-    const im = new THREE.InstancedMesh(treeGeometry(sp, lite), mat, L.length);
+    const im = new THREE.InstancedMesh(treeGeometry(sp, qual), mat, L.length);
     L.forEach(([x, z, s], i) => {
       const r = hash2(x, z); e.set(0, r * 6.283, sp === 'obstbaum' ? (hash2(z, x) - 0.5) * 0.12 : 0); q.setFromEuler(e);
       sc.set(s, s * (0.92 + hash2(z, x) * 0.16), s); m.compose(v.set(x, groundY(x, z) - 0.15, z), q, sc);
@@ -146,4 +167,32 @@ export function buildTreeInstances(list: [number, number, number, TreeSpecies][]
     im.computeBoundingSphere(); im.name = 'baum-' + sp; grp.add(im);
   }
   return grp;
+}
+
+/** EIN-ZEILEN-EINBAU für world.ts (Block «Bäume (instanziert)»):
+ *    group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z)));
+ *  trees = [x, z, s][] wie in buildWorld; osm = props.trees ([x, z, nadel, art]) für Nadel/Obstgarten/Baumreihe (Zuordnung über exakte Koordinate).
+ *  REAL.trees = 'alt' → exakt die bisherigen Kugelbäume (2 InstancedMeshes, 44 Dreiecke/Baum). */
+export function buildRealTrees(trees: number[][], osm: number[][] | undefined, mask: Pick<Mask, 'at' | 'isRoad'>, groundY: (x: number, z: number) => number, mode: TreeMode = REAL.trees) {
+  if (mode === 'alt') {
+    const grp = new THREE.Group();
+    const trunkG = new THREE.CylinderGeometry(0.35, 0.45, 3, 6); trunkG.translate(0, 1.5, 0);
+    const crownG = new THREE.IcosahedronGeometry(2.6, 0); crownG.translate(0, 4.6, 0);
+    const trunkI = new THREE.InstancedMesh(trunkG, toon('#7A5638'), trees.length);
+    const crownI = new THREE.InstancedMesh(crownG, toon('#5E9B4F'), trees.length);
+    const m = new THREE.Matrix4();
+    trees.forEach(([x, z, s], i) => {
+      m.makeScale(s, s, s); m.setPosition(x, groundY(x, z) - 0.2, z);
+      trunkI.setMatrixAt(i, m); crownI.setMatrixAt(i, m);
+      crownI.setColorAt(i, new THREE.Color().setHSL(0.27 + hash2(x, z) * 0.06, 0.38, 0.42 + hash2(z, x) * 0.1));
+    });
+    grp.add(trunkI, crownI); return grp;
+  }
+  const info = new Map<string, number[]>(); for (const t of osm || []) info.set(t[0] + ',' + t[1], t);
+  const list = trees.map(([x, z, s]) => {
+    const t = info.get(x + ',' + z), c = ctxFromMask(mask, x, z, t);
+    const sp = pickSpecies(c);
+    return [x, z, sp === 'obstbaum' ? 0.85 + hash2(x, z) * 0.3 : s * 0.75, sp] as [number, number, number, TreeSpecies];
+  });
+  return buildTreeInstances(list, (x, z) => groundY(x, z) + 0.15 - 0.2, toon('#ffffff', { vertexColors: true }), mode);
 }

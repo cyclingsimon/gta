@@ -4,6 +4,48 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 14.11.2026 19:40 – Lauf 2
+
+### Gemacht
+1. **Referenzabgleich** (nur Text-Quellen auswertbar, Bilder sind hier nicht einsehbar): neu belegt nur VBL-Flotte Batterie-Trolleybus – «24 Gelenk- und 7 Doppelgelenk-Trolleybusse» (VBL-Medienmitteilung 19.03.2026, https://www.vbl.ch/fileadmin/01_vblAG/04_Ueber_vbl/05_Medien/2026_Medienmitteilungen/260319_MM_Batterie-Trolley.pdf) → bestätigt das Nebeneinander Gelenk/Doppelgelenk mit Fahrleitung und Dachaufbauten (Batterie) im Modell; keine Modelländerung nötig. Ohne Farbangabe blieben: LUKS-Medienmitteilung Rettungsdienst 13.02.2020 (https://www.luks.ch/sites/default/files/2020-02/20200213_mm_rettungsdienst_luks.pdf), Wikipedia Rottal Auto (https://en.wikipedia.org/wiki/Rottal_Auto), zvb.ch Buswerbung (https://www.zvb.ch/en/angebote/bus-advertising), electrive-Stichwort Auto AG Rothenburg (https://www.electrive.net/tag/auto-ag-rothenburg/), busphoto.eu (nur Fotos). **Damit bleiben LUKS-Farbschema, ZVB, AAGR, ARAG Annahmen** (unverändert im Modell). Bitte Foto von Simon (LUKS-RTW Seite/Heck) – das ist die verlässlichste Quelle.
+2. **Ein-Zeilen-Einbau mit Schalter** – neue Datei `src/real/config.ts` (`REAL`, Rückfall je Teil; Test per URL `?real=0` oder `?real=trees:alt,cars:0`):
+   - `buildRealTrees(...)` (`src/real/trees.ts`), neue Sparform **'min'** = Standard: 28–48 Dreiecke/Baum; Hochrechnung 3500 Bäume **150 208** (bisher 154 000) → Budget ≤ 180 000 eingehalten, Startansicht wird sogar minimal leichter. `'alt'` = exakt der bisherige Code.
+   - `buildStops(...)`, `buildLamps(...)`, `realBenchGeometry()` (`src/real/props.ts`), je mit Rückfall auf den bisherigen Code (Code 1:1 übernommen).
+   - `realCarMeshes(...)` (`src/real/cars.ts`): liefert «body»/«cabin» als Stellvertreter-Objekte mit der InstancedMesh-Schnittstelle, die traffic.ts schon benutzt (setMatrixAt, setColorAt, instanceMatrix.needsUpdate) → in traffic.ts ändert sich genau eine Zeile.
+3. **Nachtlicht** (`src/real/night.ts`, `glowMaterial()`): Leuchtteile (Kandelaber-Glas, moderne Leuchte, Wartehallen-Vitrine + Deckenlicht) als eigenes InstancedMesh; Shader mischt Eigenleuchten nach `NIGHT.value` (aus world.ts importiert, nichts dort geändert). `furniture.ts`: Grundkörper und Leuchtteile getrennt (`furnitureGeometry`, `furnitureGlowGeometry`, `furnitureAll`); `buildFurniture` liefert jetzt ein Array `[Grundkörper, Licht?]`.
+4. **Geparkt**: `buildParkedCars(roads, mask, groundY, max=400, on, avoid)` – Strassenränder von residential/living_street/service/unclassified/tertiary aus city.json (city.json hat **keine Parkplatz-Flächen**), alle 6 m mit ~45 % Belegung, nicht an Kreuzungen (Raster 12 m), nur auf freier Fläche neben der Fahrbahn, nicht an `avoid`-Punkten (Laternen, Haltestellen). `buildParkedVelos(anker, …)`: Veloständer + 1–5 Velos. `veloRiderGeometry()`: Velo mit Fahrer:in (604 Dreiecke) als Baustein, keine Logik.
+5. **Tests**: `tests/par/real_szene.ts` zeigt ein Strassenstück (Kreuzung, Schein-Maske, Haus) mit allen Ein-Zeilen-Bausteinen, Tag- und Nachtansicht (`?nacht=1`), Bäume über `buildRealTrees`, den Verkehrs-Stellvertreter mit 36 Autos; `tests/par/real_shots.py` prüft Budget (3500 Bäume min ≤ 180 000) und echte JS-Fehler.
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei; Build `OUT=dist_pa` läuft durch (nach Merge 19f5797); Testszene ohne JS-Fehler (nur 404 Busheck-Bilder, gewollt); `real_shots.py total` → «BUDGET/BAUSTEINE OK 150208»; Sichtprüfung Screenshots: Strassenstück Tag/Nacht, Wartehalle nachts mit leuchtender Vitrine, Altstadt-Kandelaber nachts leuchtend, geparkte Autos neben der Fahrbahn, Velos am Ständer, Verkehrs-Stellvertreter fährt 8 Autos sichtbar.
+Ungeprüft: alles im echten Spiel (Auftrag: kein Weltlauf). Insbesondere: zirkulärer Import world.ts ↔ src/real/* (Bausteine importieren `toon`/`NIGHT` aus world.ts; nur zur Laufzeit benutzt, sollte in ESM funktionieren – nicht im Spiel getestet), Verhalten von `chunkInstanced` mit den neuen Netzen, Abstände der längeren Autos im Stau (traffic.ts rechnet mit 4.1 m, Lieferwagen 5.4 m → leichte Überlappung möglich), Kollision: geparkte Autos sind **nicht** in der Maske (Ambulanz fährt durch; stehen aber neben der Fahrbahn).
+Bekannter Schönheitsfehler Testszene: Zähler oben links zeigte in einzelnen Ansichten «2 Aufrufe» (Zählung vor dem letzten Bild) – betrifft nur die Anzeige.
+
+### Einbau-Hinweise Lauf 2 (ersetzen E1–E5 aus Lauf 1)
+Alle Funktionen fallen über `REAL` (src/real/config.ts) auf das bisherige Aussehen zurück.
+
+| # | Datei / Stelle | Ersetzen durch (eine Zeile) | Import | Erwartung |
+|---|---|---|---|---|
+| E1 | world.ts `buildWorld`, ganzer Block `// ---- Bäume (instanziert) ----` `{ … }` (~Z. 1470–1483) | `group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z)));` | `import { buildRealTrees } from './real/trees';` | 7 statt 2 Netze (+5 Aufrufe), 3500 Bäume ≈ 150 000 statt 154 000 Dreiecke |
+| E2 | world.ts `buildProps`, Block `// Bushaltestellen: blaues Schild` `if (P.stops.length) { … }` (~Z. 2547) | `if (P.stops.length) G.add(...buildStops(P.stops, mask, (x, z) => terrain.height(x, z)));` | `import { buildStops, buildLamps, realBenchGeometry } from './real/props';` | ~50 % Hallen (200 Dreiecke), Rest Schild; +2 Aufrufe (Halle, Licht) |
+| E3 | world.ts `buildProps`, im Block `if (P.lamps.length) {` die Zeilen von `const poleG = …` bis `pole.name = 'lamps'; G.add(pole, head);` (~Z. 2456–2466); die Zeile `(G as any).counts = …` bleibt | `G.add(...buildLamps(P.lamps, mask, (x, z) => terrain.height(x, z)));` | (s. E2) | Altstadt 132, Hauptstrasse 68 statt 2×12 Dreiecke; +4 Aufrufe |
+| E4 | world.ts `buildProps` Bank-Block (~Z. 2400): im `new THREE.InstancedMesh(colorMerge([...]), …)` | `colorMerge([...])` → `realBenchGeometry() ?? colorMerge([...])` | (s. E2) | 108 statt 36 Dreiecke je Bank |
+| E5 | traffic.ts Konstruktor: die zwei Zeilen `this.body = new THREE.InstancedMesh(bodyG, …)` und `this.cabin = …` (Z. 62–63) | `({ body: this.body, cabin: this.cabin } = realCarMeshes(N_CARS, bodyG, cabG) as any);` | `import { realCarMeshes } from './real/cars';` | 8 statt 2 Aufrufe; 36 Autos ≈ 15 000 Dreiecke; Farben nach CH-Verteilung (Zeile 68 `setColorAt` wird ignoriert) |
+| E6 | world.ts `buildWorld`, direkt nach E1 | `group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), 300, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees]));` | `import { buildParkedCars } from './real/cars';` | ≤ 300 Autos ≈ 123 000 Dreiecke (**bei 2.36 Mio. Startansicht nur mit Vorsicht** – erst 100 versuchen ≈ 41 000) |
+| E7 | world.ts `buildProps`, nach E2 | `G.add(...buildParkedVelos(P.stops.filter((_, i) => i % 6 === 0).map(([x, z]) => [x + 2, z + 2, 0]), (x, z) => terrain.height(x, z)));` | `import { buildParkedVelos } from './real/cars';` | wenige Ständer; je Ständer 180 + bis 5×364 Dreiecke |
+
+Alle Zeilen E1–E7 wurden in einer temporären Datei gegen die echten Typen (CityData, Props, Mask, Terrain) mit `tsc` geprüft – fehlerfrei (Datei danach gelöscht). Im Spiel ausgeführt wurden sie nicht.
+Prüfen nach dem Einbau: `?real=0` muss exakt wie vorher aussehen (gleiche Dreieckszahl laut `renderer.info`); Abend (`__dbg.evening(true)`) → Kandelaber/Hallen leuchten.
+
+### Offen / nächster Lauf
+- Fotos LUKS-RTW / ZVB / AAGR / ARAG (Simon) → Farben korrigieren.
+- Geparkte Autos als Hindernis in die Maske eintragen? (Entscheid Hauptsitzung; Kinderspiel: harmloser Rempler wäre okay.)
+- Volle Baumform nur nah an der Kamera (LOD) – nicht gebaut; 'min' reicht fürs Budget.
+- OSM-Standorte für Robidog/Abfallkübel/Hydrant/Briefkasten/Veloparkierung in der Daten-Pipeline.
+- Velo-Verkehr mit Logik (traffic.ts, nicht meine Datei).
+
+---
+
 ## 14.11.2026 19:25 – Lauf 1
 
 ### Gemacht
@@ -54,7 +96,7 @@ Ungeprüft:
 
 Vergleich: bisheriger Baum 44 Dreiecke, bisheriges Verkehrsauto 24. Bei 3500 Bäumen: heute ~154 000, neu ~440 000 (voll) bzw. ~280 000 («lite») → für die Gesamtwelt **lite empfohlen** (Budget R13: P1 ≤ 2.5 Mio.). 36 Autos neu ~15 000 statt 860.
 
-### Einbau-Hinweise (für die Hauptsitzung, 03:30)
+### Einbau-Hinweise (für die Hauptsitzung, 03:30) – **überholt durch Lauf 2 (E1–E7 oben)**
 
 **E1 – Baumarten (src/world.ts)**
 1. Import oben: `import { buildTreeInstances, pickSpecies, ctxFromMask, type TreeSpecies } from './real/trees';`

@@ -10,10 +10,14 @@ async def main():
         pg = await b.new_page(viewport={'width': 960, 'height': 540}); pg.set_default_timeout(180000)
         errs = []; pg.on('pageerror', lambda e: errs.append(str(e)[:300])); pg.on('console', lambda m: m.type == 'error' and errs.append(m.text[:300]))
         for i, v in enumerate(VIEWS):
-            await pg.goto(f'http://localhost:8771/real_szene.html?v={v}'); await pg.wait_for_function('window.__ready')
+            q = v.split('+'); await pg.goto(f'http://localhost:8771/real_szene.html?v={q[0]}' + ('&nacht=1' if 'nacht' in q else '')); await pg.wait_for_function('window.__ready')
             await pg.wait_for_timeout(1200)
-            await pg.screenshot(path=f'shots/pa_{v}.png')
-            if i == 0: print(json.dumps(await pg.evaluate('window.__stats'), indent=0))
+            await pg.screenshot(path=f"shots/pa_{v.replace('+', '_')}.png")
+            if i == 0:
+                st = await pg.evaluate('window.__stats'); print(json.dumps(st, indent=0))
+                ok = st.get('hochrechnung_3500_min', 0) <= 180000 and st.get('verkehr_proxy_netze', 0) >= 2 and st.get('strasse_objekte', 0) > 0
+                print('BUDGET/BAUSTEINE', 'OK' if ok else 'FEHLER', st.get('hochrechnung_3500_min'))
             print(v, await pg.evaluate("document.getElementById('info').textContent"))
-        print('Fehler', errs); await b.close()
+        echte = [e for e in errs if '404' not in e]
+        print('Fehler (ohne 404 Busheck-Bilder)', echte); await b.close()
 asyncio.run(main())
