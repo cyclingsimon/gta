@@ -1,6 +1,7 @@
 // R12: Verkehr und Passanten – friedlich, comicartig, nie gefährlich.
 // Autos folgen dem Strassengraph (Einbahn beachtet, rechts fahren), machen dem Blaulicht Platz.
 // Passanten spazieren auf Fuss- und Altstadtwegen und hüpfen der Ambulanz rechtzeitig aus dem Weg.
+import { realCarMeshes } from './real/cars';
 import * as THREE from 'three';
 import type { NavGraph } from './nav';
 import type { Terrain } from './terrain';
@@ -59,8 +60,7 @@ export class Traffic {
     }
     const bodyG = new THREE.BoxGeometry(1.8, 0.85, 4.1); bodyG.translate(0, 0.72, 0);
     const cabG = new THREE.BoxGeometry(1.58, 0.68, 2.0); cabG.translate(0, 1.47, -0.25);
-    this.body = new THREE.InstancedMesh(bodyG, toon('#ffffff'), N_CARS);
-    this.cabin = new THREE.InstancedMesh(cabG, toon('#BFD8E6'), N_CARS);
+    ({ body: this.body, cabin: this.cabin } = realCarMeshes(N_CARS, bodyG, cabG) as any); // 15a, P-A E5
     const pb = new THREE.CylinderGeometry(0.24, 0.3, 1.15, 7); pb.translate(0, 0.62, 0);
     const ph = new THREE.SphereGeometry(0.22, 8, 6); ph.translate(0, 1.42, 0);
     this.pbody = new THREE.InstancedMesh(pb, toon('#ffffff'), N_PEDS);

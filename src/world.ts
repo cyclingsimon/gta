@@ -1,3 +1,6 @@
+import { buildRealTrees } from './real/trees';
+import { buildStops, buildLamps, realBenchGeometry } from './real/props';
+import { buildParkedCars, buildParkedVelos } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -1468,19 +1471,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
 
   await onProgress('Bäume …');
   // ---- Bäume (instanziert) ----
-  {
-    const trunkG = new THREE.CylinderGeometry(0.35, 0.45, 3, 6); trunkG.translate(0, 1.5, 0);
-    const crownG = new THREE.IcosahedronGeometry(2.6, 0); crownG.translate(0, 4.6, 0);
-    const trunk = new THREE.InstancedMesh(trunkG, toon('#7A5638'), trees.length);
-    const crown = new THREE.InstancedMesh(crownG, toon('#5E9B4F'), trees.length);
-    const m = new THREE.Matrix4();
-    trees.forEach(([x, z, s], i) => {
-      m.makeScale(s, s, s); m.setPosition(x, terrain.ground(x, z) - 0.2, z);
-      trunk.setMatrixAt(i, m); crown.setMatrixAt(i, m);
-      crown.setColorAt(i, new THREE.Color().setHSL(0.27 + hash(x, z) * 0.06, 0.38, 0.42 + hash(z, x) * 0.1));
-    });
-    group.add(trunk, crown);
-  }
+  group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
+  group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), 100, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6, vorerst 100
   // 14q: Hecken (OSM barrier=hedge): Reihe aus Büschen (alle 1.6 m, 1.3–2.1 m hoch), nicht auf Strassen, Wasser oder in Häusern
   if (props?.hedges?.length) {
     const bp: number[][] = [];
@@ -2397,7 +2389,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   // Sitzbänke (OSM amenity=bench, Innenstadt): Holzbank auf zwei Füssen, zur nächsten Strasse ausgerichtet
   if (P.benches && P.benches.length) {
     const ok = P.benches.filter(([x, z]) => mask.at(x, z) === 0 && !mask.isRoad(x, z));
-    const bench = new THREE.InstancedMesh(colorMerge([[new THREE.BoxGeometry(1.8, 0.08, 0.45).translate(0, 0.45, 0), '#8A5A36'], [new THREE.BoxGeometry(1.8, 0.4, 0.06).translate(0, 0.7, -0.22), '#8A5A36'], [new THREE.BoxGeometry(1.5, 0.42, 0.4).translate(0, 0.21, 0), '#3F4A50']]), toon('#ffffff', { vertexColors: true }), ok.length);
+    const bench = new THREE.InstancedMesh(realBenchGeometry() ?? colorMerge([[new THREE.BoxGeometry(1.8, 0.08, 0.45).translate(0, 0.45, 0), '#8A5A36'], [new THREE.BoxGeometry(1.8, 0.4, 0.06).translate(0, 0.7, -0.22), '#8A5A36'], [new THREE.BoxGeometry(1.5, 0.42, 0.4).translate(0, 0.21, 0), '#3F4A50']]), toon('#ffffff', { vertexColors: true }), ok.length);
     const o = new THREE.Object3D();
     ok.forEach(([x, z], i) => {
       let a = 0; for (let k = 0; k < 8; k++) { const t = k * Math.PI / 4; if (mask.isRoad(x + Math.sin(t) * 3, z + Math.cos(t) * 3)) { a = t; break; } }
@@ -2454,16 +2446,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   P.signals = P.signals.map(toEdge).filter(Boolean) as number[][];
   P.stops = P.stops.map(toEdge).filter(Boolean) as any[][];
   if (P.lamps.length) {
-    const poleG = new THREE.CylinderGeometry(0.07, 0.1, 4.6, 5); poleG.translate(0, 2.3, 0);
-    const headG = new THREE.BoxGeometry(0.7, 0.22, 0.32); headG.translate(0.25, 4.65, 0);
-    const pole = new THREE.InstancedMesh(poleG, toon('#3E4A45'), P.lamps.length);
-    const head = new THREE.InstancedMesh(headG, toon('#FFF2B8', { emissive: new THREE.Color('#5A4E20') }), P.lamps.length); head.material.name = 'lampHead';
-    // Leuchtenkopf zur Fahrbahn drehen (Richtung mit den meisten Strassen-Zellen im Umkreis 2–6 m); Laternen an Hauptstrassen (3. Wert) 1.6× höher
-    const sc = new THREE.Matrix4();
-    P.lamps.forEach((l, i) => { const [x, z] = l; let best = hash(x, z) * Math.PI * 2, bn = 0;
-      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; let n = 0; for (const d of [2, 4, 6]) if (mask.isRoad(x + Math.cos(a) * d, z + Math.sin(a) * d)) n++; if (n > bn) { bn = n; best = a; } }
-      m4.makeRotationY(-best); if (l[2]) m4.multiply(sc.makeScale(1, 1.6, 1)); m4.setPosition(x, terrain.height(x, z), z); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); });
-    pole.name = 'lamps'; G.add(pole, head);
+    G.add(...buildLamps(P.lamps, mask, (x, z) => terrain.height(x, z))); // 15a, P-A E3 (Rückfall auf die alten Laternen über REAL)
     (G as any).counts = { lamps: P.lamps.length, signals: P.signals.length, stops: P.stops.length };
   }
   // Ampeln
@@ -2544,14 +2527,9 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
       G.add(W);
     }
   }
-  // Bushaltestellen: blaues Schild
-  if (P.stops.length) {
-    const poleG = new THREE.CylinderGeometry(0.05, 0.05, 2.6, 4); poleG.translate(0, 1.3, 0);
-    const signG = new THREE.BoxGeometry(0.6, 0.45, 0.05); signG.translate(0, 2.55, 0);
-    const st = new THREE.InstancedMesh(colorMerge([[poleG, '#8A8F94'], [signG, '#2F6FB8']]), toon('#ffffff', { vertexColors: true }), P.stops.length);
-    P.stops.forEach(([x, z], i) => { m4.makeRotationY(hash(x + 1, z) * Math.PI); m4.setPosition(x, terrain.height(x, z), z); st.setMatrixAt(i, m4); });
-    st.computeBoundingSphere(); st.name = 'stops'; G.add(st);
-  }
+  // Bushaltestellen: Schild oder Wartehalle (15a, P-A E2), dazu einzelne Veloständer (E7)
+  if (P.stops.length) { G.add(...buildStops(P.stops, mask, (x, z) => terrain.height(x, z)));
+    G.add(...buildParkedVelos(P.stops.filter((_, i) => i % 6 === 0).map(([x, z]) => [x + 2, z + 2, 0]), (x, z) => terrain.height(x, z))); }
   // Instanzen in 500-m-Zellen aufteilen, damit nur sichtbare Zellen gezeichnet werden (Ampeln bleiben am Stück: Index = Ampel)
   const sig = (G as any).signalLamp as THREE.Object3D | undefined;
   for (const c of [...G.children]) {
