@@ -1,6 +1,6 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 09:15. Fertig: **2026-11-14y** = 14x + Region a19 Hitzkirch/Baldegg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 09:05. Fertig: **2026-11-14za** = a20 Entlebuch + Musik (Spitalradio LuZ, Schüür, KKL). ZIP an Simon, nicht hochgeladen. **Ab jetzt keine neuen Gegenden – Qualität statt Grösse (45 % Umgebungsqualität / 30 % Kantonsstrassen / 20 % Luzerner Kantonsstrassen / 5 % Gameplay).** Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
@@ -15,7 +15,6 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Übergang a20↔a7 (Hauptstrasse Entlebuch–Wolhusen) beidseitig getestet; smoke a20 8/8, keine Seitenfehler.
 - missions_a: Ortsnamen ohne Restaurant/Gasthaus/Hotel/Wirtschaft.
 - **Kurswechsel Simon 14.11. 08:37: keine neuen Gegenden mehr – Qualität statt Grösse, Verteilung 45/30/20/5 bleibt** (45 % = Qualität der bestehenden Umgebung).
-- Neuer Wunsch 08:40: Spital Radio LuZ als Hintergrundsound (in Arbeit).
 
 ## Version 14y (14.11. 07:30–09:15, nicht hochgeladen)
 - Region **a19 «Hitzkirch und Baldegg»** (Seetal-Nord) x −6200..2300, z −20300..−14600 (LV95 E 2659523–2668264, N 1226069–1232081), überlappt a12 (200 m), a17 (200 m); zu a3 **keine** Überlappung (a3 beginnt bei z −14600). b3dm x 1024–1074 / y 1410–1463 (2754 Kacheln, 672 mit Inhalt), 47 neue Höhenkacheln. Treffpunkt Bahnhof Hitzkirch (BHF). Ortsnamen geprüft (Hitzkirch, Baldegg, Gelfingen, Ermensee, Retschwil im Feld).
