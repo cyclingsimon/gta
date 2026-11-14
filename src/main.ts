@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14x';
+export const VERSION = '2026-11-14y';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -976,9 +976,11 @@ function edgeNeighbor(): string | null {
   const M = 60, fx = car.fx, fz = car.fz;
   const outward = (car.x < B[0] + M && fx < -0.3) || (car.x > B[2] - M && fx > 0.3) || (car.z < B[1] + M && fz < -0.3) || (car.z > B[3] - M && fz > 0.3);
   if (!outward) return null;
-  for (const [k, b] of Object.entries(REG_BOUNDS)) {
+  // 14y: zuerst Felder, die den Punkt sicher enthalten (Überlappung), dann solche, die nur angrenzen (z. B. a19/a3 ohne Überlappung):
+  // die Ambulanz kommt am eigenen Feldrand nicht weiter, placeCar() setzt sie drüben auf die nächste Strasse
+  for (const pad of [-10, 40]) for (const [k, b] of Object.entries(REG_BOUNDS)) {
     if (k === REGION || !(RA || REGIONS_A[k])) continue; // Wechsel zwischen den alten Regionen regeln die Linien oben
-    if (car.x > b[0] + 10 && car.x < b[2] - 10 && car.z > b[1] + 10 && car.z < b[3] - 10) return k;
+    if (car.x > b[0] - pad && car.x < b[2] + pad && car.z > b[1] - pad && car.z < b[3] + pad) return k;
   }
   return null;
 }

@@ -397,5 +397,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": 4159.5
   },
   "welcome": "Willkommen in Eigenthal und Schwarzenberg! Treffpunkt ist die Haltestelle Schwarzenberg Rössli. Sie ist auf der Karte blau markiert."
+ },
+ "a19": {
+  "name": "Hitzkirch und Baldegg",
+  "b": [
+   -6200,
+   -20300,
+   2300,
+   -14600
+  ],
+  "aerial": {
+   "E0": 2659523,
+   "E1": 2668264,
+   "N0": 1226069,
+   "N1": 1232081
+  },
+  "hosp": {
+   "label": "Bahnhof Hitzkirch",
+   "kind": "rp",
+   "x": -4259.4,
+   "z": -18934.0
+  },
+  "welcome": "Willkommen in Hitzkirch und Baldegg! Treffpunkt ist der Bahnhof Hitzkirch. Er ist auf der Karte blau markiert."
  }
 };

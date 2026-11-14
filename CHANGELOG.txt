@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14y  Neue Gegend Hitzkirch und Baldegg (Seetal-Nord)
+- Neue Gegend «Hitzkirch und Baldegg» (rund 48 km², mit Gelfingen, Ermensee, Retschwil und dem Nordende des Baldeggersees): 3328 echte 3D-Häuser, Gelände, Luftbild, Obstgärten, 8 Einsätze (u. a. Bahnhof Gelfingen, Badi Wolfetschwil, Sportplatz Hitzkirch), Treffpunkt Bahnhof Hitzkirch, 40 Luksi-Herzen, Busse und Seetalbahn. Anschluss an Hochdorf (Seetal-Hauptstrasse), Hildisrieden und Beromünster
+- Wechsel in eine Nachbargegend klappt jetzt auch dort, wo zwei Gegenden nur aneinanderstossen (vorher kam man von Hitzkirch nicht nach Hildisrieden)
+- Spielwelt jetzt 24 Gegenden, rund 823 km² mit rund 101 000 Gebäuden
+
 2026-11-14x  Neue Gegend Eigenthal und Schwarzenberg (Pilatus-Nordseite)
 - Neue Gegend «Eigenthal und Schwarzenberg» (rund 44 km², vom Kriens-Rand übers Eigenthal bis Schwarzenberg, mit dem Pilatus im Hintergrund): 1211 echte 3D-Häuser, Berggelände, Luftbild, 8 Einsätze, Treffpunkt Haltestelle Schwarzenberg Rössli, 40 Luksi-Herzen, Busse. Anschluss an Littau (Schürhofstrasse) und Kriens/Luzern (Langwasenstrasse)
 - Einsätze nur noch dort, wo die Ambulanz hinkommt (höchstens 150 m von Strasse oder Feldweg – kein Einsatz mehr auf dem Pilatus-Gipfel) und ohne doppelte Ortsnamen. Gilt für alle neu gebauten Gegenden

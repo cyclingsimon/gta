@@ -19,4 +19,5 @@ REGIONS_A = {
     'a16': ('Rotkreuz und Hünenberg', (7300, -14000, 13300, -8400)),  # 14v: Kanton Zug, Einzugsgebiet Kinderspital
     'a17': ('Beromünster und Gunzwil', (-13700, -20300, -6000, -14400)),  # 14w: Michelsamt
     'a18': ('Eigenthal und Schwarzenberg', (-11000, 2800, -3600, 8800)),  # 14x: Pilatus-Nordseite
+    'a19': ('Hitzkirch und Baldegg', (-6200, -20300, 2300, -14600)),  # 14y: Seetal-Nord
 }

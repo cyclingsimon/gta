@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 08:30. Fertig: **2026-11-14x** = 14w + Region a18 Eigenthal/Schwarzenberg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 09:15. Fertig: **2026-11-14y** = 14x + Region a19 Hitzkirch/Baldegg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14y (14.11. 07:30–09:15, nicht hochgeladen)
+- Region **a19 «Hitzkirch und Baldegg»** (Seetal-Nord) x −6200..2300, z −20300..−14600 (LV95 E 2659523–2668264, N 1226069–1232081), überlappt a12 (200 m), a17 (200 m); zu a3 **keine** Überlappung (a3 beginnt bei z −14600). b3dm x 1024–1074 / y 1410–1463 (2754 Kacheln, 672 mit Inhalt), 47 neue Höhenkacheln. Treffpunkt Bahnhof Hitzkirch (BHF). Ortsnamen geprüft (Hitzkirch, Baldegg, Gelfingen, Ermensee, Retschwil im Feld).
+- **Fix Randwechsel** (`main.ts edgeNeighbor`): Nachbarfeld wurde nur gefunden, wenn die Ambulanz ≥ 10 m drin war. Bei aneinanderstossenden Feldern (a19/a3) endet die Strasse am eigenen Rand → nie drin. Jetzt zweiter Durchgang mit 40 m Toleranz; placeCar() setzt drüben auf die nächste Strasse. Gilt für alle A-Regionen [Annahme: keine Nebenwirkung an Ecken, weil die Fahrtrichtung nach aussen zeigen muss].
+- Ergebnis: 3328 Gebäude (3D), 8 Einsätze, 1201 Obst-/Reihenbäume. Spielumfang 823.1 km², 101 172 Gebäude.
+- Tests 14y: smoke_a a19 ok (8/8, keine Fehler); tests/region_a19.py a19↔a12 (Hauptstrasse), a19↔a3 (Hitzkirchstrasse, erst nach dem Fix), a19↔a17 je beide Richtungen ok – in drei Teilläufen (Startpunkte korrigiert, tp() rastet teils auf eine Nebenstrasse ein), nicht am Stück. Regression nach dem Fix: tests/region_a13.py (a13↔a4) beide Richtungen ok.
 
 ## Version 14x (14.11. 07:00–08:30, nicht hochgeladen)
 - Region **a18 «Eigenthal und Schwarzenberg»** (Pilatus-Nordseite) x −11000..−3600, z 2800..8800 (LV95 E 2654945–2662615, N 1202497–1208792), überlappt West (200 m), a8 (z 2800..3000) und Luzern (x −3800..−3600, z ≤ 6300). Feld nach Westen erweitert (−11000 statt −9500), weil Schwarzenberg bei x ≈ −10300 liegt (Ortsnamen vorher geprüft). b3dm x 995–1039 / y 1191–1247 (2565 Kacheln, 403 mit Inhalt), 59 neue Höhenkacheln (Pilatus bis 2128 m, passt in Int16-dm). Treffpunkt **Haltestelle Schwarzenberg Rössli** (HALT).
