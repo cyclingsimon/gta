@@ -13,4 +13,5 @@ REGIONS_A = {
     'a10': ('Root, Buchrain und Inwil', (1300, -9100, 7500, -3700)),  # 13n: Ausbau Umgebung (Fokus Simon 45 %)
     'a11': ('Küssnacht und Meierskappel', (7300, -8600, 12300, -1800)),  # 13o
     'a12': ('Hochdorf und Ballwil', (-3700, -14800, 2300, -8900)),  # 14r: Seetal
+    'a13': ('Willisau und Ettiswil', (-26200, -11000, -19800, -5000)),  # 14s
 }

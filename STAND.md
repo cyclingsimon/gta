@@ -1,9 +1,14 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 01:00. Fertig: **2026-11-14r** = 14q + Region a12 Seetal (Hochdorf, Ballwil). ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 01:00. Fertig: **2026-11-14s** = 14r + Region a13 Willisau/Ettiswil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14s (14.11. 02:50–03:45, nicht hochgeladen)
+- [Entscheid Claude] Statt der Lücke Adligenswil/Dottenberg (liegt grösstenteils schon in Nord, Rest Wald/Hügel, wenig Kinder) zuerst **a13 «Willisau und Ettiswil»** x −26200..−19800, z −11000..−5000 (LV95 E 2639619–2646255, N 1216250–1222519), überlappt a4 (200 m) und a1-Ecke. b3dm x 904–943 / y 1319–1377 (809 Kacheln), 63 neue Höhenkacheln, Bus-Relationen bus_a13.json. Treffpunkt Bahnhof Willisau.
+- Ergebnis: 4017 Gebäude (3D), 8 Einsätze, Hecken 64 / 6.0 km. Spielumfang 577.1 km², 77 548 Gebäude.
+- Tests 14s: smoke_a a13 ok (8/8); tests/region_a13.py a13↔a4 (Stettenbach) beide Richtungen ok (Test braucht 60 Fahr-Schritte, weil tp() auf die Strasse einrastet). Luftbild Willisau angesehen. Nicht getestet: a13↔a1 (Ecke Mauensee).
 
 ## Version 14r (14.11. 02:15–03:20, nicht hochgeladen)
 - Browser war nach Neustart leer (alle Helfer weg). Neu: `tools/browser/helpers.js` (ofetch, gz, b64, packGz, chunk, tileJob, lzw, tif, altiStart, altiDS, overpass) – Inhalt per javascript_exec einspritzen. Geprüft: Kachel 2666-1214 identisch mit lokaler Kopie.

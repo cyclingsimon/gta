@@ -1,6 +1,7 @@
 // generiert von tools/geo/sign_places.py: Orte (Name, x, z, Rang) für Wegweiser
 export const SIGN_PLACES: [string, number, number, number][] = [
   ["Adligenswil", 4592, -2083, 2],
+  ["Alberswil", -23236, -10938, 2],
   ["Baldegg", -1992, -14797, 2],
   ["Ballwil", 825, -11110, 2],
   ["Buchrain", 3000, -4689, 2],
@@ -14,6 +15,7 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Ennethorw", -206, 4612, 1],
   ["Ennetmoos", 2253, 10477, 2],
   ["Eschenbach", 779, -8992, 2],
+  ["Ettiswil", -22195, -10692, 2],
   ["Gisikon", 7050, -8248, 2],
   ["Grosswangen", -19612, -8908, 2],
   ["Hellbühl", -8383, -2107, 2],
@@ -61,5 +63,6 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Sursee", -15239, -13361, 3],
   ["Udligenswil", 6977, -4350, 2],
   ["Werthenstein", -15616, -406, 2],
+  ["Willisau", -23597, -7720, 2],
   ["Wolhusen", -17834, -698, 2]
 ];

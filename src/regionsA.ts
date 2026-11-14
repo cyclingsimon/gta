@@ -265,5 +265,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -12745.6
   },
   "welcome": "Willkommen in Hochdorf und Ballwil! Treffpunkt ist der Bahnhof Hochdorf. Er ist auf der Karte blau markiert."
+ },
+ "a13": {
+  "name": "Willisau und Ettiswil",
+  "b": [
+   -26200,
+   -11000,
+   -19800,
+   -5000
+  ],
+  "aerial": {
+   "E0": 2639619,
+   "E1": 2646255,
+   "N0": 1216250,
+   "N1": 1222519
+  },
+  "hosp": {
+   "label": "Bahnhof Willisau",
+   "kind": "rp",
+   "x": -23582.8,
+   "z": -7840.7
+  },
+  "welcome": "Willkommen in Willisau und Ettiswil! Treffpunkt ist der Bahnhof Willisau. Er ist auf der Karte blau markiert."
  }
 };

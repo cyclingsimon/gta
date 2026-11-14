@@ -2,7 +2,7 @@
 import asyncio, sys, json
 from playwright.async_api import async_playwright
 PORT = sys.argv[1] if len(sys.argv) > 1 else '8765'
-RS = sys.argv[2:] or [f'a{i}' for i in range(1, 13)]
+RS = sys.argv[2:] or [f'a{i}' for i in range(1, 14)]
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])

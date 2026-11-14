@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14s  Neue Gegend Willisau und Ettiswil
+- Neue Gegend «Willisau und Ettiswil» (rund 38 km², mit Gettnau, Alberswil, Schötz-Rand): 4017 echte 3D-Häuser, Gelände, Luftbild, Hecken, 8 Einsätze an echten Orten (u. a. Badi Willisau, Bahnhof Gettnau), Treffpunkt Bahnhof Willisau, 40 Luksi-Herzen, Busse und Bahn. Anschluss an Buttisholz (Stettenbach)
+- Spielwelt jetzt 18 Gegenden, rund 577 km² mit rund 78 000 Gebäuden
+
 2026-11-14r  Neue Gegend Hochdorf und Ballwil (Seetal)
 - Neue Gegend «Hochdorf und Ballwil» (rund 35 km², mit Eschenbach, Baldegg, Hohenrain und dem Südende des Baldeggersees): 4852 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze an echten Orten, Treffpunkt Bahnhof Hochdorf, 40 Luksi-Herzen, Busse und S-Bahn. Anschluss an Rothenburg/Eschenbach (Seetalstrasse)
 - Spielwelt jetzt 17 Gegenden, rund 540 km² mit rund 74 000 Gebäuden
