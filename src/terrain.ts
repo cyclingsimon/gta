@@ -5,8 +5,8 @@ export const SEA = 433.6;
 export class Terrain {
   nx: number; nz: number; x0: number; z0: number; step: number;
   h: Float32Array;
-  // Brückendecks (DTM enthält keine Brücken): eigenes Raster, NaN = keine Brücke
-  bridgeRes = 2.5; bw: number; bh: number; bridge: Float32Array;
+  // Brückendecks (DTM enthält keine Brücken): dünn besetztes 2.5-m-Raster (14zl: Map statt dichtem Float32-Feld – sparte je Gegend bis ~26 MB)
+  bridgeRes = 2.5; bw: number; bh: number; bridge = new Map<number, number>();
 
   constructor(raw: ArrayBuffer, meta: { nx: number; nz: number; x0: number; z0: number; step: number }, bounds: number[]) {
     this.nx = meta.nx; this.nz = meta.nz; this.x0 = meta.x0; this.z0 = meta.z0; this.step = meta.step;
@@ -15,7 +15,6 @@ export class Terrain {
     for (let i = 0; i < i16.length; i++) this.h[i] = i16[i] / 10 + 400 - SEA;
     this.bw = Math.ceil((bounds[2] - bounds[0]) / this.bridgeRes) + 1;
     this.bh = Math.ceil((bounds[3] - bounds[1]) / this.bridgeRes) + 1;
-    this.bridge = new Float32Array(this.bw * this.bh).fill(NaN);
   }
 
   /**
@@ -100,7 +99,7 @@ export class Terrain {
   bridgeAtOwn(x: number, z: number) {
     const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes);
     if (i < 0 || j < 0 || i >= this.bw || j >= this.bh) return NaN;
-    return this.bridge[j * this.bw + i];
+    const v = this.bridge.get(j * this.bw + i); return v === undefined ? NaN : v;
   }
 
   /** Fahrhöhe: Brückendeck, sonst Gelände. 14zg: mit ref (bisherige Höhe des Fahrzeugs) auch Tunnelfahrbahn unter dem Gelände –
@@ -163,7 +162,7 @@ export class Terrain {
           const ii = Math.round((x + dx - this.x0) / this.bridgeRes), jj = Math.round((z + dz - this.z0) / this.bridgeRes);
           if (ii < 0 || jj < 0 || ii >= this.bw || jj >= this.bh) continue;
           const idx = jj * this.bw + ii;
-          if (isNaN(this.bridge[idx]) || this.bridge[idx] < y) this.bridge[idx] = y;
+          const o = this.bridge.get(idx); if (o === undefined || o < y) this.bridge.set(idx, y);
         }
       }
       acc += len;

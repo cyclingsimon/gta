@@ -6,6 +6,14 @@ Stand: 14.11.2026 18:35. Letztes ZIP: **2026-11-14zj** (an Simon, nicht hochgela
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+## Version 14zl (2026-11-14 abends, Opus-Sitzung, Streaming-Abschluss)
+- Speicher: `Terrain.bridge` dichtes Float32-Feld (2.5 m über die ganze Gegend, a8 ≈ 26 MB, fast alles NaN) → `Map`. tests/mem_stream.py Leicht, Software: Luzern 431 MB (vorher 462), +West 579 (623), +a8 821 (891). Brückenhöhe geprüft (Ringstrasse-Brücke 19.2 m über Boden 18.4).
+- activate: Navi-Route sofort verwerfen/neu rechnen (vorher bis 1.2 s alte Route aus dem anderen Netz); Einblende-Warteschlange beim Betreten sofort leeren.
+- Tests neu: tests/border_pairs.py (Paare über Testhaken, Routen /tmp/x_A_B.json aus tools-Muster /tmp/xpts2.py + route.py): nord→a9, a6→a8, a11→ost, a12→a3, nord→a10 ALLE OK. a1↔a2: keine Strassenverbindung im Überlappungsstreifen gefunden – nicht geprüft.
+- tests/mission_border.py: Einsatz in Luzern annehmen → West (Navi zurück 426 Punkte/5.8 km) → Patient an Bord → zurück nach Luzern (näheres Ziel bleibt Bahnhof Littau) → Abgabe: ALLES OK.
+- Testhaken `__dbg.hgt(x,z)`; crossRoute loggt im Testmodus, wenn kein Weg gefunden wird.
+- Offen für den Hauptstrang (Fable): Ruckeln echt auf Gerät messen (Software-Rendering taugt nicht); Bau-Schritte der Nachbarn (Maske ~0.4–1 s, Bodennetz, Häuser je 250er-Block 1–2 s in Echt) blockieren je am Stück – bei Bedarf feiner aufteilen; Echt-Upgrade a7 nach Wechsel per Bild bestätigen; a1↔a2.
+
 ## Version 14zk (2026-11-14, Opus-Sitzung, Streaming; mit 15a zusammengeführt dec9989)
 - Navi über die Grenze: `crossRoute()` – Übergänge = Fahrknoten der aktiven Gegend ≤120 m vom Feldrand, die in der Zielgegend liegen und dort einen Fahrknoten ≤25 m haben (je 50-m-Feld einer); 8 beste nach Luftlinie durchgerechnet. Test tests/cross_route.py: Kriens→Malters 6.8 km, Luzern→Emmenbrücke 4.7 km, beide bis zum Zielknoten, ALLES OK.
 - activate: unterwegs ins Spital → näheres Spital (altes bleibt, wenn näher). Entladen schont die Gegend mit dem aktuellen Ziel.
