@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zb  Hecken und Obstgärten auch in Luzern, Nord, Ost, West und Süd
+- Echte Hecken (OpenStreetMap) jetzt auch in den ersten fünf Gegenden: Luzern 447 (15.7 km), Nord 205, Ost 167, West 72, Süd 32
+- Baumreihen und Hochstamm-Obstgärten dazu (Nord rund 560 neue Bäume)
+- Einsätze in Gebiet A mit den neuen Regeln geprüft: nichts zu ändern
+
 2026-11-14za  Musik: Spitalradio LuZ, Metal in der Schüür, Broadway im KKL
 - Pause-Menü «Musik»: Spielmusik, Spitalradio LuZ (live, offizieller Stream 128 kbps, braucht Internet) oder keine. Ohne Verbindung läuft nach 15 s wieder die Spielmusik
 - Konzerthaus Schüür: drinnen läuft ein Metalkonzert («De Luksi») – draussen gedämpft hörbar, je näher desto lauter und heller

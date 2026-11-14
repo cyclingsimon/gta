@@ -1,9 +1,14 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 09:05. Fertig: **2026-11-14za** = a20 Entlebuch + Musik (Spitalradio LuZ, Schüür, KKL). ZIP an Simon, nicht hochgeladen. **Ab jetzt keine neuen Gegenden – Qualität statt Grösse (45 % Umgebungsqualität / 30 % Kantonsstrassen / 20 % Luzerner Kantonsstrassen / 5 % Gameplay).** Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 10:10. Fertig: **2026-11-14zb** = 14za + Hecken/Obstgärten alte Regionen. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zb (2026-11-14)
+- Overpass (Browser) barrier=hedge, natural=tree_row, landuse=orchard für bbox 46.9513,8.1943–47.0879,8.4079 → `data/old/osm_green.json` (nicht im Repo). `greenlines.py` kennt jetzt luzern/nord/ost/west/sued (Grenzen = REG_BOUNDS). Hecken: Luzern 447/15.7 km, Nord 205/5.7, Ost 167/7.5, West 72/2.5, Süd 32/1.8; neue Bäume Luzern 234, Nord 556, Ost 73, Süd 16.
+- missions_a a1–a17 mit allen Filtern neu erzeugt: Ergebnis identisch, keine Änderung nötig.
+- Tests: Nord geladen, Hecke in Fahrersicht sichtbar, keine Fehler; Luzern geladen (audio_14za), keine Fehler. Ost/Süd lokal nicht ladbar (Gelände fehlt lokal) → dort ungetestet, nur props.json geändert.
 
 ## Version 14za (2026-11-14)
 - src/audio.ts: Musikquelle spiel|radio|aus (save.music, Pause-Menü «Musik»). Radio = HTMLAudio auf https://s10.streamingcloud.online:13552/radioluz128.mp3 (offiziell laut radioluz.ch/empfang); nur bei Wahl, getrennt bei Ton aus/Tab verdeckt; Fehler oder 15 s ohne Daten → Spielmusik + Hinweis. **Einzige Netzverbindung ausser eigenem Server, von Simon gewünscht (14.11. 08:40).**
