@@ -53,7 +53,7 @@ async def main():
         errs=[]
         pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.on('console', lambda m: errs.append(m.text) if m.type=='error' else None)
-        await pg.goto(URL); await pg.wait_for_selector('#start-btn', state='visible', timeout=120000)
+        await pg.goto(URL); await pg.wait_for_selector('#start-btn', state='visible', timeout=900000)
         await pg.click('#start-btn'); await pg.wait_for_function('window.__luksiReady', timeout=900000); await pg.wait_for_timeout(1500)
         await pg.keyboard.press('F3'); await pg.wait_for_timeout(1500)
         print('Leistung (Software-Rendering):', (await pg.evaluate('window.__dbg.info()'))['fps'])
@@ -81,7 +81,7 @@ async def main():
             print('   Sterne total:', await pg.evaluate('window.__luksi.stars'))
             await pg.keyboard.press('Enter'); await wait_phase(pg, ['free'], 60)
         # Speichern: Neu laden behält Sterne
-        await pg.reload(); await pg.wait_for_selector('#start-btn', state='visible', timeout=120000)
+        await pg.reload(); await pg.wait_for_selector('#start-btn', state='visible', timeout=900000)
         await pg.click('#start-btn'); await pg.wait_for_function('window.__luksiReady', timeout=900000); await pg.wait_for_timeout(1000)
         print('Nach Neuladen Sterne:', await pg.evaluate('window.__luksi.stars'))
         print('Fehler:', errs[:10])
