@@ -5,7 +5,7 @@ import { buildAmbulance } from '../../src/vehicle';
 import { Buses, type BusLine } from '../../src/bus';
 import { toon } from '../../src/world';
 import { tris } from '../../src/real/geo';
-import { TREE_SPECIES, treeGeometry, type TreeSpecies } from '../../src/real/trees';
+import { TREE_SPECIES, treeGeometry, treeTris, type TreeSpecies } from '../../src/real/trees';
 import { FURNITURE, furnitureGeometry, type FurnitureKind } from '../../src/real/furniture';
 import { CAR_TYPES, carGeometry, carColor, veloGeometry, type CarType } from '../../src/real/cars';
 
@@ -46,7 +46,7 @@ CAR_TYPES.forEach((c: CarType, i: number) => { const { body, fixed } = carGeomet
 { const g = veloGeometry(); for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true })); m.position.set(12 + i * 1.2, 0, 10); m.rotation.y = 1.2; scene.add(m); } stats['velo'] = tris(g); }
 
 const VIEWS: Record<string, number[]> = { // Kamera x,y,z → Ziel x,y,z
-  amb: [-7.5, 3.2, 9, -12, 1.6, 0], amb2: [-17.5, 4.2, -8, -12, 1.6, -1], amb3: [-4, 6, 14, -1, 1.5, 0],
+  amb: [-7.5, 3.2, 9, -12, 1.6, 0], amb2: [-17.5, 4.2, -8, -12, 1.6, -1], amb3: [-4, 6, 14, -1, 1.5, 0], ambL: [-22, 2.2, 3, -12, 1.6, -0.5], ambF: [-12, 2.4, 9, -12, 1.6, 0],
   bus: [-42, 5, 50, -26, 2, 28], bus2: [-5, 7, 52, -10, 1.5, 25], bus3: [-36, 9, 0, -30, 2, 24],
   baum: [-15, 12, -8, -15, 8, -45], moebel: [-6, 4.5, -10, -4, 1, -20], moebel2: [-16, 3, -13, -16, 1, -20], autos: [-2, 4.5, 20, -4, 0.8, 10], total: [-20, 45, 60, -5, 0, 0],
 };
@@ -54,6 +54,7 @@ const v = new URLSearchParams(location.search).get('v') || 'amb';
 const cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 2000); const V = VIEWS[v] || VIEWS.amb;
 cam.position.set(V[0], V[1], V[2]); cam.lookAt(V[3], V[4], V[5]);
 renderer.render(scene, cam);
+Object.entries(treeTris(true)).forEach(([k, n]) => (stats['baum_lite_' + k] = n));
 (window as any).__stats = stats; (window as any).__ready = true;
 document.getElementById('info')!.textContent = v + ' · ' + renderer.info.render.calls + ' Aufrufe · ' + renderer.info.render.triangles + ' Dreiecke';
 setInterval(() => renderer.render(scene, cam), 500);

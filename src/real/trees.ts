@@ -37,30 +37,32 @@ function tier(r: number, h: number, y0: number, col: string, seg = 7): G {
 }
 
 const BARK = '#6E5038', BARK_GREY = '#8E8E86', BARK_PLAT_A = '#C8BE9C', BARK_PLAT_B = '#8C8A68';
-const CACHE = new Map<TreeSpecies, G>();
+const CACHE = new Map<string, G>();
+let D1 = 1; // Kronen-Detail (1 = rund, 0 = «lite»)
 /** Geometrie einer Baumart (zwischengespeichert, nicht verändern – für InstancedMesh direkt verwenden) */
-export function treeGeometry(s: TreeSpecies): G {
-  const c = CACHE.get(s); if (c) return c;
+export function treeGeometry(s: TreeSpecies, lite = false): G {
+  const key = s + (lite ? ':lite' : ''); const c = CACHE.get(key); if (c) return c;
+  D1 = lite ? 0 : 1;
   let L: G[] = [];
   switch (s) {
     case 'linde': // Tilia: aufrechter Stamm, dichte, eiförmig-hochgewölbte Krone, sattgrün
       L = [trunk(0.32, 0.24, 4.2, BARK), branch(3.4, 0.9, 1.6, 0, 0.14, BARK), branch(3.6, -0.7, 1.5, 0.5, 0.13, BARK),
-        lobe(1, 3.4, 4.4, 3.4, 0, 8.2, 0, 1, '#5E9A45'), lobe(1, 1.9, 1.8, 1.9, 0.3, 11.6, -0.2, 0, '#66A34C')];
+        lobe(1, 3.4, 4.4, 3.4, 0, 8.2, 0, D1, '#5E9A45'), lobe(1, 1.9, 1.8, 1.9, 0.3, 11.6, -0.2, 0, '#66A34C')];
       break;
     case 'rosskastanie': // Aesculus: kurzer kräftiger Stamm, breite, dichte Kuppelkrone, dunkleres Grün
       L = [trunk(0.42, 0.3, 3.2, BARK), branch(2.8, 1.3, 1.4, 0.4, 0.17, BARK), branch(2.8, -1.2, 1.5, -0.5, 0.17, BARK),
-        lobe(1, 4.6, 3.6, 4.6, 0, 7.6, 0, 1, '#3F7E3A'),
+        lobe(1, 4.6, 3.6, 4.6, 0, 7.6, 0, D1, '#3F7E3A'),
         lobe(1, 2.4, 2.1, 2.4, 2.9, 6.0, 1.2, 0, '#44843D'), lobe(1, 2.4, 2.1, 2.4, -2.6, 6.2, -1.6, 0, '#3A7636'), lobe(1, 2.2, 2.0, 2.2, -0.6, 6.0, 3.0, 0, '#41813B')];
       break;
     case 'platane': { // Platanus: gefleckte Borke (hell/oliv), Gabelung, breite lockere Krone aus mehreren Ballen
       const tA = trunk(0.38, 0.32, 2.6, BARK_PLAT_A), tB = trunk(0.32, 0.28, 2.2, BARK_PLAT_B, 2.6);
       L = [tA, tB, branch(4.6, 1.8, 2.6, 0.3, 0.2, BARK_PLAT_A), branch(4.6, -1.6, 2.7, -0.6, 0.2, BARK_PLAT_A), branch(4.4, 0.2, 2.4, 1.6, 0.17, BARK_PLAT_B),
-        lobe(1, 3.6, 3.0, 3.6, 0, 11.4, 0, 1, '#77A24E'),
+        lobe(1, 3.6, 3.0, 3.6, 0, 11.4, 0, D1, '#77A24E'),
         lobe(1, 2.7, 2.3, 2.7, 3.3, 9.4, 0.6, 0, '#6F9B48'), lobe(1, 2.7, 2.3, 2.7, -3.1, 9.6, -1.1, 0, '#7AA552'), lobe(1, 2.5, 2.2, 2.5, 0.2, 9.2, 3.1, 0, '#729E4B'), lobe(1, 2.5, 2.2, 2.5, -0.4, 9.8, -3.1, 0, '#6C9846')];
       break; }
     case 'buche': // Fagus: glatter grauer Stamm, hohe ovale Krone, frisches Grün
       L = [trunk(0.34, 0.24, 6.0, BARK_GREY), branch(5.0, 1.0, 2.0, 0.2, 0.14, BARK_GREY), branch(5.2, -0.9, 2.1, -0.4, 0.14, BARK_GREY),
-        lobe(1, 3.6, 5.2, 3.6, 0, 11.4, 0, 1, '#5F9C3E'), lobe(1, 2.0, 2.0, 2.0, 0, 15.2, 0.3, 0, '#68A645')];
+        lobe(1, 3.6, 5.2, 3.6, 0, 11.4, 0, D1, '#5F9C3E'), lobe(1, 2.0, 2.0, 2.0, 0, 15.2, 0.3, 0, '#68A645')];
       break;
     case 'fichte': // Picea: schlank, spitz, dunkelgrün, Etagen bis fast zum Boden
       L = [trunk(0.3, 0.12, 18.5, BARK, 0, 5),
@@ -73,14 +75,14 @@ export function treeGeometry(s: TreeSpecies): G {
       break;
     case 'obstbaum': // Hochstamm (Apfel/Birne): ~1.8 m Stamm, runde lockere Krone, oft etwas schief
       L = [trunk(0.2, 0.15, 2.0, BARK), branch(1.8, 0.8, 1.1, 0.2, 0.09, BARK), branch(1.8, -0.7, 1.1, -0.3, 0.09, BARK),
-        lobe(1, 2.6, 2.1, 2.6, 0.15, 3.9, 0, 1, '#6FA24A'), lobe(1, 1.2, 1.0, 1.2, -1.5, 3.4, 0.9, 0, '#76A84F')];
+        lobe(1, 2.6, 2.1, 2.6, 0.15, 3.9, 0, D1, '#6FA24A'), lobe(1, 1.2, 1.0, 1.2, -1.5, 3.4, 0.9, 0, '#76A84F')];
       break;
   }
-  const g = mergeGeometries(L, false)!; CACHE.set(s, g); return g;
+  const g = mergeGeometries(L, false)!; CACHE.set(key, g); return g;
 }
 /** Dreieckszahl je Art (für Doku/Budget) */
-export function treeTris(): Record<TreeSpecies, number> {
-  const o = {} as Record<TreeSpecies, number>; for (const s of TREE_SPECIES) o[s] = tris(treeGeometry(s)); return o;
+export function treeTris(lite = false): Record<TreeSpecies, number> {
+  const o = {} as Record<TreeSpecies, number>; for (const s of TREE_SPECIES) o[s] = tris(treeGeometry(s, lite)); return o;
 }
 /** Instanz-Farbe: helle Variation um Weiss (multipliziert die Vertex-Farbe) */
 export function treeTint(x: number, z: number, out = new THREE.Color()) {
@@ -129,13 +131,13 @@ export function ctxFromMask(mask: Pick<Mask, 'at' | 'isRoad'>, x: number, z: num
 
 /** Fertige Instanzen: Liste [x, z, Skalierung, Art] → Gruppe mit einem InstancedMesh je Art.
  *  groundY(x, z) = Bodenhöhe; mat = Material (z. B. toon('#ffffff', { vertexColors: true })). */
-export function buildTreeInstances(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, mat: THREE.Material) {
+export function buildTreeInstances(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, mat: THREE.Material, lite = false) {
   const grp = new THREE.Group(); grp.name = 'baeume-arten';
   const by = new Map<TreeSpecies, [number, number, number][]>();
   for (const [x, z, s, sp] of list) { const a = by.get(sp) || []; a.push([x, z, s]); by.set(sp, a); }
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
   for (const [sp, L] of by) {
-    const im = new THREE.InstancedMesh(treeGeometry(sp), mat, L.length);
+    const im = new THREE.InstancedMesh(treeGeometry(sp, lite), mat, L.length);
     L.forEach(([x, z, s], i) => {
       const r = hash2(x, z); e.set(0, r * 6.283, sp === 'obstbaum' ? (hash2(z, x) - 0.5) * 0.12 : 0); q.setFromEuler(e);
       sc.set(s, s * (0.92 + hash2(z, x) * 0.16), s); m.compose(v.set(x, groundY(x, z) - 0.15, z), q, sc);
