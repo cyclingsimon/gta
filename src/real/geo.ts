@@ -64,3 +64,29 @@ export function weighted<T>(werte: [T, number][], r: number): T {
   for (const [k, w] of werte) { acc += w / sum; if (r < acc) return k; }
   return werte[werte.length - 1][0];
 }
+
+/** Lauf 3: Teil mit Farbe, Leuchten (0/1 oder 'unten' = nur nach unten zeigende Flächen) und Tönung (1 = Instanzfarbe wirkt) */
+export type SparPart = [THREE.BufferGeometry, THREE.ColorRepresentation, (number | 'unten')?, number?];
+/** Teile zu einer Geometrie mit Attributen color, aGlow, aTint (für realMaterial in spar.ts) */
+export function sparParts(list: SparPart[], glowCol: THREE.ColorRepresentation = '#FFF2B8') {
+  const gs = list.map(([g0, col, glow = 0, tint = 0]) => {
+    const g = paint(g0, col); if (!g.getAttribute('normal')) g.computeVertexNormals();
+    const n = g.getAttribute('position').count, nr = g.getAttribute('normal'), cl = g.getAttribute('color');
+    const ag = new Float32Array(n), at = new Float32Array(n).fill(tint), gc = new THREE.Color(glowCol);
+    for (let i = 0; i < n; i++) {
+      const on = glow === 'unten' ? (nr.getY(i) < -0.5 ? 1 : 0) : glow ? 1 : 0; ag[i] = on;
+      if (on && glow === 'unten') cl.setXYZ(i, gc.r, gc.g, gc.b);
+    }
+    g.setAttribute('aGlow', new THREE.BufferAttribute(ag, 1)); g.setAttribute('aTint', new THREE.BufferAttribute(at, 1));
+    return g;
+  });
+  return mergeGeometries(gs, false)!;
+}
+/** Viereck (a, b, c, d im Umlauf), Normale zeigt Richtung «out» */
+export function quad(a: number[], b: number[], c: number[], d: number[], out: number[]) {
+  const g = new THREE.BufferGeometry(), A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), C = new THREE.Vector3(...c), D = new THREE.Vector3(...d);
+  const n = B.clone().sub(A).cross(C.clone().sub(A)); const flip = n.dot(new THREE.Vector3(...out)) < 0;
+  const P = flip ? [A, C, B, A, D, C] : [A, B, C, A, C, D];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P.flatMap((v) => [v.x, v.y, v.z]), 3)); g.computeVertexNormals();
+  return g;
+}

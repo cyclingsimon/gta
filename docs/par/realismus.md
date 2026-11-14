@@ -4,6 +4,57 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 14.11.2026 21:30 – Lauf 3
+
+Anlass: nach Einbau Lauf 2 Startansicht 2.475 Mio. Dreiecke / 852 Aufrufe (Budget 2.5 Mio.). Ziel: neue Bausteine ≤ +30 000 Dreiecke und ≤ +25 Zeichenaufrufe gegenüber `?real=0`.
+
+### Gemacht
+- **Neue Datei `src/real/spar.ts`**: Sparformen + EIN gemeinsames Material `realMaterial()` (Vertex-Farben; Attribut `aGlow` = Leuchtteil, Nachtlicht über `NIGHT.value`; Attribut `aTint` = nur Lackflächen nehmen die Instanzfarbe an). Leuchtteile liegen im selben Netz → 1 Zeichenaufruf je Bausteinart (vorher Körper + Licht = 2).
+- `buildLamps`: alle Laternen (auch die gewöhnlichen) als Sparform, je Art 1 InstancedMesh; `REAL.lamps = false` → unverändert alter Code.
+- `buildStops`: Wartehalle als Sparform (108), Licht im selben Netz.
+- `realBenchGeometry()`: Sparform-Bank (48).
+- `realCarMeshes`: je Autotyp EIN Netz (Sparform 88, Lack über `aTint`), «cabin» ist jetzt ein leerer Stellvertreter → 4 statt 8 Zeichenaufrufe. Schnittstelle zu traffic.ts unverändert (keine Änderung am Einbau E5 nötig).
+- `buildParkedCars`: Sparform, **fest gebacken in 500-m-Zellen** (1 Zeichenaufruf je sichtbare Zelle statt 8 InstancedMeshes); nur noch `residential`/`living_street`; mindestens 14 m Abstand zu allen Strassen-Endpunkten (Einmündungen, exakte Distanz statt Raster); Platzierung rein über Hash der Lage, Strassenreihenfolge per Hash gemischt (gleichmässig statt «erste Strassen der Liste») → deterministisch. Rückgabetyp jetzt `THREE.Object3D[]` (Einbau-Zeile E6 unverändert gültig).
+- `buildParkedVelos`: Ständer (108) + Velos (112) gebacken in 500-m-Zellen.
+- Volle Formen aus Lauf 1/2 (`furniture.ts`, `carGeometry`) bleiben für Nahansichten erhalten, werden von den Einbau-Funktionen aber nicht mehr benutzt.
+
+### Dreiecke je Baustein (alt = `?real=0`, gemessen an der Geometrie)
+| Baustein | alt | Lauf 2 | **Lauf 3** | Budget |
+|---|---|---|---|---|
+| gewöhnliche Laterne | 32 | 32 (alt) | **20** | – |
+| moderne Leuchte (Hauptstrasse) | 32 | 68 (+Licht-Netz) | **20** | ≤ 28 |
+| Altstadt-Kandelaber | 32 | 132 (+Licht-Netz) | **38** | ≤ 48 |
+| Wartehalle (statt Schild) | 28 | 200 | **108** | ≤ 120 |
+| Bank | 36 | 108 | **48** | ≤ 60 |
+| geparktes Auto | – | 400–424 | **86–88** | ≤ 180 |
+| Verkehrsauto | 24 | 400–424 | **86–88** | ≤ 260 |
+| Veloständer / Velo | – | 180 / 364 | **108 / 112** | – |
+| Baum (3500 Stück) | 154 000 | 150 208 (min) | 150 208 (min, unverändert) | ≤ 180 000 |
+
+### Stadt-Vergleich in der Testszene (gezählt, nicht gemessen im Spiel)
+Synthetischer dichter Ausschnitt: 300 Laternen (100 Altstadt, 100 Hauptstrasse, 100 übrige), 40 Haltestellen, 30 Bänke, 36 Verkehrsautos, Wohnstrassen-Raster mit max. 100 geparkten Autos, 7 Veloständer, 500 Bäume.
+| | Dreiecke | Netze (≈ Zeichenaufrufe ohne Zellteilung) |
+|---|---|---|
+| `?real=0` | 34 664 | 8 |
+| Lauf 3 | 49 466 | 19 |
+| **Differenz** | **+14 802** (Budget ≤ +30 000) | **+11** (Budget ≤ +25) |
+Grösster Posten der Differenz sind die geparkten Autos (8 876, gebacken) und die Wartehallen. Im Spiel kommen durch `chunkInstanced` (1000-m-Zellen) bei Laternen/Hallen je sichtbarer Zelle Aufrufe hinzu – dort sind es jetzt 3 Laternennetze statt 2 (alt: Mast + Kopf) und 2 Haltestellennetze statt 1.
+**Schätzung Startansicht** (ungeprüft): Laternen werden günstiger (32 → 20 für die Mehrheit), Autos/Hallen/Bänke deutlich günstiger als Lauf 2 → gegenüber 2.475 Mio. erwarte ich klar unter 2.40 Mio.; die Hauptsitzung bitte mit `qa.py` P1 nachmessen.
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei (nach Merge 5c37a6a); Build `OUT=dist_pa` läuft durch; Testszene ohne JS-Fehler; `real_shots.py` → «BUDGET je Baustein: OK» (neue Prüfung je Baustein + Stadt-Delta Dreiecke/Netze + 3500 Bäume); Sichtprüfung: Wartehallen nachts leuchtend (Vitrine), Laternen nachts leuchtend, Sparautos auf der Strasse und geparkt.
+Ungeprüft: echtes Spiel (kein Weltlauf laut Auftrag), insbesondere P1/P2 aus `qa.py`, Speicher der gebackenen Zellen (100 Autos ≈ 26 000 Ecken – gering), Aussehen der Sparautos aus der Fahrerperspektive (Räder als durchgehende Achs-Walze, keine Radkästen).
+
+### Einbau
+Keine neue Zeile nötig: E1–E7 aus Lauf 2 gelten unverändert (gleiche Funktionsnamen und Parameter). Nach dem Merge von `par/realismus` neu bauen; `?real=0` bleibt der Rückfall.
+
+### Offen / nächster Lauf
+- Fotos LUKS-RTW / ZVB / AAGR / ARAG (unverändert offen).
+- Nahansicht: volle Autoform nur für die nächsten ~6 Verkehrsautos (LOD) – erst, wenn das Budget wieder Luft hat.
+- Bäume in Zellen teilen (heute 7 Netze über die ganze Stadt, immer gezeichnet) → weniger Dreiecke in Teilansichten.
+
+---
+
 ## 14.11.2026 19:40 – Lauf 2
 
 ### Gemacht
