@@ -1,9 +1,13 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 10:45. Fertig: **2026-11-14zc** = 14zb + Horizont West/Nord + Begleitwege. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 11:15. Fertig: **2026-11-14zd** = 14zc + Fernsicht-Übergang. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zd (2026-11-14)
+- a18-«Horizontspalt» erklärt: kein Loch, sondern Nebel der Nahszene (Fog 260–1500 m, #CFE9F5) macht Hügel bei 1–1.5 km weiss; dahinter Fernsicht (farScene) mit eigener, dunklerer Färbung → harte helle Silhouette. Fix in `horizonMesh`: Shader mischt bis 1500 m Kameradistanz Nebelfarbe (`HZ_FOG`, folgt Tag/Abend), Übergang bis 4000 m; Tiefland-Dunst 0.45 → 0.2. Ergebnis: Kante deutlich weicher, aber noch sichtbar von hoch oben (freie Kamera 1000 m).
+- Tests: smoke_a a18, a19 je 8/8 ohne Fehler (a20 in 14z); Luzern lädt ohne Fehler; Sichtprüfung Eigenthal oben und Fahrersicht. Abend-Modus nicht angeschaut.
 
 ## Version 14zc (2026-11-14)
 - **Horizont erweitert**: alt x −18000..23600 / z −20800..21000 (209×210); a1, a4, a13, a14, a15, a20 lagen teils westlich x −18000 → Horizont dort am Rand geklemmt (flach gestreckt). Neu x −34000..23600 / z −30000..21000, 289×256, 200 m, Neue Punkte per api3.geo.admin.ch profile.json (COMB) im Browser, Basis 433.6 m (Abweichung alt/neu an Stichproben ±8 m, alte Daten geglättet), alte Werte unverändert übernommen. Naht West Ø 30 m Sprung = normaler Nachbarunterschied (Ø 27 m). In public/data + 22 Regionsordnern ersetzt (gleiche Datei); Ost/Süd haben lokal keinen Horizont (Server-Version bleibt alt, Grid passt dort weiter).

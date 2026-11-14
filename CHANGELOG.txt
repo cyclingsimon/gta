@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zd  Weicherer Übergang zur Fernsicht
+- Am Ende der Sichtweite gab es eine harte helle Kante: nahe Hügel im Dunst weiss, dahinter die Fernsicht dunkler (gut sichtbar von Anhöhen, z. B. Eigenthal). Die Fernsicht beginnt jetzt in derselben Dunstfarbe und wird erst mit der Entfernung farbig
+- Ebenen in der Fernsicht weniger weiss
+- Einsätze Eigenthal, Hitzkirch und Entlebuch nochmals geprüft: alle erreichbar
+
 2026-11-14zc  Fernsicht im Westen und Begleitwege an Kantonsstrassen
 - Berge und Hügel am Horizont jetzt auch westlich von Sursee, Willisau, Dagmersellen und Entlebuch (Höhendaten um 16 km nach Westen und 9 km nach Norden erweitert, vorher dort flach gestreckt)
 - Rad- und Gehwege direkt neben Kantonsstrassen sind jetzt Asphalt statt Kiesweg; dort keine Leitpfosten mehr mitten auf dem Weg

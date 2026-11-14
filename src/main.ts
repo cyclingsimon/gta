@@ -5,7 +5,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, toon, outline, type CityData, type World } from './world';
+import { AERIAL, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14zc';
+export const VERSION = '2026-11-14zd';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -212,7 +212,7 @@ function setEvening(on: boolean) {
   for (const l of farScene.children) { if ((l as any).isHemisphereLight) { (l as any).intensity = on ? 0.95 : 1.35; (l as any).color.set(on ? '#9AA3D6' : '#ffffff'); } if ((l as any).isDirectionalLight) { (l as any).color.set(on ? '#FFA866' : '#fff3dc'); (l as any).intensity = on ? 1.4 : 2.1; } }
   const sky = on ? '#F2A877' : '#A9DDF3'; renderer.setClearColor(sky, 1);
   SKY.zenith.set(on ? '#4F5FA8' : '#3E8FD6'); SKY.horizon.set(on ? '#F4B183' : '#CFE9F5'); SKY.sunCol.set(on ? '#FFB46A' : '#FFF4D6'); SKY.sunDir.copy(SUN_DIR); WATER.sun.value.copy(SKY.sunDir); WATER.sky.value.copy(SKY.horizon);
-  (scene.fog as THREE.Fog).color.set(on ? '#EDB38C' : '#CFE9F5');
+  (scene.fog as THREE.Fog).color.set(on ? '#EDB38C' : '#CFE9F5'); HZ_FOG.value.copy((scene.fog as THREE.Fog).color);
   scene.traverse((o: any) => { const m = o.material; if (m && m.name === 'lampHead') m.emissive.set(on ? '#FFD27A' : '#5A4E20'); });
   document.body.classList.toggle('evening', on);
 }

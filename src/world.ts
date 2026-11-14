@@ -2461,6 +2461,8 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   return G;
 }
 
+/** Nebelfarbe der Nahszene (main.ts setzt sie bei Tag/Abend mit) */
+export const HZ_FOG = { value: new THREE.Color('#CFE9F5') };
 /** R14: Horizont aus echten Höhen (Pilatus, Rigi, Bürgenstock …) – eigene Szene ohne Nebel. */
 export function horizonMesh(t: Terrain, hole: number[]) {
   const m = t.hzm, nx = m.nx, nz = m.nz;
@@ -2478,7 +2480,7 @@ export function horizonMesh(t: Terrain, hole: number[]) {
     else if (y > 350 || sl > 0.35) c.copy(forest);
     else c.copy(meadow);
     // Dunst: tiefes Land verschwindet im Himmel, Berge treten hervor
-    const d = Math.hypot(x, z), haze = Math.min(0.9, 0.12 + d / 45000 + Math.max(0, 1 - y / 450) * 0.45);
+    const d = Math.hypot(x, z), haze = Math.min(0.85, 0.1 + d / 45000 + Math.max(0, 1 - y / 450) * 0.2); // 14zd: Ebenen weniger weiss (von oben sah das wie ein Spalt/Nebelmeer aus)
     c.lerp(fog, haze);
     col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
   }
@@ -2492,7 +2494,15 @@ export function horizonMesh(t: Terrain, hole: number[]) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.setIndex(idx); g.computeVertexNormals();
-  const mesh = new THREE.Mesh(g, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT, fog: false }));
+  const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT, fog: false });
+  // 14zd: Anschluss an den Nebel der Nahszene (endet bei 1500 m): bis 1500 m Nebelfarbe, bis 4000 m Übergang zur eigenen Farbe.
+  // Vorher harte helle Kante (weiss vernebelte Hügel der Nahszene vor dunklerem Horizont), von Anhöhen gut sichtbar.
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.hzFog = HZ_FOG;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vHzD;').replace('#include <project_vertex>', '#include <project_vertex>\nvHzD = length(mvPosition.xyz);');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vHzD;\nuniform vec3 hzFog;').replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb = mix(gl_FragColor.rgb, hzFog, 1.0 - smoothstep(1500.0, 4000.0, vHzD));\n#include <tonemapping_fragment>');
+  };
+  const mesh = new THREE.Mesh(g, mat);
   mesh.name = 'horizon';
   return mesh;
 }
