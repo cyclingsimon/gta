@@ -987,7 +987,8 @@ function exportSave() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'luksi-rescue-spielstand.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && world && !paused) setPause(true); suspendAudio(document.hidden); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && world && fullReady) writeSave(); if (document.hidden && world && !paused) setPause(true); suspendAudio(document.hidden); }); // 15a (P-C C6): beim Wegwechseln speichern
+addEventListener('pagehide', () => { if (world && fullReady) writeSave(); });
 
 // ---------------- Auto platzieren ----------------
 function placeCar(x: number, z: number, heading?: number, car: Vehicle = players[0].car) {
@@ -1620,7 +1621,13 @@ if (location.search.includes('test')) {
   };
 }
 
-boot().catch((e) => { $('#load-status').textContent = 'Fehler beim Laden: ' + e; console.error(e); });
+boot().catch((e) => { console.error(e);
+  // 15a (P-C C1): gespeicherte/gewählte Gegend fehlt oder ist defekt → einmal je Tab in Luzern starten statt für immer hängen
+  let once = false; try { once = !sessionStorage.getItem('luksiBootFallback'); sessionStorage.setItem('luksiBootFallback', '1'); } catch { /* privat */ }
+  if (REGION !== 'luzern' && once) {
+    try { save.region = 'luzern'; save.pos = undefined; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat */ }
+    const u = new URL(location.href); u.searchParams.delete('region'); location.replace(u.toString()); return; }
+  $('#load-status').textContent = 'Fehler beim Laden: ' + e; });
 requestAnimationFrame(frame);
 
 
