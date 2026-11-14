@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14w  Neue Gegend Beromünster und Gunzwil (Michelsamt)
+- Neue Gegend «Beromünster und Gunzwil» (rund 45 km², mit Rickenbach und dem Michelsamt): 4322 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze, Treffpunkt Haltestelle Beromünster Flecken (Beromünster hat keinen Bahnhof), 40 Luksi-Herzen, Busse. Anschluss an Hildisrieden (Luzernerstrasse), Sempach und Triengen
+- Spielwelt jetzt 22 Gegenden, rund 735 km² mit rund 97 000 Gebäuden
+
 2026-11-14v  Neue Gegend Rotkreuz und Hünenberg (Kanton Zug)
 - Neue Gegend «Rotkreuz und Hünenberg» (rund 34 km², mit Risch, Holzhäusern, Honau, Hünenberg See und einem Stück Zugersee): 5211 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze an echten Orten (u. a. Spielplatz Hünenberg-See, Badi Honau, Schulhaus Risch), Treffpunkt Bahnhof Rotkreuz, 40 Luksi-Herzen, Busse und S-Bahn. Anschluss an Root/Gisikon (Luzernerstrasse) und Küssnacht (Küssnachterstrasse)
 - Spielwelt jetzt 21 Gegenden, rund 692 km² mit rund 93 000 Gebäuden

@@ -1,9 +1,16 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 07:45. Fertig: **2026-11-14v** = 14u + Region a16 Rotkreuz/Hünenberg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 08:15. Fertig: **2026-11-14w** = 14v + Region a17 Beromünster/Gunzwil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14w (14.11. 06:30–08:15, nicht hochgeladen)
+- Region **a17 «Beromünster und Gunzwil»** (Michelsamt) x −13700..−6000, z −20300..−14400 (LV95 E 2652035–2659972, N 1225797–1231992), überlappt a15 (200 m), a2/a3 (200 m). b3dm x 979–1025 / y 1408–1463 (2632 Kacheln, 732 mit Inhalt), 35 neue Höhenkacheln. Treffpunkt **Haltestelle Beromünster Flecken** (HALT-Tabelle; kein Bahnhof in OSM).
+- Name zuerst «Beromünster und Neudorf» (aus dem Laufplan) → korrigiert, weil Neudorf (x ≈ −7400, z ≈ −13900) in a3 liegt, nicht in a17. region.json, missions.json und regionsA.ts nachgezogen.
+- Bus-Relationen jetzt direkt im Browser gefiltert (Whitelist, Ref ≤ 3, Gebiet ±0.02°).
+- Ergebnis: 4322 Gebäude (3D), 8 Einsätze, Hecken 44 / 3.7 km, 433 Obst-/Reihenbäume. Spielumfang 734.7 km², 96 826 Gebäude (OSM-Zählung).
+- Tests 14w: smoke_a a17 ok (8/8, keine Fehler, nach der Umbenennung); tests/region_a17.py a17↔a3 (Luzernerstrasse), a17↔a2, a17↔a15 (Krumbacherstrasse) je beide Richtungen ok, am Stück (Lauf vor der Umbenennung; Dialogtext zeigte noch den alten Namen).
 
 ## Version 14v (14.11. 06:05–07:45, nicht hochgeladen)
 - Region **a16 «Rotkreuz und Hünenberg»** (Kanton Zug) x 7300..13300, z −14000..−8400 (LV95 E 2673078–2679339, N 1219986–1225883), überlappt a10 (200 m, nur z −9100..−8400) und a11 (200 m). Westrand z < −9100 ohne Nachbarn (a12 endet bei x 2300). b3dm x 1104–1140 / y 1352–1404 (1961 Kacheln, 598 mit Inhalt), 28 neue Höhenkacheln. Treffpunkt Bahnhof Rotkreuz (BHF-Tabelle).

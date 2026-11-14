@@ -353,5 +353,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -9951.9
   },
   "welcome": "Willkommen in Rotkreuz und Hünenberg! Treffpunkt ist der Bahnhof Rotkreuz. Er ist auf der Karte blau markiert."
+ },
+ "a17": {
+  "name": "Beromünster und Gunzwil",
+  "b": [
+   -13700,
+   -20300,
+   -6000,
+   -14400
+  ],
+  "aerial": {
+   "E0": 2652035,
+   "E1": 2659972,
+   "N0": 1225797,
+   "N1": 1231992
+  },
+  "hosp": {
+   "label": "Haltestelle Beromünster Flecken",
+   "kind": "rp",
+   "x": -8739.4,
+   "z": -17123.8
+  },
+  "welcome": "Willkommen in Beromünster und Gunzwil! Treffpunkt ist die Haltestelle Beromünster Flecken. Sie ist auf der Karte blau markiert."
  }
 };
