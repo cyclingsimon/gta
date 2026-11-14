@@ -18,4 +18,5 @@ REGIONS_A = {
     'a15': ('Knutwil und Triengen', (-20000, -20300, -13500, -14400)),  # 14u: Surental
     'a16': ('Rotkreuz und Hünenberg', (7300, -14000, 13300, -8400)),  # 14v: Kanton Zug, Einzugsgebiet Kinderspital
     'a17': ('Beromünster und Gunzwil', (-13700, -20300, -6000, -14400)),  # 14w: Michelsamt
+    'a18': ('Eigenthal und Schwarzenberg', (-11000, 2800, -3600, 8800)),  # 14x: Pilatus-Nordseite
 }

@@ -76,6 +76,7 @@ export const SIGN_PLACES: [string, number, number, number][] = [
   ["Schenkon", -13298, -13907, 2],
   ["Schlierbach", -14922, -19067, 2],
   ["Schwarzenbach LU", -7269, -19918, 2],
+  ["Schwarzenberg", -10181, 4103, 2],
   ["Schötz", -24212, -13064, 2],
   ["Sempach", -8774, -9252, 2],
   ["Stans", 4430, 10465, 3],

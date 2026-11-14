@@ -1,9 +1,16 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 08:15. Fertig: **2026-11-14w** = 14v + Region a17 Beromünster/Gunzwil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 08:30. Fertig: **2026-11-14x** = 14w + Region a18 Eigenthal/Schwarzenberg. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14x (14.11. 07:00–08:30, nicht hochgeladen)
+- Region **a18 «Eigenthal und Schwarzenberg»** (Pilatus-Nordseite) x −11000..−3600, z 2800..8800 (LV95 E 2654945–2662615, N 1202497–1208792), überlappt West (200 m), a8 (z 2800..3000) und Luzern (x −3800..−3600, z ≤ 6300). Feld nach Westen erweitert (−11000 statt −9500), weil Schwarzenberg bei x ≈ −10300 liegt (Ortsnamen vorher geprüft). b3dm x 995–1039 / y 1191–1247 (2565 Kacheln, 403 mit Inhalt), 59 neue Höhenkacheln (Pilatus bis 2128 m, passt in Int16-dm). Treffpunkt **Haltestelle Schwarzenberg Rössli** (HALT).
+- `missions_a.py`: Einsätze nur ≤ 150 m von Strasse/Feldweg (city.json, ohne Fusswege) – sonst war «Bahnhof Pilatus Kulm» (Zahnradbahn, keine Strasse) ein Einsatz; keine doppelten Ortsnamen (vorher 2× «Kirche Dorschnei»). Gilt nur für neu gebaute Regionen; a1–a17 nicht neu erzeugt.
+- Ergebnis: 1211 Gebäude (3D), 8 Einsätze, keine Hecken/Obstgärten in OSM. Spielumfang 777.0 km², 97 988 Gebäude.
+- Tests 14x: smoke_a a18 ok (8/8, keine Fehler); tests/region_a18.py a18↔West (Schürhofstrasse) und a18↔**Luzern** (Langwasenstrasse, Kriens) je beide Richtungen ok, am Stück – erster getesteter Wechsel Luzern ↔ Gebiet A. a18↔a8 nicht getestet (einzige Strasse verläuft fast parallel zum Rand). Fahrersicht Eigenthal ok.
+- Offen (Optik): Freie Kamera hoch über dem Eigenthal (y 1000) zeigt einen hellen Spalt zwischen Gelände und Horizont-Band (Horizontring schwebt über dem nahen Grat). In der Fahrersicht nicht sichtbar. Ursache nicht geprüft.
 
 ## Version 14w (14.11. 06:30–08:15, nicht hochgeladen)
 - Region **a17 «Beromünster und Gunzwil»** (Michelsamt) x −13700..−6000, z −20300..−14400 (LV95 E 2652035–2659972, N 1225797–1231992), überlappt a15 (200 m), a2/a3 (200 m). b3dm x 979–1025 / y 1408–1463 (2632 Kacheln, 732 mit Inhalt), 35 neue Höhenkacheln. Treffpunkt **Haltestelle Beromünster Flecken** (HALT-Tabelle; kein Bahnhof in OSM).

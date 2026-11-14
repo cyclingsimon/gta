@@ -375,5 +375,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -17123.8
   },
   "welcome": "Willkommen in Beromünster und Gunzwil! Treffpunkt ist die Haltestelle Beromünster Flecken. Sie ist auf der Karte blau markiert."
+ },
+ "a18": {
+  "name": "Eigenthal und Schwarzenberg",
+  "b": [
+   -11000,
+   2800,
+   -3600,
+   8800
+  ],
+  "aerial": {
+   "E0": 2654945,
+   "E1": 2662615,
+   "N0": 1202497,
+   "N1": 1208792
+  },
+  "hosp": {
+   "label": "Haltestelle Schwarzenberg Rössli",
+   "kind": "rp",
+   "x": -10164.8,
+   "z": 4159.5
+  },
+  "welcome": "Willkommen in Eigenthal und Schwarzenberg! Treffpunkt ist die Haltestelle Schwarzenberg Rössli. Sie ist auf der Karte blau markiert."
  }
 };

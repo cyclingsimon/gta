@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14x  Neue Gegend Eigenthal und Schwarzenberg (Pilatus-Nordseite)
+- Neue Gegend «Eigenthal und Schwarzenberg» (rund 44 km², vom Kriens-Rand übers Eigenthal bis Schwarzenberg, mit dem Pilatus im Hintergrund): 1211 echte 3D-Häuser, Berggelände, Luftbild, 8 Einsätze, Treffpunkt Haltestelle Schwarzenberg Rössli, 40 Luksi-Herzen, Busse. Anschluss an Littau (Schürhofstrasse) und Kriens/Luzern (Langwasenstrasse)
+- Einsätze nur noch dort, wo die Ambulanz hinkommt (höchstens 150 m von Strasse oder Feldweg – kein Einsatz mehr auf dem Pilatus-Gipfel) und ohne doppelte Ortsnamen. Gilt für alle neu gebauten Gegenden
+- Spielwelt jetzt 23 Gegenden, rund 777 km² mit rund 98 000 Gebäuden
+
 2026-11-14w  Neue Gegend Beromünster und Gunzwil (Michelsamt)
 - Neue Gegend «Beromünster und Gunzwil» (rund 45 km², mit Rickenbach und dem Michelsamt): 4322 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze, Treffpunkt Haltestelle Beromünster Flecken (Beromünster hat keinen Bahnhof), 40 Luksi-Herzen, Busse. Anschluss an Hildisrieden (Luzernerstrasse), Sempach und Triengen
 - Spielwelt jetzt 22 Gegenden, rund 735 km² mit rund 97 000 Gebäuden

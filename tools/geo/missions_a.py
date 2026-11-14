@@ -41,7 +41,7 @@ for e in els:
         if p and inside(p, 0) and ort in ('Sursee', 'Wolhusen'): hosp = {'name': t['name'], 'label': 'LUKS ' + ort, 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
 # 14o (Simon): keine erfundenen Rettungsposten mehr. Ohne LUKS-Spital ist das Ziel der Bahnhof des Hauptorts (OSM railway=station/halt),
 # wo es keinen gibt, die Bushaltestelle im Dorfzentrum. Übergabe dort an die Eltern (Spieltext), Schnellreise-Station ebenda.
-HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter', 'a15': 'Triengen Dorf', 'a17': 'Beromünster Flecken'}  # Hauptort des Regionsnamens; a15: Triengen-Winikon ist nur Güterbahnhof (Personenverkehr seit 1971 eingestellt)
+HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter', 'a15': 'Triengen Dorf', 'a17': 'Beromünster Flecken', 'a18': 'Schwarzenberg Rössli'}  # Hauptort des Regionsnamens; a15: Triengen-Winikon ist nur Güterbahnhof (Personenverkehr seit 1971 eingestellt)
 BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi', 'a12': 'Hochdorf', 'a13': 'Willisau', 'a14': 'Wauwil', 'a16': 'Rotkreuz'}
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]
@@ -76,6 +76,18 @@ def cat(t):
     if t.get('leisure') in ('pitch', 'sports_centre') and t.get('sport') in ('soccer', 'multi', None): return 'sport'
     if t.get('tourism') == 'viewpoint' and not t.get('military') and not t.get('historic'): return 'aussicht'
     return None
+# 14x: nur Orte, die mit der Ambulanz erreichbar sind (≤ 150 m von einer Strasse oder einem Feldweg; z. B. nicht Pilatus Kulm)
+NODRIVE = ('footway', 'path', 'steps', 'cycleway', 'pedestrian', 'bridleway')
+_grid = {}
+try:
+    for r in json.load(open(f'public/data/{rid}/city.json'))['roads']:
+        if r.get('c') in NODRIVE: continue
+        for q in r['p']: _grid.setdefault((int(q[0] // 100), int(q[1] // 100)), []).append((q[0], q[1]))
+except Exception: _grid = None
+def drivable(p, lim=150):
+    if _grid is None: return True
+    gx, gz = int(p[0] // 100), int(p[1] // 100)
+    return any(math.dist(p, q) <= lim for dx in (-2, -1, 0, 1, 2) for dz in (-2, -1, 0, 1, 2) for q in _grid.get((gx + dx, gz + dz), ()))
 cands = []
 for e in els:
     t = e.get('tags', {}); k = cat(t)
@@ -83,6 +95,7 @@ for e in els:
     if k == 'badi' and t.get('access') == 'private': continue
     p = pos(e)
     if not p or not inside(p) or math.dist(p, (hosp['x'], hosp['z'])) < 300: continue
+    if not drivable(p): continue
     cands.append((k, p, t.get('name', '')))
 def text(k, p, nm):
     ort = near_place(p)
@@ -116,7 +129,7 @@ for rnd in range(3):
     for k in ORDER:
         if len(chosen) >= 8: break
         if rnd == 0 and any(c[0] == k for c in chosen): continue
-        opts = [c for c in cands if c[0] == k and all(math.dist(c[1], o[1]) >= 700 for o in chosen) and not any(c[2] and c[2] == o[2] for o in chosen)]
+        opts = [c for c in cands if c[0] == k and all(math.dist(c[1], o[1]) >= 700 for o in chosen) and not any(c[2] and c[2] == o[2] for o in chosen) and text(*c)['place'] not in {text(*o)['place'] for o in chosen}]  # 14x: keine doppelten Ortsnamen
         if not opts: continue
         # am weitesten weg von den bisherigen (und vom Spital)
         best = max(opts, key=lambda c: min([math.dist(c[1], o[1]) for o in chosen] + [math.dist(c[1], (hosp['x'], hosp['z']))]))
