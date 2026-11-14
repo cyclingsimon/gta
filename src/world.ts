@@ -464,7 +464,7 @@ const ROAD_LAYER: Record<string, number> = { footway: 0.3, path: 0.3, steps: 0.3
 
 export interface B3D { meta: { buildings: number[][] }; pos: ArrayLike<number>; idx: Uint16Array; edges?: Uint16Array; roof?: string[] }
 
-export interface Props { piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][]; crossings?: number[][]; isl?: number[][] }
+export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: number; f: number; a: number; s: string }[]; lamps: number[][]; trees: number[][]; signals: number[][]; stops: any[][]; fountains: number[][]; beaches?: number[][][]; benches?: number[][]; crossings?: number[][]; isl?: number[][] }
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
@@ -659,9 +659,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       }
     }
     // R9: echte Einzelbäume und Alleen aus OSM (vor den gestreuten, damit sie Vorrang haben)
-    if (props) for (const [x, z] of props.trees) {
+    if (props) for (const t of props.trees) { const x = t[0], z = t[1];
       if (mask.isRoad(x, z) || mask.at(x, z) === 2) continue;
-      trees.unshift([x, z, 1.05 + hash(x, z) * 0.45]);
+      // 14q: Hochstamm-Obstbäume (t[3] = 2, OSM landuse=orchard) kleiner und runder, Baumreihen (3) normal
+      trees.unshift([x, z, t[3] === 2 ? 0.58 + hash(x, z) * 0.16 : 1.05 + hash(x, z) * 0.45]);
     }
     if (!opts.aerial) group.add(flatMesh(pos, col, toon('#ffffff', { vertexColors: true }))); // mit Luftbild kommt das Grün aus dem Bild
   }
@@ -1383,6 +1384,23 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       crown.setColorAt(i, new THREE.Color().setHSL(0.27 + hash(x, z) * 0.06, 0.38, 0.42 + hash(z, x) * 0.1));
     });
     group.add(trunk, crown);
+  }
+  // 14q: Hecken (OSM barrier=hedge): Reihe aus Büschen (alle 1.6 m, 1.3–2.1 m hoch), nicht auf Strassen, Wasser oder in Häusern
+  if (props?.hedges?.length) {
+    const bp: number[][] = [];
+    for (const h of props.hedges) { let acc = 0;
+      for (let i = 1; i < h.length; i++) { const A = h[i - 1], B = h[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+        while (acc < L) { const t = acc / L, x = A[0] + (B[0] - A[0]) * t, z = A[1] + (B[1] - A[1]) * t;
+          if (!mask.isRoad(x, z) && mask.at(x, z) === 0) bp.push([x, z]); acc += 1.6; }
+        acc -= L; } }
+    const bg = new THREE.IcosahedronGeometry(1, 0); bg.translate(0, 0.75, 0);
+    const bm = new THREE.InstancedMesh(bg, toon('#ffffff'), Math.max(1, bp.length)); bm.count = bp.length;
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
+    bp.forEach(([x, z], i) => { const r = hash(x, z), r2 = hash(z, x);
+      e.set(0, r * 6.28, 0); q.setFromEuler(e); sc.set(1.0 + r2 * 0.35, 1.1 + r * 0.7, 1.0 + r * 0.35);
+      m.compose(v.set(x, terrain.ground(x, z) - 0.25, z), q, sc); bm.setMatrixAt(i, m); bm.setColorAt(i, c.setHSL(0.27 + r2 * 0.06, 0.5, 0.2 + r * 0.08)); });
+    bm.computeBoundingSphere(); bm.name = 'hecken'; group.add(chunkInstanced(bm, 1500));
+    console.log('[bau] Hecken-Büsche', bp.length);
   }
 
   await onProgress('Wald …');

@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14q  Hecken und Obstgärten in allen neuen Gegenden
+- Hecken aus OpenStreetMap als Reihen aus Büschen entlang von Feldern und Wegen (rund 5–13 km Hecke je Gegend, insgesamt rund 1 250 Hecken)
+- Hochstamm-Obstgärten: kleine runde Obstbäume im lockeren Raster dort, wo OpenStreetMap einen Obstgarten kennt (z. B. 2 600 Bäume rund um Sempach und Nottwil); Baumreihen als einzelne Bäume
+- Gilt für alle 11 Gegenden rund um Sursee, Wolhusen, Rothenburg, Root und Küssnacht. Luzern und die alten Gegenden folgen, sobald ihre Rohdaten wieder geladen sind
+
 2026-11-14p  Nur echte Spitäler, Bahnhöfe als Treffpunkte, übersichtliche Schnellreise
 - Ziele nur noch echt (Wunsch Simon): Kinderspital Zentralschweiz (LUKS Luzern), LUKS Sursee, LUKS Wolhusen, Spital Nidwalden. Das «Spital Nottwil» und alle erfundenen Rettungsposten sind weg
 - In Gegenden ohne Spital ist der Treffpunkt der Bahnhof (Nottwil, Malters, Buchrain, Küssnacht am Rigi, Emmenbrücke Kapf, Rothenburg Station, Meggen, Littau), wo keiner ist die Bushaltestelle im Dorf (Hildisrieden Post, Buttisholz Dorf, Sonnhöfli in Ruswil). Dort holen Mami und Papi das Kind ab

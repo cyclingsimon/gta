@@ -67,6 +67,7 @@ for rid in sys.argv[1:]:
     run(['python3', 'tools/geo/kreisel.py', out, *raws])
     run(['python3', 'tools/geo/missions_a.py', rid], LR=rid, LR_OSMRAW=osmraw)
     run(['python3', 'tools/geo/rural.py', rid], LR=rid)
+    run(['python3', 'tools/geo/greenlines.py', rid])  # 14q: Hecken, Baumreihen, Obstgärten
     if os.path.isdir(f'data/a/b3dm_{rid}'):  # swissBUILDINGS3D-Kacheln (im Browser geholt, Kachelformel siehe STAND.md)
         run(['node', '--max-old-space-size=6000', 'tools/geo/b3d_build.mjs', f'data/a/b3dm_{rid}', f'{x0},{z0},{x1},{z1}'], LR=rid)
         run(['python3', 'tools/geo/roofcolors.py'], LR=rid, LR_IMG=f'data/a/raw/wms_{rid}.jpg', LR_EN=f'{E0},{N1}')

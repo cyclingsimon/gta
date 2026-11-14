@@ -1,9 +1,16 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 01:00. Fertig: **2026-11-14p** = 14o + nur echte Spitäler / Bahnhöfe als Treffpunkte + Schnellreise-Karte. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 01:00. Fertig: **2026-11-14q** = 14p + Hecken/Obstgärten/Baumreihen in Gebiet A. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14q (14.11. 01:00–01:45, nicht hochgeladen)
+- `tools/geo/greenlines.py <id…>` (in build_region_a.py nach rural.py): OSM barrier=hedge → props.hedges (Polylinien), natural=tree_row → Bäume alle 9 m (trees[i][3] = 3), landuse=orchard → Obstbäume im 11-m-Raster, versetzt, max. 4000 je Region (trees[i][3] = 2). Idempotent.
+- `world.ts`: Obstbäume Skala 0.58–0.74 (statt 1.05–1.5); Hecken als InstancedMesh aus Ikosaedern alle 1.6 m (1.1–1.8 m hoch, dunkelgrün), nicht auf Strasse/Wasser/Gebäude, in 1500-m-Kacheln (chunkInstanced). Erster Versuch als durchgehende Wand sah aus wie Beton → verworfen.
+- Mengen: Hecken a1 113/10.8 km … a4 164/13.1 km, a11 7/0.2 km; neue Bäume a2 2648, a10 1458, a4 35.
+- Tests 14q: smoke_a a2, a10 ok; Sichtprüfung Hecke bei Sempach (Boden- und Schrägsicht) und Obstgärten bei Sursee; P1 a2 Startansicht 0.71 Mio. Dreiecke / 217 Draw Calls (Software-Rendering, nur eine Ansicht).
+- Offen: alte Regionen (Luzern, Nord, Ost, West, Süd) brauchen die OSM-Rohdaten (data/e2 … teils nur auf dem Server/PC) → später.
 
 ## Version 14p (14.11. 00:30–01:30, nicht hochgeladen)
 - [Entscheid Simon 00:34/00:36] Nur echte Spitäler (LUKS Luzern/Kinderspital Zentralschweiz, LUKS Sursee, LUKS Wolhusen, Spital Nidwalden); keine erfundenen Rettungsposten; sonst Bahnhöfe als Schnellreise-Stationen. Quelle Rettungsdienst-Standorte LUKS: Luzern, Sursee, Wolhusen, Menziken (+ Satelliten ohne Namen) laut LUKS-Stelleninseraten.
