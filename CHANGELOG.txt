@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zh  Durchgehende Welt (erster Teil)
+- Kein Neuladen mehr am Rand einer Gegend: Die nächste Gegend wird beim Hinfahren im Hintergrund gebaut (mit lustigem Hinweis «Die Bauarbeiter bauen ganz schnell die nächste Ecke …»), dann fährt man einfach weiter. Navi, Einsätze, Herzen, Busse, Züge und Ziel wechseln automatisch («Willkommen in …»)
+- Höchstens 3 Gegenden gleichzeitig im Speicher (Handy: 2), weit entfernte werden wieder abgebaut
+- Einsätze: zuerst solche in derselben Geländekammer (ohne grossen Umweg und ohne Pass erreichbar)
+- Schnellreise funktioniert weiterhin mit kurzem Laden
+
 2026-11-14zg  Strassentunnels, Hofkirche, Ladebild
 - Echte Strassentunnels: Die Ambulanz fährt durch den Berg (Loppertunnel, Kirchenwald, Sonnenberg, Reussport, Spier, Schlund, Eich, Küssnacht u. a.). Röhre mit Lampen, Portale mit Betonrahmen, offener Einschnitt mit Stützmauern bis dorthin, wo der Berg dick genug ist. Vorher lief die Strasse über den Berg
 - Kamera im Tunnel: tief und nah hinter der Ambulanz, alles ausserhalb ausgeblendet; am Tunnelende sieht man hell den Himmel

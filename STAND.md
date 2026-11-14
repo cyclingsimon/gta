@@ -1,9 +1,19 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 13:30. Fertig: **2026-11-14zg** = Tunnels, Hofkirche, Ladebild. ZIP an Simon, nicht hochgeladen. **Neuer Hauptfokus (Simon 12:2x, bestätigt): durchgehende Welt ohne Neuladen (Stans → Wolhusen am Stück), Einsätze je Geländekammer.** PC läuft bis Abend. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 15:45. Fertig: **2026-11-14zh** = durchgehende Welt M1 (Nachbargegenden im Hintergrund, Wechsel ohne Neuladen) + Einsätze je Geländekammer. ZIP an Simon, nicht hochgeladen. Hauptfokus weiter: durchgehende Welt (Plan claude/WELT-STREAMING.md). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zh (2026-11-14) – Durchgehende Welt M1
+- main.ts: Gegend-Werte (REGION, RA, DIR, HOSP, RPL, RP, HALT, SP, SPN, TO_H, AT_H) jetzt `let` + `setRegionVars(id)`; `aerialFor(id)`; `getBuf/getJSON(name, dir)`, `decodeTerrain`, `loadForestMask(…, dir)`.
+- Slots: `slots` (Map id → {data, props, terrain, world, nav, bus, trains, ma}); Start-Gegend wird beim Booten eingetragen. `streamTick` (alle 0.5 s, statt checkRegionEdge; `?nostream` = alter Weg): (1) Ambulanz ausserhalb REG_BOUNDS der aktiven Gegend und in einer geladenen → `activate()`; (2) 700/350 m voraus bzw. ±250 m seitlich liegt eine fehlende Gegend → `loadSlot()` im Hintergrund (Leicht-Stufe: OSM-Häuser, aerial_s, 1200 Bäume), Hinweis `#lazy-ind` mit zufälligem Bau-Text; (3) > 3 Slots (Handy 2) → am weitesten entfernten (> 1.5 km) entladen (dispose).
+- `activate`: Navi (lazy gebaut), car.mask/terrain, Verkehr neu, Busse+Fahrleitung, Züge, Fun/Herzen/Tiere/Schiffe neu (setupFun), Spital/Treffpunkt + Schild, Einsätze (setupMissions, Angebot wird zurückgezogen), save.region, Toast «Willkommen in …». Laufender Einsatz bleibt (Ziel ggf. in alter Gegend).
+- terrain.ts: `nb` (Nachbarn), `owns`, ground/height/bridgeAt/tunnelAt delegieren ausserhalb des eigenen Rasters; `anyTun`. world.ts Mask: eigene `res`, `nb`, at/isRoad delegieren. `linkSlots` verbindet alle geladenen; Umland (`apron`) und Aussenfläche (`outer`) 4 m tiefer, sobald Nachbarn da sind.
+- Einsätze: `sameChamber()` – Route ≤ 1.7 × Luftlinie + 500 m, ≤ 6 km, kein Punkt > 120 m über Start/Ziel; `nextMission` nimmt zuerst diese.
+- Tests: /tmp/stream.py-Muster (Route aus city.json Luzern+West+a8 per Dijkstra, `__dbg.warp`, Lenkhilfe `__dbg.head`, `__welt()`): Luzern → West bei x −3800 gewechselt (West in 21.5 s geladen, Software-Rendering), West → a8 bei x −8500 (a8 in 14 s), keine Seitenfehler, Bilder: Häuser/Strassen der neuen Gegend da, Minikarte gewechselt, «Freie Fahrt im Westen/in Malters». smoke_a a1, sued, a8 ok; Luzern-Musiktest ok.
+- Nicht getestet: Echt-Modus mit Nachbarn (Nachbar ohne 3D-Häuser), Handy-Speicher, Einsatz über die Grenze, Mehrspieler, Ruckeln auf echtem Gerät. Alte Grenz-Wegweiser (Sprites «⬅ Littau …») bleiben stehen.
+- Lokal neu: West/Ost-Gelände + aerial_s + roofcolors vom Server (Ost ohne forest/bus/trains).
 
 ## Version 14zg (2026-11-14)
 - **Strassentunnels**: Overpass highway+tunnel (ganzes Gebiet) → `data/old/road_tunnels.json`; `tools/geo/road_tunnels.py` markiert city.json-Strassen `tu:1` (≥ 70 % der Punkte ≤ 4 m neben OSM-Tunnelachse, Autostrassen ohne service). In allen Regionen gelaufen (Luzern 45 Stücke/11.8 km, Süd 22/6.8 km, a2 6/2.3 km, a10, a11, Nord …).

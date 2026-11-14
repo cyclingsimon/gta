@@ -422,22 +422,27 @@ export class Mask {
     this.x0 = bounds[0]; this.z0 = bounds[1];
     const area = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]);
     MASK_RES = (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && area / (1.25 * 1.25) > 16e6) ? Math.ceil(Math.sqrt(area / 16e6) * 20) / 20 : 1.25;
+    this.res = MASK_RES;
     this.w = Math.ceil((bounds[2] - bounds[0]) / MASK_RES);
     this.h = Math.ceil((bounds[3] - bounds[1]) / MASK_RES);
     this.data = new Uint8Array(this.w * this.h);
     this.road = new Uint8Array(this.w * this.h);
   }
-  isRoad(x: number, z: number) {
-    const i = Math.floor((x - this.x0) / MASK_RES), j = Math.floor((z - this.z0) / MASK_RES);
-    if (i < 0 || j < 0 || i >= this.w || j >= this.h) return false;
+  /** 14zh: eigene Auflösung (MASK_RES ist global und gilt nur beim Bauen); Nachbarmasken für die durchgehende Welt */
+  res = MASK_RES; nb: Mask[] = [];
+  isRoad(x: number, z: number): boolean {
+    const i = Math.floor((x - this.x0) / this.res), j = Math.floor((z - this.z0) / this.res);
+    if (i < 0 || j < 0 || i >= this.w || j >= this.h) { for (const m of this.nb) { const v = m.isRoadOwn(x, z); if (v !== null) return v; } return false; }
     return this.road[j * this.w + i] === 1;
   }
+  isRoadOwn(x: number, z: number): boolean | null { const i = Math.floor((x - this.x0) / this.res), j = Math.floor((z - this.z0) / this.res); if (i < 0 || j < 0 || i >= this.w || j >= this.h) return null; return this.road[j * this.w + i] === 1; }
   /** 0 frei, 1 Wasser, 2 Gebäude/Hindernis, 3 ausserhalb */
-  at(x: number, z: number) {
-    const i = Math.floor((x - this.x0) / MASK_RES), j = Math.floor((z - this.z0) / MASK_RES);
-    if (i < 1 || j < 1 || i >= this.w - 1 || j >= this.h - 1) return 3;
+  at(x: number, z: number): number {
+    const i = Math.floor((x - this.x0) / this.res), j = Math.floor((z - this.z0) / this.res);
+    if (i < 1 || j < 1 || i >= this.w - 1 || j >= this.h - 1) { for (const m of this.nb) { const v = m.atOwn(x, z); if (v !== 3) return v; } return 3; }
     return this.data[j * this.w + i];
   }
+  atOwn(x: number, z: number) { const i = Math.floor((x - this.x0) / this.res), j = Math.floor((z - this.z0) / this.res); if (i < 1 || j < 1 || i >= this.w - 1 || j >= this.h - 1) return 3; return this.data[j * this.w + i]; }
 }
 
 export interface World {
@@ -574,12 +579,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     apronG.setAttribute('color', new THREE.BufferAttribute(col, 3));
   }
   const apron = new THREE.Mesh(apronG, RURAL_HOUSES ? toon('#ffffff', { map: apronTex, vertexColors: true }) : toon('#B9C995', { map: apronTex }));
-  group.add(apron);
+  apron.name = 'apron'; group.add(apron);
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), toon('#A9C285', { fog: true }));
   // tief: sonst deckt sie das Reussbett unterhalb des Nadelwehrs (Wasser < Seespiegel); Region Nord: Rotsee/Reuss bis 17 m unter Seespiegel
   let lowest = -9; { const [bx0, bz0, bx1, bz1] = d.meta.bounds; for (let x = bx0; x < bx1; x += 50) for (let z = bz0; z < bz1; z += 50) lowest = Math.min(lowest, terrain.ground(x, z)); }
   outer.rotation.x = -Math.PI / 2; outer.position.y = Math.min(-12, lowest - 3);
-  group.add(outer);
+  outer.name = 'outer'; group.add(outer);
 
   // ---- Wasser ----
   const waterMeshes: THREE.Mesh[] = [];

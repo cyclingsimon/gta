@@ -72,7 +72,13 @@ export class Terrain {
     return ((a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz) * m.scale;
   }
 
-  ground(x: number, z: number) {
+  // 14zh (durchgehende Welt): geladene Nachbargegenden – ausserhalb des eigenen Rasters fragen wir sie
+  nb: Terrain[] = [];
+  owns(x: number, z: number) { return x >= this.x0 && z >= this.z0 && x <= this.x0 + (this.nx - 1) * this.step && z <= this.z0 + (this.nz - 1) * this.step; }
+  private other(x: number, z: number): Terrain | null { if (!this.nb.length || this.owns(x, z)) return null; for (const t of this.nb) if (t.owns(x, z)) return t; return null; }
+  get anyTun() { return this.tun.size > 0 || this.nb.some((t) => t.tun.size > 0); }
+  ground(x: number, z: number): number { const o = this.other(x, z); return o ? o.groundOwn(x, z) : this.groundOwn(x, z); }
+  groundOwn(x: number, z: number) {
     if (this.hz) {
       const ox = Math.max(this.x0 - x, x - (this.x0 + (this.nx - 1) * this.step), 0), oz = Math.max(this.z0 - z, z - (this.z0 + (this.nz - 1) * this.step), 0);
       const o = Math.max(ox, oz);
@@ -90,7 +96,8 @@ export class Terrain {
     return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
   }
 
-  bridgeAt(x: number, z: number) {
+  bridgeAt(x: number, z: number): number { const o = this.other(x, z); return o ? o.bridgeAtOwn(x, z) : this.bridgeAtOwn(x, z); }
+  bridgeAtOwn(x: number, z: number) {
     const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes);
     if (i < 0 || j < 0 || i >= this.bw || j >= this.bh) return NaN;
     return this.bridge[j * this.bw + i];
@@ -98,7 +105,8 @@ export class Terrain {
 
   /** Fahrhöhe: Brückendeck, sonst Gelände. 14zg: mit ref (bisherige Höhe des Fahrzeugs) auch Tunnelfahrbahn unter dem Gelände –
    *  gewählt wird die Ebene, die näher an ref liegt (so bleibt ein Auto im Tunnel drin und eines auf dem Hügel oben). */
-  height(x: number, z: number, ref?: number) {
+  height(x: number, z: number, ref?: number): number { const o = this.other(x, z); return o ? o.heightOwn(x, z, ref) : this.heightOwn(x, z, ref); }
+  heightOwn(x: number, z: number, ref?: number) {
     const b = this.bridgeAt(x, z);
     const g = this.ground(x, z);
     const s = isNaN(b) ? g : Math.max(b, g);
@@ -108,7 +116,8 @@ export class Terrain {
   }
   /** 14zg: Tunnelfahrbahn (dünn besetzt, nur Zellen in Tunnels) */
   tun = new Map<number, number>();
-  tunnelAt(x: number, z: number) {
+  tunnelAt(x: number, z: number): number { const o = this.other(x, z); return o ? o.tunnelAtOwn(x, z) : this.tunnelAtOwn(x, z); }
+  tunnelAtOwn(x: number, z: number) {
     const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes);
     const v = this.tun.get(j * this.bw + i); return v === undefined ? NaN : v;
   }

@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14zg';
+export const VERSION = '2026-11-14zh';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -33,22 +33,30 @@ let save = loadSave();
 // Gewechselt wird am Nordrand per Neuladen (eigene Daten in data/nord/, Speicher bleibt klein).
 // 13i: dazu Gebiet A (a1–a9, src/regionsA.ts). Unbekannte/nicht gebaute Region → Luzern.
 const KNOWN_REGIONS = ['luzern', 'nord', 'ost', 'west', 'sued', ...Object.keys(REGIONS_A)];
-const REGION: string = ((q) => KNOWN_REGIONS.includes(q || '') ? q! : KNOWN_REGIONS.includes(save.region || '') ? save.region! : 'luzern')(new URLSearchParams(location.search).get('region'));
-const RA = REGIONS_A[REGION]; // Gebiet-A-Region oder undefined
-const DIR = REGION === 'luzern' ? 'data/' : `data/${REGION}/`;
+let REGION: string = ((q) => KNOWN_REGIONS.includes(q || '') ? q! : KNOWN_REGIONS.includes(save.region || '') ? save.region! : 'luzern')(new URLSearchParams(location.search).get('region'));
+// 14zh (durchgehende Welt): Gegend-Werte sind veränderlich – beim Wechsel ohne Neuladen setzt setRegionVars() sie neu
+let RA = REGIONS_A[REGION]; // Gebiet-A-Region oder undefined
+let DIR = '';
 /** 14o (Simon): nur echte LUKS-Standorte. Gegenden ohne Spital: Treffpunkt am Bahnhof (sonst Bushaltestelle), dort holen die Eltern ab. */
-const RPL = RA ? RA.hosp.label : REGION === 'ost' ? 'Bahnhof Meggen' : REGION === 'west' ? 'Bahnhof Littau' : '';
-const HOSP = RA ? RA.hosp.label : REGION === 'ost' || REGION === 'west' ? RPL : REGION === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
-const RP = RA ? RA.hosp.kind === 'rp' : REGION === 'ost' || REGION === 'west'; // Ost/West/Teile von Gebiet A: Treffpunkt statt Spital
-const HALT = RPL.startsWith('Haltestelle');
-const SP = RA ? RA.hosp.kind === 'spital' : REGION === 'sued';
-const SPN = RA && RA.hosp.kind === 'spital' ? RA.hosp.label : 'Spital Nidwalden'; // Süd: Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe)
-const TO_H = RP ? `${HALT ? 'zur' : 'zum'} ${RPL}` : SP ? `ins ${SPN}` : 'ins Kinderspital', AT_H = RP ? `${HALT ? 'an der' : 'am'} ${RPL}` : SP ? `im ${SPN}` : 'im Kinderspital';
-if (REGION === 'nord') Object.assign(AERIAL, { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 });
-if (REGION === 'ost') Object.assign(AERIAL, { E0: 2668400, E1: 2673700, N0: 1209000, N1: 1213700 });
-if (REGION === 'west') Object.assign(AERIAL, { E0: 2657400, E1: 2662600, N0: 1208400, N1: 1212900 });
-if (REGION === 'sued') Object.assign(AERIAL, { E0: 2662800, E1: 2671200, N0: 1200300, N1: 1205800 });
-if (RA) Object.assign(AERIAL, RA.aerial);
+let RPL = '', HOSP = '', RP = false, HALT = false, SP = false, SPN = '', TO_H = '', AT_H = '';
+function setRegionVars(id: string) {
+  REGION = id; RA = REGIONS_A[id]; DIR = id === 'luzern' ? 'data/' : `data/${id}/`;
+  RPL = RA ? RA.hosp.label : id === 'ost' ? 'Bahnhof Meggen' : id === 'west' ? 'Bahnhof Littau' : '';
+  HOSP = RA ? RA.hosp.label : id === 'ost' || id === 'west' ? RPL : id === 'sued' ? 'Spital Nidwalden' : 'Kinderspital';
+  RP = RA ? RA.hosp.kind === 'rp' : id === 'ost' || id === 'west'; // Ost/West/Teile von Gebiet A: Treffpunkt statt Spital
+  HALT = RPL.startsWith('Haltestelle');
+  SP = RA ? RA.hosp.kind === 'spital' : id === 'sued';
+  SPN = RA && RA.hosp.kind === 'spital' ? RA.hosp.label : 'Spital Nidwalden'; // Süd: Ziel ist das echte Spital Nidwalden in Stans (gehört zur LUKS Gruppe)
+  TO_H = RP ? `${HALT ? 'zur' : 'zum'} ${RPL}` : SP ? `ins ${SPN}` : 'ins Kinderspital'; AT_H = RP ? `${HALT ? 'an der' : 'am'} ${RPL}` : SP ? `im ${SPN}` : 'im Kinderspital';
+}
+setRegionVars(REGION);
+const AERIAL_LU = { ...AERIAL };
+function aerialFor(id: string) {
+  const ra = REGIONS_A[id];
+  return ra ? ra.aerial : id === 'nord' ? { E0: 2662190, E1: 2670670, N0: 1212000, N1: 1215560 } : id === 'ost' ? { E0: 2668400, E1: 2673700, N0: 1209000, N1: 1213700 }
+    : id === 'west' ? { E0: 2657400, E1: 2662600, N0: 1208400, N1: 1212900 } : id === 'sued' ? { E0: 2662800, E1: 2671200, N0: 1200300, N1: 1205800 } : AERIAL_LU;
+}
+Object.assign(AERIAL, aerialFor(REGION));
 const MOBILE = isTouchDevice();
 const QUALITY_: 'echt' | 'leicht' = /[?&]q=leicht/.test(location.search) ? 'leicht' : /[?&]q=echt/.test(location.search) ? 'echt' : save.quality || (MOBILE ? 'leicht' : 'echt');
 const QUALITY = QUALITY_;
@@ -158,7 +166,7 @@ function setUnderground(on: boolean) {
   if (on) { lightKeep = [hemi.intensity, sun.intensity]; hemi.intensity *= 0.6; sun.intensity *= 0.25; } else { hemi.intensity = lightKeep[0]; sun.intensity = lightKeep[1]; }
 }
 function renderView(cam: THREE.PerspectiveCamera) {
-  if (terrain && terrain.tun.size) setUnderground(cam.position.y < terrain.ground(cam.position.x, cam.position.z) - 0.3 && (!isNaN(terrain.tunnelAt(cam.position.x, cam.position.z)) || players.some((p) => terrain.inTunnel(p.car.x, p.car.z, p.car.y))));
+  if (terrain && terrain.anyTun) setUnderground(cam.position.y < terrain.ground(cam.position.x, cam.position.z) - 0.3 && (!isNaN(terrain.tunnelAt(cam.position.x, cam.position.z)) || players.some((p) => terrain.inTunnel(p.car.x, p.car.z, p.car.y))));
   if (!underground) { farCam.position.copy(cam.position); farCam.quaternion.copy(cam.quaternion); farCam.aspect = cam.aspect; farCam.fov = cam.fov; farCam.updateProjectionMatrix(); renderer.render(farScene, farCam); renderer.clearDepth(); }
   renderer.render(scene, cam);
 }
@@ -256,8 +264,8 @@ let gondola: Gondola | null = null;
 let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined;
 let forestMask: ForestMask | undefined;
 /** Waldmaske (aus Luftbild, 4 m) laden: PNG → Bytes */
-async function loadForestMask(x0: number, z0: number): Promise<ForestMask | undefined> {
-  try { const img = new Image(); img.src = DIR + 'forest.png'; await img.decode();
+async function loadForestMask(x0: number, z0: number, dir = DIR): Promise<ForestMask | undefined> {
+  try { const img = new Image(); img.src = dir + 'forest.png'; await img.decode();
     const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d')!; g.drawImage(img, 0, 0);
     const px = g.getImageData(0, 0, c.width, c.height).data, data = new Uint8Array(c.width * c.height);
     for (let i = 0; i < data.length; i++) data[i] = px[i * 4] > 127 ? 1 : 0;
@@ -552,13 +560,26 @@ function setupFun(data: CityData) {
 }
 
 const declined = new Set<string>(); // in dieser Sitzung abgelehnt: kommen erst wieder, wenn alles andere dran war
+/** 14zh (Simon: «Einsätze in derselben Geländekammer»): Einsatzort ist ohne grossen Umweg und ohne Pass erreichbar
+ *  – Strecke ≤ 1.7 × Luftlinie + 500 m, höchstens 6 km, unterwegs nicht mehr als 120 m höher als Start und Ziel */
+function sameChamber(m: Mission): boolean {
+  if (!car || !nav) return true;
+  const a = nav.nearest(car.x, car.z, true), b = nav.nearest(m.at[0], m.at[1], true); if (a < 0 || b < 0) return true;
+  const r = nav.route(a, b); if (!r || r.length < 2) return false;
+  let L = 0, top = -1e9; for (let i = 1; i < r.length; i++) { L += Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]); if (i % 3 === 0) top = Math.max(top, terrain.height(r[i][0], r[i][1])); }
+  const D = Math.hypot(m.at[0] - car.x, m.at[1] - car.z), h0 = Math.max(terrain.height(car.x, car.z), terrain.height(m.at[0], m.at[1]));
+  return L <= D * 1.7 + 500 && L < 6000 && top < h0 + 120;
+}
 function nextMission(): Mission {
   const pool = missions.filter((m) => !declined.has(m.id));
   if (!pool.length) declined.clear();
-  const open = (pool.length ? pool : missions).find((m) => !(save.best[m.id] >= 1));
+  const base = pool.length ? pool : missions;
+  const near = base.filter(sameChamber); // zuerst Einsätze in der eigenen Geländekammer
+  const src = near.length ? near : base;
+  const open = src.find((m) => !(save.best[m.id] >= 1));
   if (open) return open;
-  const choices = (pool.length ? pool : missions).filter((m) => m !== current);
-  return choices[Math.floor(Math.random() * choices.length)];
+  const choices = src.filter((m) => m !== current);
+  return choices.length ? choices[Math.floor(Math.random() * choices.length)] : src[0];
 }
 
 function setTarget(t: [number, number] | null, color = '#F39204') {
@@ -821,7 +842,7 @@ function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
   else want = new THREE.Vector3(car.x - fx * (13 + back * 3), cy + 6 + back, car.z - fz * (13 + back * 3));
   if (mode === 1) look.set(car.x + fx * 10, cy, car.z + fz * 10);
   // 14zg: im Tunnel tief und nah hinter dem Auto (unter der Decke, 5.6 m), egal welche Kamera gewählt ist
-  const inTun = terrain.tun.size > 0 && terrain.inTunnel(car.x, car.z, cy);
+  const inTun = terrain.anyTun && terrain.inTunnel(car.x, car.z, cy);
   if (inTun) { want = new THREE.Vector3(car.x - fx * 8.5, cy + 3.1, car.z - fz * 8.5); look.set(car.x + fx * 8, cy + 1.4, car.z + fz * 8); }
   // Kamera nie unter dem Gelände und Sichtlinie zum Auto frei halten (Hänge)
   if (!inTun) {
@@ -1119,7 +1140,7 @@ function frame(now: number) {
     }
     if (playing && fullReady) { save.km = (save.km || 0) + Math.abs(car.speed) * dt; badgeT += dt; if (badgeT > 30) { badgeT = 0; checkBadges(); writeSave(); } }
     stats.players = players.length; if (fullReady) stats.tick(dt, playing ? players.map((p) => p.car.speed) : [], car.siren, [car.x, car.z]); // Mini-Spiele zählen als Spielzeit; Ladezeit nicht
-    if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
+    if (playing && fullReady && STREAM) streamTick(dt); else if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
       if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
@@ -1198,12 +1219,20 @@ async function gunzipIf(buf: ArrayBuffer): Promise<ArrayBuffer> {
 }
 /** Holt data/<name>.gz (kleiner), sonst data/<name> */
 const GZ = new Set(['b3d.bin', 'ground.bin', 'terrain.bin', 'city.json', 'b3d.json']);
-async function getBuf(name: string): Promise<ArrayBuffer> {
-  if (GZ.has(name)) try { const r = await fetch(`${DIR}${name}.gz?v=${VERSION}`); if (r.ok) return gunzipIf(await r.arrayBuffer()); } catch { /* weiter */ }
-  const r = await fetch(`${DIR}${name}?v=${VERSION}`); if (!r.ok) throw new Error(name + ' ' + r.status);
+async function getBuf(name: string, dir = DIR): Promise<ArrayBuffer> {
+  if (GZ.has(name)) try { const r = await fetch(`${dir}${name}.gz?v=${VERSION}`); if (r.ok) return gunzipIf(await r.arrayBuffer()); } catch { /* weiter */ }
+  const r = await fetch(`${dir}${name}?v=${VERSION}`); if (!r.ok) throw new Error(name + ' ' + r.status);
   return gunzipIf(await r.arrayBuffer());
 }
-async function getJSON(name: string) { return JSON.parse(new TextDecoder().decode(await getBuf(name))); }
+async function getJSON(name: string, dir = DIR) { return JSON.parse(new TextDecoder().decode(await getBuf(name, dir))); }
+/** Gelände-Rohdaten: Byte-Trennung + zeilenweise Differenzen rückgängig machen */
+function decodeTerrain(tmeta: any, traw: ArrayBuffer): ArrayBuffer {
+  if (tmeta.enc !== 'delta-shuffle') return traw;
+  const b8 = new Uint8Array(traw), n = b8.length >> 1, o = new Int16Array(n), nx = tmeta.nx;
+  for (let i = 0; i < n; i++) { const v = b8[i] | (b8[n + i] << 8); o[i] = v > 32767 ? v - 65536 : v; }
+  for (let k = 0; k < n; k += nx) for (let i = 1; i < nx; i++) o[k + i] += o[k + i - 1];
+  return o.buffer;
+}
 const opt = <T,>(p: Promise<T>) => p.catch((e) => { console.warn('optional', e); return undefined; });
 let fullReady = false;
 (window as any).__luksiReady = false;
@@ -1226,16 +1255,10 @@ async function boot() {
   const pB = echt ? opt(Promise.all(RA ? [opt(getJSON('b3d.json')), opt(getBuf('b3d.bin')), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')] : [getJSON('b3d.json'), getBuf('b3d.bin'), opt(getJSON('roofcolors.json')), getJSON('ground.json'), getBuf('ground.bin')])) : null; // Gebiet A: 3D-Häuser nur, wo b3d vorhanden (sonst OSM-Gebäude)
   const data: CityData = await pCity;
   memLog('city'); status.textContent = 'Lade Gelände …'; loaderProgress(0.25);
-  const tmeta = await pTmeta; let traw: ArrayBuffer = await pTraw;
-  if (tmeta.enc === 'delta-shuffle') { // Byte-Trennung + zeilenweise Differenzen rückgängig machen
-    const b8 = new Uint8Array(traw), n = b8.length >> 1, o = new Int16Array(n), nx = tmeta.nx;
-    for (let i = 0; i < n; i++) { const v = b8[i] | (b8[n + i] << 8); o[i] = v > 32767 ? v - 65536 : v; }
-    for (let k = 0; k < n; k += nx) for (let i = 1; i < nx; i++) o[k + i] += o[k + i - 1];
-    traw = o.buffer;
-  }
+  const tmeta = await pTmeta; const traw: ArrayBuffer = decodeTerrain(tmeta, await pTraw);
   terrain = new Terrain(traw, tmeta, data.meta.bounds);
   if (!tmeta.flattened) terrain.flattenRoads(data.roads);
-  const hor = await pHor; if (hor) terrain.setHorizon(new Int16Array(hor[1]), hor[0]);
+  const hor = await pHor; if (hor) { horData = hor; terrain.setHorizon(new Int16Array(hor[1]), hor[0]); }
   const props = await pProps;
   memLog('terrain'); loaderProgress(0.5);
   forestMask = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1]);
@@ -1250,11 +1273,9 @@ async function boot() {
   await new Promise((r) => setTimeout(r, 30));
   { const t0 = performance.now(); nav = new NavGraph(data, world.mask); console.log('[bau] Navi', (performance.now() - t0).toFixed(0), 'ms'); }
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
-  { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); scene.add(buses.buildWires()); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
-  if (REGION === 'ost') world.hospital = { x: 5715, z: 171, name: 'Bahnhof Meggen' };   // 14o: OSM-Bahnhof statt erfundener Rettungsposten
-  if (REGION === 'west') world.hospital = { x: -3835, z: -145, name: 'Bahnhof Littau' };
-  if (REGION === 'sued') world.hospital = { x: 3753, z: 10146, name: 'Spital Nidwalden' };
-  if (RA) world.hospital = { x: RA.hosp.x, z: RA.hosp.z, name: RA.hosp.label };
+  { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
+  setHospital(world, REGION);
+  slots.set(REGION, { id: REGION, dir: DIR, data, props, terrain, world, nav, bus: await pBus, trains: await pTrains, ma: missionsAP ? await missionsAP : null });
   hospitalBay = snap([world.hospital.x, world.hospital.z]);
   if (missionsAP) MA = await missionsAP;
   setupMissions();
@@ -1278,9 +1299,7 @@ async function boot() {
   scene.add(arrow);
   addPlayer(); car = players[0].car;
   // Schild über dem Kinderspital
-  const sign = textSprite(HOSP + ' ♥', '#FFF6DE', '#0E73BA', 420, 110, 'bold 50px system-ui, sans-serif');
-  sign.position.set(world.hospital.x, gy(world.hospital.x, world.hospital.z) + 42, world.hospital.z); sign.scale.set(16, 4.2, 1);
-  scene.add(sign);
+  placeHospSign();
   // Orientierung: schwebende Ortsschilder an bekannten Orten in Kriens, Horw und auf der Allmend (an echten Haltestellen)
   for (const [name, txt] of [['Pilatus-Bahnen', 'Pilatus-Bahnen 🚡'], ['Allmend/Messe', 'Swissporarena ⚽'], ['Horw Zentrum', 'Horw'], ['Zentrum Pilatus', 'Kriens'], ['Badi', 'Badi Horw 🏊'], ['Kastanienbaum Schiffstation', 'Kastanienbaum ⛵'], ['Maihofmatte-Rotsee', 'Rotsee 🚣'], ['Emmenbrücke Bahnhof', 'Emmenbrücke'], ['Ebikon Bahnhof', 'Ebikon'], ['Adligenswil Dorf', 'Adligenswil'], ['Emmen Center', 'Emmen Center 🛍️']] as [string, string][]) {
     const st = propsData?.stops?.find((q: any) => q[2] === name); if (!st) continue;
@@ -1484,7 +1503,7 @@ if (location.search.includes('test')) {
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     car: () => ({ x: car.x, z: car.z, heading: car.heading }),
     speed: (v: number) => { car.speed = v; },
-    head: (h: number) => { car.heading = h; }, under: () => underground, // 14zg Tests
+    head: (h: number) => { car.heading = h; }, warp: (x: number, z: number, h: number) => { car.x = x; car.z = z; car.heading = h; car.speed = 0; car.y = terrain.height(x, z); updateCamera(0, true); }, under: () => underground, // 14zg Tests
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
       return rc.intersectObjects([scene], true).slice(0, 4).map((h) => { const n: string[] = []; let o: any = h.object; while (o) { n.push(o.name || o.type); o = o.parent; }
         return { path: n.join('<'), p: [Math.round(h.point.x), Math.round(h.point.y * 10) / 10, Math.round(h.point.z)], d: Math.round(h.distance) }; }); },
@@ -1555,3 +1574,111 @@ if (location.search.includes('test')) {
 
 boot().catch((e) => { $('#load-status').textContent = 'Fehler beim Laden: ' + e; console.error(e); });
 requestAnimationFrame(frame);
+
+
+// ---------------- 14zh Durchgehende Welt (Wunsch Simon 14.11.): Nachbargegenden im Hintergrund laden, ohne Neuladen wechseln ----------------
+const STREAM = !/[?&]nostream/.test(location.search);
+interface Slot { id: string; dir: string; data: CityData; props: any; terrain: Terrain; world: World; nav?: NavGraph; bus?: any; trains?: any; ma?: any }
+const slots = new Map<string, Slot>();
+let horData: any = null, busWires: THREE.Object3D | null = null, hospSign: THREE.Sprite | null = null;
+let loadingSlot = '', streamT = 0;
+function setHospital(w: World, id: string) {
+  const ra = REGIONS_A[id];
+  if (id === 'ost') w.hospital = { x: 5715, z: 171, name: 'Bahnhof Meggen' };   // 14o: OSM-Bahnhof statt erfundener Rettungsposten
+  if (id === 'west') w.hospital = { x: -3835, z: -145, name: 'Bahnhof Littau' };
+  if (id === 'sued') w.hospital = { x: 3753, z: 10146, name: 'Spital Nidwalden' };
+  if (ra) w.hospital = { x: ra.hosp.x, z: ra.hosp.z, name: ra.hosp.label };
+}
+function placeHospSign() {
+  if (hospSign) scene.remove(hospSign);
+  hospSign = textSprite(HOSP + ' ♥', '#FFF6DE', '#0E73BA', 420, 110, 'bold 50px system-ui, sans-serif');
+  hospSign.position.set(world.hospital.x, gy(world.hospital.x, world.hospital.z) + 42, world.hospital.z); hospSign.scale.set(16, 4.2, 1);
+  scene.add(hospSign);
+}
+/** Lustige Bau-Meldungen beim Nachladen (Simon: kindgerecht, mit Humor) */
+const BAU_TXT = ['🚧 Die Bauarbeiter bauen ganz schnell die nächste Ecke …', '🐌 Die Schnecke bringt die Landkarte – gleich da!', '🧱 Häuser werden hingestellt, Strassen ausgerollt …', '🐄 Die Kühe gehen schnell auf ihre Weide …', '🌳 Bäume werden gepflanzt – psst, sie wachsen!'];
+async function loadSlot(id: string): Promise<Slot> {
+  const dir = id === 'luzern' ? 'data/' : `data/${id}/`;
+  const [data, tmeta, trawRaw, props, bus, trainsJ, ma] = await Promise.all([getJSON('city.json', dir), getJSON('terrain.json', dir), getBuf('terrain.bin', dir),
+    opt(getJSON('props.json', dir)), opt(getJSON('bus.json', dir)), opt(getJSON('trains.json', dir)), REGIONS_A[id] ? opt(getJSON('missions.json', dir)) : Promise.resolve(null)]);
+  const t = new Terrain(decodeTerrain(tmeta, trawRaw), tmeta, data.meta.bounds);
+  if (!tmeta.flattened) t.flattenRoads(data.roads);
+  if (horData) t.setHorizon(new Int16Array(horData[1]), horData[0]);
+  const fm = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1], dir);
+  let tex: THREE.Texture | undefined;
+  if (!/[?&]noaerial/.test(location.search)) { tex = new THREE.TextureLoader().load(dir + 'aerial_s.jpg'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; }
+  const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(id));
+  let w: World;
+  try { w = await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true }); }
+  finally { Object.assign(AERIAL, keep); }
+  setHospital(w, id);
+  return { id, dir, data, props, terrain: t, world: w, bus, trains: trainsJ, ma };
+}
+function linkSlots() {
+  const all = [...slots.values()];
+  for (const s of all) { const others = all.filter((o) => o !== s); s.terrain.nb = others.map((o) => o.terrain); s.world.mask.nb = others.map((o) => o.world.mask);
+    // Umland/Aussenfläche einer Gegend tiefer legen, wenn Nachbarn geladen sind (sonst ragt das grobe Umland in die Nachbarstrassen)
+    for (const n of ['apron', 'outer']) { const o = s.world.group.getObjectByName(n); if (o) { if (o.userData.y0 === undefined) o.userData.y0 = o.position.y; o.position.y = o.userData.y0 - (all.length > 1 ? 4 : 0); } } }
+}
+function unloadSlot(s: Slot) {
+  scene.remove(s.world.group); scene.remove(s.world.tunnels);
+  for (const g of [s.world.group, s.world.tunnels]) g.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); if (o.material) for (const m of [].concat(o.material)) { (m as any).map?.dispose?.(); (m as any).dispose?.(); } });
+  slots.delete(s.id); linkSlots();
+  console.log('[welt] entladen', s.id);
+}
+function regionAt(x: number, z: number, pad = 0): string[] {
+  return Object.entries(REG_BOUNDS).filter(([k, b]) => KNOWN_REGIONS.includes(k) && x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad).map(([k]) => k);
+}
+/** Aktive Gegend wechseln: Navi, Einsätze, Herzen, Verkehr, Busse, Züge, Ziel – ohne Neuladen */
+function activate(s: Slot) {
+  const from = REGION; setRegionVars(s.id);
+  world = s.world; terrain = s.terrain; cityData = s.data; propsData = s.props ? JSON.parse(JSON.stringify(s.props)) : null;
+  if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
+  nav = s.nav;
+  for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
+  if (traffic) { scene.remove(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
+    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); }
+  if (buses) { scene.remove(buses.group); buses = null; } if (busWires) { scene.remove(busWires); busWires = null; }
+  if (s.bus && !/[?&]nobus/.test(location.search)) { buses = new Buses(s.bus, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops);
+    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
+  if (trains) { scene.remove(trains.group); trains = null; }
+  if (s.trains) { trains = new Trains(terrain, s.trains, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); }
+  for (const o of [fun, animals, ships, boats]) if (o) scene.remove(o.group);
+  fun = null; animals = null; ships = null; boats = null;
+  hospitalBay = snap([world.hospital.x, world.hospital.z]);
+  MA = s.ma || null;
+  if (phase === 'offer') declineOffer();
+  setupMissions(); setupFun(s.data); placeHospSign();
+  if (underground) { underground = false; setUnderground(true); }
+  save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
+  stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;
+  toast(`👋 Willkommen in ${REGION_NAME[s.id] || s.id}!`, 3000); updateHud();
+  console.log('[welt] aktiv', s.id, 'von', from);
+}
+function streamTick(dt: number) {
+  streamT -= dt; if (streamT > 0) return; streamT = 0.5;
+  const c = players[0].car;
+  // 1) Wechsel: Ambulanz hat das aktive Feld verlassen und steht in einer geladenen Nachbargegend
+  const B = REG_BOUNDS[REGION];
+  if (B && !(c.x > B[0] && c.x < B[2] && c.z > B[1] && c.z < B[3])) {
+    const here = regionAt(c.x, c.z).find((k) => slots.has(k));
+    if (here) { activate(slots.get(here)!); }
+  }
+  // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
+  if (!loadingSlot && Math.abs(c.speed) > 2) {
+    const look = [[0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
+    let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r)); if (k) { want = k; break; } }
+    if (want) { loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
+      const t0 = performance.now();
+      loadSlot(want).then((s) => { slots.set(s.id, s); scene.add(s.world.group); scene.add(s.world.tunnels); linkSlots();
+        ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit!`; setTimeout(() => ind.remove(), 2200);
+        console.log('[welt] geladen', s.id, (performance.now() - t0).toFixed(0), 'ms');
+      }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); }).finally(() => { loadingSlot = ''; }); }
+  }
+  // 3) Entladen: höchstens 3 Gegenden; weit entfernte (> 2.5 km vom Feldrand) zuerst
+  if (slots.size > (MOBILE ? 2 : 3)) { // Handy: höchstens 2 Gegenden im Speicher
+    const far = [...slots.values()].filter((s) => s.id !== REGION).map((s) => { const b = REG_BOUNDS[s.id]; const dx = Math.max(b[0] - c.x, 0, c.x - b[2]), dz = Math.max(b[1] - c.z, 0, c.z - b[3]); return [Math.hypot(dx, dz), s] as [number, Slot]; }).sort((a, b) => b[0] - a[0]);
+    if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]);
+  }
+}
+if (TEST) (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot });

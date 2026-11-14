@@ -158,7 +158,7 @@ export class Vehicle {
     const fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx;
     // 14zg: im Tunnel (unter dem Gelände) zählen nur die Tunnelwände, nicht Häuser/Wasser oben auf dem Hügel
     const T = this.terrain;
-    if (T.tun.size && this.y < T.ground(this.x, this.z) - 2) {
+    if (T.anyTun && this.y < T.ground(this.x, this.z) - 2) {
       for (const [a, b] of [[3.2, 1.0], [3.2, -1.0], [-3.1, 1.0], [-3.1, -1.0], [0, 1.1], [0, -1.1]]) {
         const px = x + fx * a + rx * b, pz = z + fz * a + rz * b;
         if (isNaN(T.tunnelAt(px, pz)) && T.ground(px, pz) > this.y + 2) return 1;
