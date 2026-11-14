@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14zh
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14zi
+Neu in 14zi: Stans bis Wolhusen am Stück, Schnellreise ohne Laden, Feuerwehr/Glace-Wagen/Monster-Ambulanz.
 Neu in 14zh: durchgehend weiterfahren ohne Neuladen (Luzern – Littau – Malters getestet).
 Neu in 14zg: Strassentunnels (z. B. Lopper), neue Hofkirche, neuer Ladebild-Text.
 Neu in 14zf: Signal «Kein Vortritt» an Einmündungen.

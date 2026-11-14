@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14zh';
+export const VERSION = '2026-11-14zi';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -509,7 +509,7 @@ function setupFun(data: CityData) {
     (x, z) => { sfxPlay.boing(); comic(x, z, 2); stats.tot.boings++; },
     (n, tot, first) => { stats.tot.hearts++; setTimeout(() => checkBadges(), 2500); stats.event('heart', { val: n }); if (RA) (save.heartsA ||= {})[REGION] = fun!.heartsGot(); else if (REGION === 'nord') save.heartsN = fun!.heartsGot(); else if (REGION === 'ost') save.heartsO = fun!.heartsGot(); else if (REGION === 'west') save.heartsW = fun!.heartsGot(); else if (REGION === 'sued') save.heartsS = fun!.heartsGot(); else save.hearts = fun!.heartsGot(); writeSave(); sfxPlay.star(0); sfxPlay.star(1);
       const el = $('#hearts'); el.textContent = `♥ ${n}/${tot}`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-      const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neue Lackierung freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
+      const unlocked = SKIN_NEED.find(([, k]) => k === n); if (unlocked && n > 0) setTimeout(() => toast(`🎉 Neues Fahrzeug freigeschaltet: ${SKIN_LABEL[unlocked[0]]} – im Pause-Menü wählen!`, 4500), 1600);
       toast(first ? `♥ Ein Luksi-Herz! ${tot} sind ${RA ? 'in ' + RA.name : REGION === 'nord' ? 'in Emmenbrücke, Ebikon und Adligenswil' : REGION === 'ost' ? 'in Meggen und Würzenbach' : REGION === 'west' ? 'in Littau, Obernau und Blatten' : REGION === 'sued' ? 'in Hergiswil, Stansstad und Stans' : 'in Luzern, Kriens und Horw'} versteckt.` : n === tot ? '♥ Alle Luksi-Herzen gefunden – du bist ein Held!' : n % 10 === 0 ? `♥ ${n} von ${tot} – super!` : `♥ ${n}/${tot}`, first || n % 10 === 0 ? 4200 : 1500); });
   $('#hearts').textContent = `♥ ${fun.heartCount}/${fun.heartTotal}`;
   scene.add(fun.group);
@@ -877,8 +877,8 @@ function showLoadUmfang() {
 const chZahl = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2019'); // Schweizer Tausendertrenner
 let menuFocus = 0;
 const DIFF_LABEL: Record<Difficulty, string> = { entdecken: 'Einfach (Navi-Linie, bis 90 km/h)', rettung: 'Mittel (bis 150 km/h)', profi: 'Schnell (bis 269 km/h)' };
-const SKIN_LABEL: Record<string, string> = { standard: 'Standard', regenbogen: 'Regenbogen 🌈', luksi: 'Luksi-Look 🐯', gold: 'Gold ✨' };
-const SKIN_NEED: [string, number][] = [['standard', 0], ['regenbogen', 5], ['luksi', 15], ['gold', 30]];
+const SKIN_LABEL: Record<string, string> = { standard: '🚑 Ambulanz', feuerwehr: '🚒 Feuerwehr', glace: '🍦 Glace-Wagen', monster: '🦖 Monster-Ambulanz' }; // 14zi: ganze Fahrzeuge statt Lackierungen
+const SKIN_NEED: [string, number][] = [['standard', 0], ['feuerwehr', 5], ['glace', 15], ['monster', 30]];
 function unlockedSkins() { const n = fun ? fun.heartCount : 0; return SKIN_NEED.filter(([, k]) => n >= k).map(([s]) => s); }
 function nextSkinHint() { const n = fun ? fun.heartCount : 0; const nx = SKIN_NEED.find(([, k]) => n < k); return nx ? `${SKIN_LABEL[nx[0]]} ab ${nx[1]} ♥` : ''; }
 // Pause-Menü: oben die zwei Hauptknöpfe, darunter Sammelalbum, dann Einstellungen als Auswahl-Knöpfe (alle Möglichkeiten sichtbar,
@@ -898,7 +898,7 @@ function menuRows(): MenuRow[] {
     { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
     { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
     { kind: 'opt', label: 'Musik', note: getMusicSrc() === 'radio' ? 'Live aus dem Luzerner Kantonsspital (braucht Internet).' : undefined, btns: ([['spiel', '🎵 Spielmusik'], ['radio', '📻 Spitalradio LuZ'], ['aus', '🔕 Keine']] as [MusicSrc, string][]).map(([m, t]) => ({ t, on: getMusicSrc() === m, f: () => { save.music = m; setMusicSrc(m); writeSave(); } })) },
-    { kind: 'opt', label: 'Ambulanz', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Lackierungen gibt es mit Luksi-Herzen.' : undefined,
+    { kind: 'opt', label: 'Fahrzeug', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Fahrzeuge gibt es mit Luksi-Herzen.' : undefined,
       btns: SKIN_NEED.map(([sk, need]) => ({ t: skinN >= need ? SKIN_LABEL[sk] : `🔒 ${need} ♥`, on: (car?.skin || 'standard') === sk, off: skinN < need, f: () => { if (skinN >= need) setSkin(sk); else toast(`${SKIN_LABEL[sk]} gibt es ab ${need} Luksi-Herzen.`, 2500); } })) },
     { kind: 'opt', label: 'Grafik', note: 'Wechseln lädt das Spiel neu (Spielstand bleibt).', btns: [
       { t: '🏙️ Echt', on: QUALITY === 'echt', f: () => { if (QUALITY !== 'echt') { save.quality = 'echt'; writeSave(); location.reload(); } } },
@@ -1076,11 +1076,20 @@ function openTravelMap() {
   for (const p of players) p.car.speed = 0;
   const leaveMission = () => { if (current && (phase === 'toScene' || phase === 'toHospital')) { abortMission(); toast('Einsatz abgegeben – kein Problem!', 2200); } else if (phase === 'offer') declineOffer(); };
   openTravel(ui, {
-    region: REGION, carX: () => car.x, carZ: () => car.z, hosp: hospitalBay,
+    region: REGION, carX: () => car.x, carZ: () => car.z, hosp: hospitalBay, // REGION hier zur Öffnungszeit (aktuelle Gegend)
     canGo: () => players.length > 1 ? 'Schnellreise geht nur allein – zu zweit fahrt ihr zusammen weiter.' : (phase === 'onsite' || phase === 'handover') ? 'Zuerst den Einsatz hier fertig machen – dann kann es losgehen.' : null,
     teleport: (to) => { leaveMission(); const t = to === 'hosp' ? hospitalBay : to; placeCar(t[0], t[1]); for (const p of players) p.car.speed = 0; updateCamera(0, true); sfxPlay.reset(); toast('🗺️ Angekommen!', 2000); writeSave(); },
     switchTo: (region, to, name) => {
       leaveMission();
+      if (STREAM && players.length === 1) { // 14zi: Schnellreise ohne Neuladen – Zielgegend im Hintergrund bauen, dann hinsetzen
+        const arrive = (s: Slot) => { activate(s); const t = to === 'hosp' ? hospitalBay : to; placeCar(t[0], t[1]); car.speed = 0; updateCamera(0, true); sfxPlay.reset(); document.querySelector('.mg.tr')?.remove(); toast(`🗺️ Angekommen in ${name}!`, 2500); writeSave(); };
+        const have = slots.get(region); if (have) { arrive(have); return; }
+        loadingSlot = region;
+        loadSlot(region).then((s) => { slots.set(s.id, s); scene.add(s.world.group); scene.add(s.world.tunnels); linkSlots(); arrive(s);
+          for (const o of [...slots.values()]) if (o.id !== s.id) unloadSlot(o); // nach der Reise nur die Zielgegend behalten
+        }).catch(() => { document.querySelector('.mg.tr')?.remove(); toast('Hoppla, die Reise hat nicht geklappt – nochmals versuchen!', 3000); }).finally(() => { loadingSlot = ''; });
+        return;
+      }
       writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: region + ':reise' }); stats.flush(true);
       save.region = region as Save['region']; save.pos = to === 'hosp' ? undefined : [to[0], to[1], NaN];
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', region); sessionStorage.setItem('luksiTravel', name); } catch { /* privat */ }
@@ -1310,7 +1319,7 @@ async function boot() {
   // Linien: [Achse 'z'|'x', Wert, Text, nur wo die andere Koordinate in [a, b] liegt]
   const lines: [string, number, string, number, number][] = RA ? [] : REGION === 'luzern' ? [['z', -1000, '⬆ Emmenbrücke · Ebikon', -3700, 2400], ['x', 2660, '➡ Meggen', -1000, 2450], ['x', -3720, '⬅ Littau · Blatten', -1000, 2950], ['z', 6230, '⬇ Hergiswil · Stansstad', -2900, 2650]]
     : REGION === 'nord' ? [['z', -650, '⬇ Luzern · Kinderspital', -1e9, 1e9]] : REGION === 'west' ? [['x', -3660, '➡ Luzern · Kinderspital', -1e9, 1e9]] : REGION === 'sued' ? [['z', 6170, '⬆ Luzern · Kinderspital', -2950, 2650]] : [['x', 2560, '⬅ Luzern · Kinderspital', -1e9, 1e9]];
-  for (const [ax, lv, txt, a0, a1] of lines) { const put: number[][] = [];
+  if (!STREAM) for (const [ax, lv, txt, a0, a1] of lines) { const put: number[][] = []; // 14zi: mit durchgehender Welt keine Grenz-Wegweiser mehr (Grenzen spürt man nicht)
     for (const r of data.roads as any[]) { if (!['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) continue;
       for (let i = 1; i < r.p.length; i++) { const P1 = r.p[i - 1], P2 = r.p[i]; const u1 = ax === 'z' ? P1[1] : P1[0], u2 = ax === 'z' ? P2[1] : P2[0];
         if ((u1 - lv) * (u2 - lv) > 0 || u1 === u2) continue;

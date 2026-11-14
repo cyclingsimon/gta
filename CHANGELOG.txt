@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zi  Ganze Kette, Schnellreise ohne Laden, neue Fahrzeuge
+- Durchgehend gefahren und geprüft: Stansstad (Süd) – Luzern – Littau – Malters – Wolhusen, jeder Übergang ohne Neuladen
+- Schnellreise lädt nicht mehr neu: die Zielgegend wird im Hintergrund gebaut, dann steht Luksi dort
+- Statt Lackierungen ganze Fahrzeuge zum Freispielen: 🚒 Feuerwehr (5 ♥, mit Leiter), 🍦 Glace-Wagen (15 ♥, mit Riesen-Cornet), 🦖 Monster-Ambulanz (30 ♥, riesige Räder)
+- Grenz-Wegweiser («⬅ Littau …») entfernt – Grenzen gibt es beim Fahren nicht mehr
+
 2026-11-14zh  Durchgehende Welt (erster Teil)
 - Kein Neuladen mehr am Rand einer Gegend: Die nächste Gegend wird beim Hinfahren im Hintergrund gebaut (mit lustigem Hinweis «Die Bauarbeiter bauen ganz schnell die nächste Ecke …»), dann fährt man einfach weiter. Navi, Einsätze, Herzen, Busse, Züge und Ziel wechseln automatisch («Willkommen in …»)
 - Höchstens 3 Gegenden gleichzeitig im Speicher (Handy: 2), weit entfernte werden wieder abgebaut

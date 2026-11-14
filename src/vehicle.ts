@@ -25,12 +25,16 @@ function textSprite(text: string, bg: string, fg: string, w = 256, h = 96, font 
 }
 export { textSprite };
 
-/** Rettungswagen im Kastenaufbau-Stil (Fahrerkabine + Wechselkoffer), ohne Logos. */
-export function buildAmbulance() {
+/** Rettungswagen im Kastenaufbau-Stil (Fahrerkabine + Wechselkoffer), ohne Logos.
+ *  14zi (Simon: «Skins komplett anders, darf ein ganz anderes Fahrzeug sein»): kind = standard | feuerwehr | glace | monster */
+export function buildAmbulance(kind = 'standard') {
+  const FW = kind === 'feuerwehr', GL = kind === 'glace', MO = kind === 'monster';
   const root = new THREE.Group();
   const body = new THREE.Group(); // wird für Wackeln/Neigen bewegt
   root.add(body);
-  const white = toon('#F7F7F4'), yellow = toon('#E3EE3A'), red = toon('#D8343A'), dark = toon('#2E3440'), glass = toon('#4F6F8C'), grey = toon('#9AA0A6');
+  const white = toon(FW ? '#D7262E' : GL ? '#FFB3D1' : '#F7F7F4'), yellow = toon(FW ? '#F2F2EE' : GL ? '#9EE6CF' : MO ? '#7CFC6A' : '#E3EE3A'), red = toon(FW ? '#F2F2EE' : GL ? '#FFE37A' : MO ? '#A040E0' : '#D8343A'), dark = toon('#2E3440'), glass = toon('#4F6F8C'), grey = toon('#9AA0A6');
+  const WR = MO ? 1.05 : 0.45, lift = MO ? 0.85 : 0; // Monster: grosse Räder, Aufbau höher
+  body.position.y = lift;
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, line = true) => {
     const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); body.add(m); if (line) body.add(outline(m)); return m;
   };
@@ -49,12 +53,12 @@ export function buildAmbulance() {
   for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.06, 0.6, 0.9), glass, s * 1.11, 1.75, 2.0, false);
   // Fahrgestell + Räder
   add(new THREE.BoxGeometry(2.1, 0.35, 6.2), dark, 0, 0.55, 0.3, false);
-  const wheelG = new THREE.CylinderGeometry(0.45, 0.45, 0.35, 12); wheelG.rotateZ(Math.PI / 2);
+  const wheelG = new THREE.CylinderGeometry(WR, WR, MO ? 0.8 : 0.35, 14); wheelG.rotateZ(Math.PI / 2);
   const wheels: THREE.Mesh[] = [];
   const steerPivots: THREE.Group[] = [];
   for (const [x, z] of [[-1.05, 2.4], [1.05, 2.4], [-1.05, -2.0], [1.05, -2.0]]) {
     // Lenkgelenk: Pivot dreht um y, das Rad darin nur um seine Achse → kein Eiern
-    const pivot = new THREE.Group(); pivot.position.set(x, 0.45, z); body.add(pivot);
+    const pivot = new THREE.Group(); pivot.position.set(MO ? x * 1.45 : x, WR - lift, z); body.add(pivot);
     const w = new THREE.Mesh(wheelG, dark); pivot.add(w); wheels.push(w);
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.37, 8).rotateZ(Math.PI / 2), grey); pivot.add(hub);
     if (z > 0) steerPivots.push(pivot);
@@ -74,7 +78,7 @@ export function buildAmbulance() {
     lights.push(add(new THREE.BoxGeometry(0.5, 0.25, 0.4), blueOff, x, y, z, false));
   }
   // Seitlicher Stern-des-Lebens-freier Hinweis: einfaches weisses Kreuz auf blauem Feld, kein Logo
-  for (const s of [-1, 1]) {
+  if (!FW && !GL) for (const s of [-1, 1]) { // Kreuz nur bei Ambulanzen
     add(new THREE.BoxGeometry(0.04, 0.8, 0.8), toon('#0E73BA'), s * 1.17, 2.25, -1.4, false);
     add(new THREE.BoxGeometry(0.05, 0.55, 0.16), white, s * 1.18, 2.25, -1.4, false);
     add(new THREE.BoxGeometry(0.05, 0.16, 0.55), white, s * 1.18, 2.25, -1.4, false);
@@ -82,11 +86,11 @@ export function buildAmbulance() {
   // Hecktüren mit Fenstern und Warnwinkeln (Comic-Textur)
   const rear = document.createElement('canvas'); rear.width = 128; rear.height = 128;
   const rg = rear.getContext('2d')!;
-  rg.fillStyle = '#F7F7F4'; rg.fillRect(0, 0, 128, 128);
+  rg.fillStyle = FW ? '#D7262E' : GL ? '#FFB3D1' : '#F7F7F4'; rg.fillRect(0, 0, 128, 128);
   rg.fillStyle = '#4F6F8C'; rg.fillRect(12, 12, 46, 34); rg.fillRect(70, 12, 46, 34);
   rg.fillStyle = 'rgba(255,255,255,.5)'; rg.fillRect(18, 16, 8, 26); rg.fillRect(76, 16, 8, 26);
   rg.save(); rg.beginPath(); rg.rect(0, 74, 128, 54); rg.clip();
-  for (let x = -128; x < 256; x += 22) { rg.fillStyle = (x / 22) % 2 ? '#D8343A' : '#E3EE3A'; rg.beginPath(); rg.moveTo(x, 128); rg.lineTo(x + 11, 128); rg.lineTo(x + 11 + 54, 74); rg.lineTo(x + 54, 74); rg.fill(); }
+  for (let x = -128; x < 256; x += 22) { rg.fillStyle = (x / 22) % 2 ? (FW ? '#F2F2EE' : GL ? '#FF8FB8' : '#D8343A') : (FW ? '#D7262E' : GL ? '#9EE6CF' : '#E3EE3A'); rg.beginPath(); rg.moveTo(x, 128); rg.lineTo(x + 11, 128); rg.lineTo(x + 11 + 54, 74); rg.lineTo(x + 54, 74); rg.fill(); }
   rg.restore();
   rg.strokeStyle = '#3b302b'; rg.lineWidth = 3; rg.beginPath(); rg.moveTo(64, 4); rg.lineTo(64, 124); rg.stroke();
   rg.strokeRect(2, 2, 124, 124);
@@ -100,12 +104,29 @@ export function buildAmbulance() {
   sg.clearRect(0, 0, 256, 128);
   sg.fillStyle = '#4F6F8C'; sg.fillRect(150, 10, 70, 40); sg.fillStyle = 'rgba(255,255,255,.45)'; sg.fillRect(156, 14, 10, 32);
   sg.strokeStyle = '#3b302b'; sg.lineWidth = 3; sg.strokeRect(150, 10, 70, 40);
-  sg.fillStyle = '#0E73BA'; sg.font = 'bold 44px system-ui, sans-serif'; sg.fillText('144', 20, 48);
+  sg.fillStyle = FW ? '#FFFFFF' : GL ? '#C2185B' : '#0E73BA'; sg.font = 'bold 44px system-ui, sans-serif'; sg.fillText(FW ? '118' : GL ? 'GLACE' : '144', 20, 48);
   const sideTex = new THREE.CanvasTexture(side); sideTex.colorSpace = THREE.SRGBColorSpace;
   for (const sgn of [-1, 1]) {
     const pl = new THREE.Mesh(new THREE.PlaneGeometry(4.1, 2.05), new THREE.MeshBasicMaterial({ map: sideTex, transparent: true }));
     pl.position.set(sgn * 1.162, 2.45, -1.05); pl.rotation.y = sgn * Math.PI / 2;
     body.add(pl);
+  }
+  // 14zi: Aufbauten je Fahrzeug
+  if (FW) { // Feuerwehr: silberne Leiter auf dem Dach, Rollläden seitlich
+    const alu = toon('#C9CDD2');
+    for (const sx of [-0.45, 0.45]) add(new THREE.BoxGeometry(0.1, 0.12, 5.6), alu, sx, 3.15, -0.2);
+    for (let i = 0; i < 12; i++) add(new THREE.BoxGeometry(0.9, 0.06, 0.08), alu, 0, 3.15, -2.9 + i * 0.48, false);
+    add(new THREE.BoxGeometry(0.5, 0.25, 0.5), alu, 0, 3.05, -2.8);
+    for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.05, 1.3, 1.1), toon('#B8BCC2'), sd * 1.17, 2.0, -2.5 + k * 1.3, false);
+  }
+  if (GL) { // Glace-Wagen: riesiges Cornet auf dem Dach
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 12), toon('#D9A35B')); cone.rotation.x = Math.PI; cone.position.set(0, 3.8, -1.2); body.add(cone, outline(cone));
+    for (const [c, y, dx] of [['#FFF4E0', 4.6, -0.15], ['#FF8FB8', 4.95, 0.12], ['#7B4A2E', 5.3, 0]] as [string, number, number][]) { const sc = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 10), toon(c)); sc.position.set(dx, y, -1.2); body.add(sc, outline(sc)); }
+    const ch = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), toon('#E3262E')); ch.position.set(0, 5.95, -1.2); body.add(ch);
+  }
+  if (MO) { // Monster-Ambulanz: Überrollbügel und dicke Stossstangen
+    for (const z of [3.7, -3.4]) add(new THREE.BoxGeometry(2.6, 0.4, 0.35), dark, 0, 0.85, z);
+    add(new THREE.BoxGeometry(2.2, 0.12, 0.12), dark, 0, 3.25, 0.8, false);
   }
   // Schwindel-Sternchen (bei Remplern)
   const dizzy = new THREE.Group();
@@ -140,14 +161,17 @@ export class Vehicle {
   wobble = 0; // Sekunden Schwindel-Effekt
   model = buildAmbulance();
   skin = 'standard'; private skinT = 0;
-  /** Lackierung (freigespielt mit Luksi-Herzen) */
+  /** 14zi: Fahrzeug (freigespielt mit Luksi-Herzen): ganzes Modell austauschen */
   setSkin(name: string) {
-    this.skin = name; const { white, yellow, red } = this.model.mats as unknown as Record<string, THREE.MeshToonMaterial>;
-    const S: Record<string, string[]> = { standard: ['#F7F7F4', '#E3EE3A', '#D8343A'], regenbogen: ['#F7F7F4', '#E3EE3A', '#D8343A'], luksi: ['#FFD447', '#1E5AA8', '#F39204'], gold: ['#E8C14A', '#FFF2B0', '#B8860B'] };
-    const c = S[name] || S.standard; white.color.set(c[0]); yellow.color.set(c[1]); red.color.set(c[2]);
-    (this.model.mats as any).rear.color.set(name === 'gold' ? '#F0CF73' : name === 'luksi' ? '#FFE27A' : '#ffffff');
+    if (!['standard', 'feuerwehr', 'glace', 'monster'].includes(name)) name = 'standard'; // alte Lackierungen (Regenbogen, Luksi, Gold) → Standard
+    if (name === this.skin) return;
+    this.skin = name; const old = this.model, parent = old.root.parent;
+    this.model = buildAmbulance(name); this.model.root.rotation.order = 'YXZ';
+    this.model.root.position.copy(old.root.position); this.model.root.rotation.copy(old.root.rotation);
+    if (parent) { parent.remove(old.root); parent.add(this.model.root); }
+    old.root.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
   }
-  animateSkin(dt: number) { if (this.skin !== 'regenbogen') return; this.skinT += dt; const { yellow, red } = this.model.mats as unknown as Record<string, THREE.MeshToonMaterial>; yellow.color.setHSL((this.skinT * 0.25) % 1, 0.85, 0.6); red.color.setHSL((this.skinT * 0.25 + 0.5) % 1, 0.85, 0.5); (this.model.mats as any).rear.color.setHSL((this.skinT * 0.25) % 1, 0.7, 0.8); }
+  animateSkin(dt: number) { this.skinT += dt; }
   private t = 0;
   constructor(public mask: Mask, public terrain: Terrain) { this.model.root.rotation.order = 'YXZ'; }
 

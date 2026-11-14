@@ -1,9 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 15:45. Fertig: **2026-11-14zh** = durchgehende Welt M1 (Nachbargegenden im Hintergrund, Wechsel ohne Neuladen) + Einsätze je Geländekammer. ZIP an Simon, nicht hochgeladen. Hauptfokus weiter: durchgehende Welt (Plan claude/WELT-STREAMING.md). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 17:15. Fertig: **2026-11-14zi** = durchgehende Welt M2/M3 (ganze Kette Süd–Luzern–West–a8–a7, Schnellreise ohne Neuladen) + neue Fahrzeuge. ZIP an Simon, nicht hochgeladen. Plan claude/WELT-STREAMING.md. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zi (2026-11-14)
+- Kette getestet (je Übergang eigener Lauf, /tmp/stream_gen.py bzw. stream_i.py, Route per /tmp/route.py Dijkstra über city.json): Luzern→Süd bei z 6300 (Süd in 17.9 s geladen), West→a8 bei x −8500 (14 s), a8→a7 bei x −14500 (24.8 s), Luzern→West (14zh). Alle ohne Seitenfehler, Wechsel «aktiv» korrekt.
+- Schnellreise (`switchTo`): mit STREAM und allein → Zielgegend laden (falls nicht geladen), `activate`, placeCar, Overlay schliessen, alle anderen Slots entladen. Test tests/travel_stream.py: Luzern → Spital Nidwalden ohne Seitenwechsel (framenavigated), Auto am Spital (3772, 10058), keine Fehler.
+- Fahrzeuge: vehicle.ts `buildAmbulance(kind)` standard | feuerwehr (rot, Leiter, Rollläden, «118») | glace (rosa/mint, Cornet mit 3 Kugeln + Kirsche, «GLACE») | monster (Räder r 1.05, breiter, Aufbau +0.85 m, Stossstangen). `setSkin` tauscht das ganze Modell; alte Namen → standard. main.ts SKIN_LABEL/NEED (5/15/30 ♥), Menüzeile «Fahrzeug». Sichtprüfung aller vier.
+- Grenz-Wegweiser nur noch mit `?nostream`.
+- Tests: smoke_a a7 8/8, west 7/7 ohne Fehler.
+- Offen: Echt-Modus Nachbar ohne 3D-Häuser (stageB je Slot), Speicher messen, Mehrspieler über Grenzen, Einsatz über Grenze.
 
 ## Version 14zh (2026-11-14) – Durchgehende Welt M1
 - main.ts: Gegend-Werte (REGION, RA, DIR, HOSP, RPL, RP, HALT, SP, SPN, TO_H, AT_H) jetzt `let` + `setRegionVars(id)`; `aerialFor(id)`; `getBuf/getJSON(name, dir)`, `decodeTerrain`, `loadForestMask(…, dir)`.
