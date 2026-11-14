@@ -41,7 +41,7 @@ for e in els:
         if p and inside(p, 0) and ort in ('Sursee', 'Wolhusen'): hosp = {'name': t['name'], 'label': 'LUKS ' + ort, 'x': p[0], 'z': p[1], 'kind': 'spital'}; break
 # 14o (Simon): keine erfundenen Rettungsposten mehr. Ohne LUKS-Spital ist das Ziel der Bahnhof des Hauptorts (OSM railway=station/halt),
 # wo es keinen gibt, die Bushaltestelle im Dorfzentrum. Übergabe dort an die Eltern (Spieltext), Schnellreise-Station ebenda.
-HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter'}  # Hauptort des Regionsnamens (Buttisholz, Ruswil)
+HALT = {'a4': 'Buttisholz Dorf', 'a5': 'Rottalcenter', 'a15': 'Triengen Dorf'}  # Hauptort des Regionsnamens; a15: Triengen-Winikon ist nur Güterbahnhof (Personenverkehr seit 1971 eingestellt)
 BHF = {'a2': 'Nottwil', 'a6': 'Rothenburg Station', 'a8': 'Malters', 'a9': 'Emmenbrücke Kapf', 'a10': 'Buchrain', 'a11': 'Küssnacht am Rigi', 'a12': 'Hochdorf', 'a13': 'Willisau', 'a14': 'Wauwil'}
 if not hosp:
     big = [q for q in places if inside(q[1:3], 100)]

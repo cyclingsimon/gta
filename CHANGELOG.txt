@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14u  Neue Gegend Knutwil und Triengen (Surental)
+- Neue Gegend «Knutwil und Triengen» (rund 38 km², mit Büron, Geuensee, St. Erhard, Bad Knutwil und Wilihof): 4003 echte 3D-Häuser, Gelände, Luftbild, Hecken und Obstgärten, 8 Einsätze an echten Orten (u. a. Badi Schlierbach, Sportplatz Büron, Kirche Bad Knutwil), Treffpunkt Haltestelle Triengen Dorf (Triengen hat keinen Personenbahnhof), 40 Luksi-Herzen, Busse. Anschluss an Sursee (Surentalstrasse), Sempach/Geuensee und Wauwil (Kantonsstrasse)
+- Spielwelt jetzt 20 Gegenden, rund 659 km² mit rund 88 000 Gebäuden
+
 2026-11-14t  Neue Gegend Dagmersellen und Wauwil (Wiggertal)
 - Neue Gegend «Dagmersellen und Wauwil» (rund 46 km², mit Nebikon, Egolzwil, Schötz, Uffikon und dem Wauwilermoos): 6678 echte 3D-Häuser, Gelände, Luftbild, Hecken, 8 Einsätze an echten Orten (u. a. Badi Uffikon, Bahnhof Nebikon, Sportplatz Schötz), Treffpunkt Bahnhof Wauwil, 40 Luksi-Herzen, Busse und S-Bahn. Anschluss an Sursee (bei Kaltbach) und Willisau (Surseestrasse)
 - Spielwelt jetzt 19 Gegenden, rund 623 km² mit rund 84 000 Gebäuden

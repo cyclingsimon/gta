@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 05:00. Fertig: **2026-11-14t** = 14s + Region a14 Dagmersellen/Wauwil. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 07:00. Fertig: **2026-11-14u** = 14t + Region a15 Knutwil/Triengen. ZIP an Simon, nicht hochgeladen. Simon lässt den PC bis Sa 14.11. Mittag laufen (Browser für Geodaten). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14u (14.11. 05:05–07:00, nicht hochgeladen)
+- Region **a15 «Knutwil und Triengen»** (Surental) x −20000..−13500, z −20300..−14400 (LV95 E 2645746–2652477, N 1225746–1231921), überlappt a1/a2 (200 m) und a14 (200 m) → schliesst die Lücke nordöstlich a14. b3dm x 941–980 / y 1408–1463 (2240 Kacheln, 738 mit Inhalt), 34 neue Höhenkacheln, bus_a15.json.
+- Treffpunkt **Haltestelle Triengen Dorf** (HALT-Tabelle). OSM führt «Triengen-Winikon» als railway=station, das ist aber die Sursee–Triengen-Bahn (nur Güterverkehr, Personenverkehr seit 1971 eingestellt) → kein Bahnhof-Treffpunkt [Vertrauen hoch].
+- Ergebnis: 4003 Gebäude (3D), 8 Einsätze, 6 Kreisel, Hecken 14 / 0.8 km, 596 Obst-/Reihenbäume. Spielumfang 659.4 km², 87 616 Gebäude (OSM-Zählung).
+- Tests 14u: smoke_a a15 ok (8/8, keine Fehler); tests/region_a15.py: a15↔a1 (Surentalstrasse), a15↔a2 (Strasse Geuensee–Sempach bei x −13900), a15↔a14 (Kantonsstrasse) je beide Richtungen ok (Läufe in drei Teilen, weil zwei Startpunkte zu weit vom Rand lagen; Startpunkte korrigiert, Gesamtlauf am Stück nicht wiederholt).
 
 ## Version 14t (14.11. 03:30–05:00, nicht hochgeladen)
 - Region **a14 «Dagmersellen und Wauwil»** (Wiggertal) x −26200..−19800, z −18300..−10800 (LV95 E 2639570–2646210, N 1222082–1229858, 46 km²), überlappt a13 (200 m) und a1 (200 m, nur z −14600..−10800). b3dm x 904–943 / y 1374–1444 (2840 Kacheln, 1063 mit Inhalt), 42 neue Höhenkacheln, bus_a14.json (Linien 63/66/80/82/271/275/277). Treffpunkt Bahnhof Wauwil (BHF-Tabelle; OSM kennt «Nebikon» station und «Wauwil» halt, Dagmersellen nicht als railway=station in der bbox).

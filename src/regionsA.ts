@@ -309,5 +309,27 @@ export const REGIONS_A: Record<string, RegionA> = {
    "z": -14613.9
   },
   "welcome": "Willkommen in Dagmersellen und Wauwil! Treffpunkt ist der Bahnhof Wauwil. Er ist auf der Karte blau markiert."
+ },
+ "a15": {
+  "name": "Knutwil und Triengen",
+  "b": [
+   -20000,
+   -20300,
+   -13500,
+   -14400
+  ],
+  "aerial": {
+   "E0": 2645746,
+   "E1": 2652477,
+   "N0": 1225746,
+   "N1": 1231921
+  },
+  "hosp": {
+   "label": "Haltestelle Triengen Dorf",
+   "kind": "rp",
+   "x": -17407.4,
+   "z": -20013.5
+  },
+  "welcome": "Willkommen in Knutwil und Triengen! Treffpunkt ist die Haltestelle Triengen Dorf. Sie ist auf der Karte blau markiert."
  }
 };
