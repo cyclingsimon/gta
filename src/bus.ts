@@ -12,25 +12,34 @@ export interface BusPlayer { x: number; z: number; heading: number; speed: numbe
 const MAX_BUSES = 14;
 const LANE = 1.7;
 
-/** 13o: Betreiber-Farben. VBL blau-weiss, PostAuto gelb; übrige Regionalbetreiber (Rottal Auto, Auto AG Rothenburg/Schwyz, ZVB)
- *  [Annahme] neutral weiss mit grauem Unterteil und Betreibername, weil die echten Lackierungen nicht geprüft sind. */
+/** Betreiber-Farben (P-A Lauf 1, Quellen in docs/par/realismus.md):
+ *  VBL: «mainly white, with blue finish» (Wikipedia Verkehrsbetriebe Luzern) → weiss mit blauem Unterteil [belegt; Blauton Annahme].
+ *  PostAuto: gelb (postauto.ch «Die Marke») [belegt]; dunkles Unterteil/Stossfänger und roter Schriftzug [Annahme].
+ *  AAGS: rot-weiss (Wikipedia Auto AG Schwyz) [belegt; Aufteilung Annahme].
+ *  ZVB: weiss mit Blau [Annahme, Vertrauen mittel]. AAGR, ARAG, AAGU, SGV: neutral weiss/grau [Annahme, Lackierung nicht belegt]. */
 function brand(op: string) {
-  if (op === 'PAG') return { pag: true, top: '#FFCC00', low: '#FFCC00', txt: '#D2001E', name: 'PostAuto' };
-  if (op === 'VBL') return { pag: false, top: '#F4F6F8', low: '#0B5CAB', txt: '#FFFFFF', name: 'vbl' };
-  const name = ({ ARAG: 'Rottal Auto', AAGR: 'Auto AG', AAGU: 'Auto AG Uri', AAGS: 'Auto AG Schwyz', ZVB: 'zvb', SGV: 'SGV' } as Record<string, string>)[op] || op;
-  return { pag: false, top: '#F4F6F8', low: '#6B7178', txt: '#FFFFFF', name };
+  if (op === 'PAG') return { pag: true, top: '#FFCC00', low: '#FFCC00', skirt: '#3A3F44', txt: '#D2001E', name: 'PostAuto' };
+  if (op === 'VBL') return { pag: false, top: '#F4F6F8', low: '#0B5CAB', skirt: '#0B5CAB', txt: '#FFFFFF', name: 'vbl' };
+  if (op === 'AAGS') return { pag: false, top: '#F4F6F8', low: '#C8102E', skirt: '#C8102E', txt: '#FFFFFF', name: 'Auto AG Schwyz' };
+  if (op === 'ZVB') return { pag: false, top: '#F4F6F8', low: '#1F6DB5', skirt: '#1F6DB5', txt: '#FFFFFF', name: 'zvb' };
+  const name = ({ ARAG: 'Rottal Auto', AAGR: 'Auto AG', AAGU: 'Auto AG Uri', SGV: 'SGV' } as Record<string, string>)[op] || op;
+  return { pag: false, top: '#F4F6F8', low: '#6B7178', skirt: '#6B7178', txt: '#FFFFFF', name };
 }
 function sideTex(op: string, ref: string, flip = false) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d')!;
   const B = brand(op), pag = B.pag;
-  g.fillStyle = B.top; g.fillRect(0, 0, 512, 128);           // Dach/Grundfarbe
-  g.fillStyle = '#25313B'; g.fillRect(0, 26, 512, 52);                               // Fensterband
-  g.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 10; x < 512; x += 64) g.fillRect(x, 30, 8, 44); // Spiegelung
-  g.fillStyle = '#1B1F24'; for (let x = 62; x < 512; x += 64) g.fillRect(x, 26, 4, 52);             // Fensterpfosten
-  g.fillStyle = B.low; g.fillRect(0, 78, 512, 50);             // Unterteil
-  if (!pag) { g.fillStyle = '#FFFFFF'; g.fillRect(0, 78, 512, 5); }
-  g.font = 'bold 34px system-ui, sans-serif'; g.fillStyle = B.txt; g.textAlign = flip ? 'right' : 'left'; g.fillText(B.name, flip ? 486 : 26, 118);
-  g.fillStyle = B.txt; g.font = 'bold 30px system-ui, sans-serif'; g.fillText(ref, flip ? 72 : 440, 118);
+  g.fillStyle = B.top; g.fillRect(0, 0, 512, 128);                                   // Dach/Grundfarbe
+  g.fillStyle = '#25313B'; g.fillRect(0, 24, 512, 56);                               // Fensterband (tief, Niederflur)
+  g.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 10; x < 512; x += 64) g.fillRect(x, 28, 8, 48); // Spiegelung
+  g.fillStyle = '#1B1F24'; for (let x = 62; x < 512; x += 64) g.fillRect(x, 24, 4, 56);             // Fensterpfosten
+  g.fillStyle = B.low; g.fillRect(0, 84, 512, 44);                                   // Unterteil
+  if (pag) { g.fillStyle = B.skirt; g.fillRect(0, 116, 512, 12); }                   // dunkler Schweller (Annahme)
+  else { g.fillStyle = '#FFFFFF'; g.fillRect(0, 80, 512, 4); }
+  // Doppeltür (Glas bis unten) – je Wagenkasten eine, Lage je Seite gespiegelt
+  const dx = flip ? 392 : 64; g.fillStyle = '#2C3A45'; g.fillRect(dx, 18, 56, 110); g.fillStyle = '#5F7586'; g.fillRect(dx + 4, 22, 22, 104); g.fillRect(dx + 30, 22, 22, 104);
+  g.strokeStyle = '#1B1F24'; g.lineWidth = 3; g.strokeRect(dx, 18, 56, 110);
+  g.font = 'bold 30px system-ui, sans-serif'; g.fillStyle = B.txt; g.textAlign = flip ? 'right' : 'left'; g.fillText(B.name, flip ? 380 : 136, 116);
+  g.fillStyle = B.txt; g.font = 'bold 28px system-ui, sans-serif'; g.textAlign = flip ? 'left' : 'right'; g.fillText(ref, flip ? 20 : 492, 116);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 function frontTex(op: string, ref: string, to: string) {
@@ -42,7 +51,9 @@ function frontTex(op: string, ref: string, to: string) {
   g.font = 'bold 19px monospace'; g.fillText(to.slice(0, 15), 22 + (ref.length + 1) * 18, 38);
   g.fillStyle = '#25313B'; g.fillRect(14, 58, 228, 112);                              // Frontscheibe
   g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(30, 160); g.lineTo(90, 66); g.lineTo(120, 66); g.lineTo(60, 160); g.fill();
+  g.fillStyle = B.top; g.fillRect(0, 172, 256, 22);                                    // Front-Grundfarbe unter der Scheibe
   g.fillStyle = '#FFF7D6'; g.fillRect(20, 206, 40, 18); g.fillRect(196, 206, 40, 18); // Scheinwerfer
+  g.fillStyle = '#2A2F33'; g.fillRect(0, 236, 256, 20);                                // Stossfänger
   if (!pag) { g.fillStyle = '#FFFFFF'; g.font = 'bold 28px system-ui'; g.textAlign = 'center'; g.fillText(B.name === 'vbl' ? 'vbl' : B.name.split(' ')[0], 128, 226); g.textAlign = 'left'; }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
@@ -73,11 +84,11 @@ function busSegGeo(segL: number, front: boolean, rear: boolean) {
 /** Heck: Werbung «Kinderspital Zentralschweiz» mit Luksi (ein Canvas je Betreiberfarbe, Luksi-Bild wird nachgeladen) */
 const rearCache = new Map<string, THREE.CanvasTexture>();
 function rearTex(op: string) {
-  const k = op === 'PAG' || op === 'VBL' ? op : 'X'; const old = rearCache.get(k); if (old) return old;
+  const k = op; const old = rearCache.get(k); if (old) return old;
   const c = document.createElement('canvas'); c.width = 512; c.height = 560; const g = c.getContext('2d')!; g.scale(2, 2);
   const imgs: { luksi?: HTMLImageElement; logo?: HTMLImageElement } = {};
   const draw = () => {
-    g.fillStyle = k === 'PAG' ? '#FFCC00' : k === 'VBL' ? '#0B5CAB' : '#6B7178'; g.fillRect(0, 0, 256, 280);
+    g.fillStyle = brand(k).low; g.fillRect(0, 0, 256, 280);
     g.fillStyle = '#25313B'; g.fillRect(16, 12, 224, 70);                               // Heckscheibe
     g.fillStyle = '#FFFFFF'; g.beginPath(); (g as any).roundRect ? (g as any).roundRect(12, 92, 232, 140, 14) : g.rect(12, 92, 232, 140); g.fill(); // Werbefläche
     const L = imgs.luksi; if (L) { const h = 128, w = L.width * h / L.height; g.drawImage(L, 16, 98, w, h); }
@@ -100,6 +111,7 @@ export class Buses {
   private mats = new Map<string, THREE.Material[]>();
   private rearMats = new Map<string, THREE.Material>();
   private atlasMats = new Map<string, THREE.Material>();
+  private roofMat = toon('#C9CED2');
   private rearMat(op: string) { let r = this.rearMats.get(op); if (!r) { r = toon('#ffffff', { map: rearTex(op) }); this.rearMats.set(op, r); } return r; }
   private sig: number[][] = []; private sigState: (i: number) => number = () => 0;
   stats = { spawns: 0, stops: 0 };
@@ -202,9 +214,18 @@ export class Buses {
         for (const x of [-0.3, 0.3]) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, L, 5), toon('#2A2F33')); pole.rotation.x = -(Math.PI / 2 - A); pole.position.set(x, 3.3 + Math.sin(A) * L / 2, 0.8 - Math.cos(A) * L / 2); seg.add(pole);
           const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.35), toon('#1A1D20')); head.position.set(x, 3.3 + Math.sin(A) * L, 0.8 - Math.cos(A) * L); seg.add(head); }
       }
-      // Räder und Stromabnehmer (alle dunkel) zu einem Netz zusammenfassen: 1 Zeichenaufruf statt bis 7
+      // P-A: Faltenbalg (Gelenk) hinter jedem nicht-letzten Wagenkasten, gerippt
+      if (i < n - 1) for (let k = 0; k < 4; k++) { const fb = new THREE.Mesh(new THREE.BoxGeometry(k % 2 ? 2.38 : 2.46, k % 2 ? 2.5 : 2.62, (gap + 0.5) / 4), wheelM); fb.position.set(0, 1.68, -segL / 2 - gap / 2 + ((k + 0.5) / 4 - 0.5) * (gap + 0.5)); seg.add(fb); }
+      // P-A: Dachaufbauten (Klima/Batterie bzw. Trolley-Ausrüstung) – hellgrau, eigenes Netz
+      const roofG: THREE.BufferGeometry[] = [];
+      { const rb = new THREE.BoxGeometry(1.9, 0.32, Math.min(3.2, segL * 0.4)); rb.translate(0, 3.25, i === 0 && l.trolley ? -1.8 : 0); roofG.push(rb.toNonIndexed());
+        if (l.trolley || l.op === 'VBL') { const rb2 = new THREE.BoxGeometry(1.6, 0.22, 1.6); rb2.translate(0, 3.2, -segL / 2 + 1.4); roofG.push(rb2.toNonIndexed()); } }
+      for (const q of roofG) q.deleteAttribute('uv');
+      seg.add(new THREE.Mesh(mergeGeometries(roofG, false)!, this.roofMat));
+      const roofMesh = seg.children[seg.children.length - 1];
+      // Räder, Faltenbalg und Stromabnehmer (alle dunkel) zu einem Netz zusammenfassen
       const dark: THREE.BufferGeometry[] = [];
-      for (const c of [...seg.children]) { if (c === body) continue; const mm = c as THREE.Mesh; mm.updateMatrix(); const q = (mm.geometry.index ? mm.geometry.toNonIndexed() : mm.geometry.clone()); q.deleteAttribute('uv'); q.applyMatrix4(mm.matrix); dark.push(q); seg.remove(c); }
+      for (const c of [...seg.children]) { if (c === body || c === roofMesh) continue; const mm = c as THREE.Mesh; mm.updateMatrix(); const q = (mm.geometry.index ? mm.geometry.toNonIndexed() : mm.geometry.clone()); q.deleteAttribute('uv'); q.applyMatrix4(mm.matrix); dark.push(q); seg.remove(c); }
       if (dark.length) seg.add(new THREE.Mesh(mergeGeometries(dark, false)!, wheelM));
       g.add(seg); segs.push(seg);
     }
