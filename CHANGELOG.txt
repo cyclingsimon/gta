@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zl  Streaming fertig: weniger Speicher, Einsatz über die Grenze (kommt mit dem ZIP 2026-11-15a)
+- Weniger Speicher: Brücken-Höhen werden nur noch dort gespeichert, wo Brücken sind (Luzern mit zwei Nachbargegenden rund 70 MB weniger)
+- Navi rechnet beim Wechsel in eine neue Gegend sofort neu
+- Kommt Luksi in eine Gegend, die noch eingeblendet wird, ist sofort alles da
+- Geprüft: Übergänge Emmenbrücke–Rothenburg, Emmenbrücke–Root, Malters–Wolhusen-Seite, Küssnacht-Seite–Meggen, Ruswil-Seite–Sempach-Seite; ganzer Einsatz über die Grenze
+
 2026-11-14zk  Navi über die Grenze, weniger Ruckeln beim Nachladen (kommt mit dem ZIP 2026-11-15a)
 - Navi findet Ziele in der Nachbargegend: die Route führt über eine Strasse, die über die Grenze geht (vorher nur Luftlinie)
 - Unterwegs ins Spital und in eine neue Gegend gefahren: Luksi nimmt das nähere Spital

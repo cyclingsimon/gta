@@ -790,6 +790,7 @@ function crossRoute(a: number, t: [number, number]): number[][] | null {
   let best: number[][] | null = null, bl = 1e18;
   for (const [[gi, gj]] of cand) { const r1 = nav.route(a, gi), r2 = tn.route(gj, bt); if (!r1 || !r2) continue;
     const L = pathLength(r1) + pathLength(r2); if (L < bl) { bl = L; best = r1.concat(r2); } }
+  if (!best && TEST) console.log('[welt] crossRoute ohne Weg', key, 'a', a, 'bt', bt, 'Kandidaten', cand.map(([[gi, gj]]) => [!!nav.route(a, gi), !!tn.route(gj, bt)]).join(' '));
   return best;
 }
 function updateRoute(dt: number) {
@@ -1557,6 +1558,7 @@ if (location.search.includes('test')) {
     quiet: () => { offerTimer = 1e9; $('#ui').style.display = 'none'; },
     drive: (on: boolean) => { (window as any).__autodrive = on; },
     grid: (x: number, z: number, r: number) => { const rows: string[] = []; for (let j = -r; j <= r; j += 2) { let l = ''; for (let i = -r; i <= r; i += 2) { const v = world.mask.at(x + i, z + j); l += Math.abs(i) < 1 && Math.abs(j) < 1 ? 'X' : v === 2 ? '#' : v === 1 ? '~' : world.mask.isRoad(x + i, z + j) ? '.' : ' '; } rows.push(l); } return rows.join('\n'); },
+    hgt: (x: number, z: number) => ({ b: terrain.bridgeAt(x, z), g: terrain.ground(x, z), h: terrain.height(x, z) }),
     tgt: (x: number, z: number) => { setTarget([x, z]); route = null; routeTimer = 0; },
     goHospital: () => { current = missions[0]; phase = 'toHospital'; phaseTime = 0; setTarget(hospitalBay, '#3FA9FF'); },
     tris: () => { const o: Record<string, number> = {}; world.group.traverse((m: any) => { if (m.isMesh || m.isLineSegments) { const g = m.geometry; const n = (g.index ? g.index.count : g.getAttribute('position').count) / (m.isMesh ? 3 : 2) * (m.count || 1); const k = (m.material.map ? 'tex:' : '') + (m.name || m.type) + '/' + (m.material.color ? m.material.color.getHexString() : ''); o[k] = (o[k] || 0) + Math.round(n); } }); return Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12); },
@@ -1705,6 +1707,7 @@ function regionAt(x: number, z: number, pad = 0): string[] {
 }
 /** Aktive Gegend wechseln: Navi, Einsätze, Herzen, Verkehr, Busse, Züge, Ziel – ohne Neuladen */
 function activate(s: Slot) {
+  while (revealQ.length) revealQ.shift()!.visible = true; // 14zl: beim Betreten alles sofort zeigen (falls das Einblenden noch läuft)
   const from = REGION; setRegionVars(s.id);
   world = s.world; terrain = s.terrain; cityData = s.data; propsData = s.props ? JSON.parse(JSON.stringify(s.props)) : null;
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
@@ -1722,7 +1725,7 @@ function activate(s: Slot) {
   { const nb = snap([world.hospital.x, world.hospital.z]); // 14zk: unterwegs ins Spital – das nähere Spital nehmen
     if (phase === 'toHospital' && Math.hypot(hospitalBay[0] - car.x, hospitalBay[1] - car.z) < Math.hypot(nb[0] - car.x, nb[1] - car.z)) { /* altes bleibt */ }
     else { hospitalBay = nb; if (phase === 'toHospital') setTarget(hospitalBay, '#3FA9FF'); } }
-  crossCache = null;
+  crossCache = null; route = null; routeTimer = 0; // 14zl: Navi sofort mit dem Netz der neuen Gegend neu rechnen
   MA = s.ma || null;
   if (phase === 'offer') declineOffer();
   setupMissions(); setupFun(s.data); placeHospSign();
