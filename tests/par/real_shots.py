@@ -15,8 +15,13 @@ async def main():
             await pg.screenshot(path=f"shots/pa_{v.replace('+', '_')}.png")
             if i == 0:
                 st = await pg.evaluate('window.__stats'); print(json.dumps(st, indent=0))
-                ok = st.get('hochrechnung_3500_min', 0) <= 180000 and st.get('verkehr_proxy_netze', 0) >= 2 and st.get('strasse_objekte', 0) > 0
-                print('BUDGET/BAUSTEINE', 'OK' if ok else 'FEHLER', st.get('hochrechnung_3500_min'))
+                LIM = {'spar_leuchte_modern': 28, 'spar_leuchte': 28, 'spar_kandelaber': 48, 'spar_wartehalle': 120, 'spar_bank': 60,
+                       'spar_auto_kombi': 180, 'spar_auto_kleinwagen': 180, 'spar_auto_suv': 180, 'spar_auto_lieferwagen': 180,
+                       'hochrechnung_3500_min': 180000, 'stadt_delta_dreiecke': 30000, 'stadt_delta_netze': 25}
+                bad = {k: (st.get(k), v) for k, v in LIM.items() if st.get(k) is None or st[k] > v}
+                print('BUDGET je Baustein:', 'OK' if not bad else 'FEHLER ' + str(bad))
+                print('Stadt alt/neu Dreiecke', st.get('stadt_alt_dreiecke'), st.get('stadt_neu_dreiecke'), 'Netze', st.get('stadt_alt_netze'), st.get('stadt_neu_netze'))
+                print('Stadt-Netze neu:', await pg.evaluate('window.__stadt.neu.join(" ")'))
             print(v, await pg.evaluate("document.getElementById('info').textContent"))
         echte = [e for e in errs if '404' not in e]
         print('Fehler (ohne 404 Busheck-Bilder)', echte); await b.close()

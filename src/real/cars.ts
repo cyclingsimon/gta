@@ -7,7 +7,7 @@ import { parts, box, cylX, tube, tris, hash2, weighted, type Part } from './geo'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from '../world';
 import { REAL } from './config';
-import { buildFurniture } from './furniture';
+import { sparCarGeometry, sparGeometry, realMaterial, bakeCells } from './spar';
 
 export type CarType = 'kombi' | 'kleinwagen' | 'suv' | 'lieferwagen';
 export const CAR_TYPES: CarType[] = ['kombi', 'kleinwagen', 'suv', 'lieferwagen'];
@@ -139,86 +139,76 @@ export function veloRiderGeometry() {
  *  verteilt aber Auto i auf das Netz seines Typs. REAL.cars = false → exakt die bisherigen Kisten. */
 export function realCarMeshes(n: number, oldBody: THREE.BufferGeometry, oldCabin: THREE.BufferGeometry, on = REAL.cars) {
   if (!on) return { body: new THREE.InstancedMesh(oldBody, toon('#ffffff'), n), cabin: new THREE.InstancedMesh(oldCabin, toon('#BFD8E6'), n) };
+  // Lauf 3: je Typ EIN Netz (Sparform 88 Dreiecke, Lack über Instanzfarbe nur auf aTint-Flächen) → 4 Zeichenaufrufe
   const type = Array.from({ length: n }, (_, i) => carTypeFor((i * 0.618034 + 0.07) % 1));
   const idx = type.map((t, i) => type.slice(0, i).filter((u) => u === t).length);
-  const mats = { body: toon('#ffffff', { vertexColors: true }), fixed: toon('#ffffff', { vertexColors: true }) };
-  const nets = new Map<CarType, THREE.InstancedMesh[]>();
+  const nets = new Map<CarType, THREE.InstancedMesh>();
   for (const t of CAR_TYPES) {
-    const k = type.filter((u) => u === t).length; if (!k) continue; const g = carGeometry(t);
-    const b = new THREE.InstancedMesh(g.body, mats.body, k), f = new THREE.InstancedMesh(g.fixed, mats.fixed, k);
-    for (const im of [b, f]) { im.frustumCulled = false; im.name = 'traffic'; }
-    nets.set(t, [b, f]);
+    const k = type.filter((u) => u === t).length; if (!k) continue;
+    const im = new THREE.InstancedMesh(sparCarGeometry(t), realMaterial(), k); im.frustumCulled = false; im.name = 'traffic'; nets.set(t, im);
   }
   const c = new THREE.Color();
-  type.forEach((t, i) => nets.get(t)![0].setColorAt(idx[i], c.set(carColor((i * 0.381966 + 0.13) % 1))));
-  const proxy = (part: 0 | 1) => {
-    const o = new THREE.Object3D() as any;
-    for (const [, nm] of nets) o.add(nm[part]);
-    o.setMatrixAt = (i: number, m: THREE.Matrix4) => nets.get(type[i])![part].setMatrixAt(idx[i], m);
-    o.setColorAt = () => { /* Farben kommen aus carColor (Farbverteilung CH) */ };
-    o.instanceMatrix = { set needsUpdate(v: boolean) { for (const [, nm] of nets) nm[part].instanceMatrix.needsUpdate = v; } };
-    o.carType = (i: number) => type[i];
-    return o as THREE.InstancedMesh;
-  };
-  return { body: proxy(0), cabin: proxy(1) };
+  type.forEach((t, i) => nets.get(t)!.setColorAt(idx[i], c.set(carColor((i * 0.381966 + 0.13) % 1))));
+  const body = new THREE.Object3D() as any, cabin = new THREE.Object3D() as any;
+  for (const im of nets.values()) body.add(im);
+  body.setMatrixAt = (i: number, m: THREE.Matrix4) => nets.get(type[i])!.setMatrixAt(idx[i], m);
+  body.setColorAt = () => { /* Farben kommen aus carColor (Farbverteilung CH) */ };
+  body.instanceMatrix = { set needsUpdate(v: boolean) { for (const im of nets.values()) im.instanceMatrix.needsUpdate = v; } };
+  body.carType = (i: number) => type[i];
+  cabin.setMatrixAt = () => { /* Kabine ist Teil des Autos */ }; cabin.setColorAt = () => { /* – */ };
+  cabin.instanceMatrix = { needsUpdate: false };
+  return { body: body as THREE.InstancedMesh, cabin: cabin as THREE.InstancedMesh };
 }
 
-/** Geparkte Autos am Strassenrand von Wohn-/Erschliessungsstrassen (city.json roads: residential, living_street, service,
- *  unclassified, tertiary). Abstand 6 m, Lücken per Zufall, nicht in Kreuzungsnähe (12 m), nur auf freier Fläche
- *  (Mask.at === 0, keine Strasse) – also neben der Fahrbahn, nicht im Weg [Annahme: Parkfelder/Vorplätze].
- *  EIN-ZEILEN-EINBAU (world.ts, buildWorld, nach dem Baum-Block): group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z)));
- *  max = Obergrenze (Dreiecke ≈ 410 × max). avoid = Punkte, an denen nicht geparkt wird (props.lamps, props.stops, Bäume).
+/** Geparkte Autos am Strassenrand – Lauf 3: nur residential/living_street, mindestens 14 m von Einmündungen/Strassenenden,
+ *  Platzierung rein deterministisch (Hash der Lage) → stabile Tests. Alle 6 m geprüft, ~45 % belegt, nur auf freier Fläche neben
+ *  der Fahrbahn (Mask.at === 0, keine Strasse), nicht an avoid-Punkten (4-m-Raster ±1). Sparform 88 Dreiecke, fest gebacken
+ *  in 500-m-Zellen (1 Zeichenaufruf je sichtbare Zelle). EIN-ZEILEN-EINBAU (world.ts, nach den Bäumen):
+ *    group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), 100, undefined, [...lamps, ...stops, ...trees]));
  *  REAL.parked = false → []. */
 export function buildParkedCars(roads: { p: number[][]; c: string; w?: number; b?: number; tu?: number }[], mask: { at(x: number, z: number): number; isRoad(x: number, z: number): boolean },
-  groundY: (x: number, z: number) => number, max = 400, on = REAL.parked, avoid: number[][] = []): THREE.InstancedMesh[] {
+  groundY: (x: number, z: number) => number, max = 400, on = REAL.parked, avoid: number[][] = []): THREE.Object3D[] {
   if (!on) return [];
-  const av = new Set<string>(); for (const [x, z] of avoid) for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) av.add((Math.floor(x / 4) + a) + ',' + (Math.floor(z / 4) + b)); // Laternen, Haltestellen, Bäume: 4–8 m frei
-  const OK = new Set(['residential', 'living_street', 'service', 'unclassified', 'tertiary']);
-  const ends = new Set<string>(); for (const r of roads) for (const q of [r.p[0], r.p[r.p.length - 1]]) ends.add(Math.round(q[0] / 12) + ',' + Math.round(q[1] / 12));
-  const nearEnd = (x: number, z: number) => ends.has(Math.round(x / 12) + ',' + Math.round(z / 12)); // Kreuzungen/Strassenenden (Raster 12 m)
+  const av = new Set<string>(); for (const [x, z] of avoid) for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) av.add((Math.floor(x / 4) + a) + ',' + (Math.floor(z / 4) + b));
+  const OK = new Set(['residential', 'living_street']), JD = 14;
+  // Einmündungen: alle Strassen-Endpunkte (ausser Fusswegen) im 14-m-Raster
+  const ends = new Map<string, number[][]>();
+  for (const r of roads) { if (['footway', 'path', 'steps', 'track', 'cycleway'].includes(r.c)) continue;
+    for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = Math.floor(q[0] / JD) + ',' + Math.floor(q[1] / JD); const a = ends.get(k) || []; a.push(q); ends.set(k, a); } }
+  const nearEnd = (x: number, z: number) => { const i0 = Math.floor(x / JD), j0 = Math.floor(z / JD);
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of ends.get((i0 + a) + ',' + (j0 + b)) || []) if (Math.hypot(q[0] - x, q[1] - z) < JD) return true;
+    return false; };
   const spots: [number, number, number, CarType][] = [];
-  for (const r of roads) {
-    if (!OK.has(r.c) || r.b || r.tu) continue; const W = (r.w || 6) / 2 + 1.3;
+  const cand = roads.filter((r) => OK.has(r.c) && !r.b && !r.tu).sort((a, b) => hash2(a.p[0][0], a.p[0][1]) - hash2(b.p[0][0], b.p[0][1])); // gleichmässig über die Stadt
+  for (const r of cand) {
+    const W = (r.w || 6) / 2 + 1.3;
     for (let i = 1; i < r.p.length && spots.length < max; i++) {
       const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]); if (L < 8) continue;
       const dx = (B[0] - A[0]) / L, dz = (B[1] - A[1]) / L, h = Math.atan2(dx, dz);
       for (let s = 4; s < L - 4 && spots.length < max; s += 6) for (const side of [-1, 1]) {
-        const x = A[0] + dx * s + dz * W * side, z = A[1] + dz * s - dx * W * side, r0 = hash2(x * 0.7, z * 1.3);
-        if (r0 < 0.55 || nearEnd(x, z) || av.has(Math.floor(x / 4) + ',' + Math.floor(z / 4))) continue;
+        const cx = A[0] + dx * s, cz = A[1] + dz * s, x = cx + dz * W * side, z = cz - dx * W * side;
+        if (hash2(x * 0.7, z * 1.3) < 0.55 || nearEnd(cx, cz) || av.has(Math.floor(x / 4) + ',' + Math.floor(z / 4))) continue;
         let free = true; for (const [a, b] of [[0, 0], [2.2, 0], [-2.2, 0], [0, 0.9], [0, -0.9]]) { const px = x + dx * a + dz * b, pz = z + dz * a - dx * b; if (mask.at(px, pz) !== 0 || mask.isRoad(px, pz)) { free = false; break; } }
         if (!free) continue;
         spots.push([x, z, h + (hash2(z, x) < 0.5 ? 0 : Math.PI), carTypeFor(hash2(x + 3, z - 5))]);
       }
     }
   }
-  const out: THREE.InstancedMesh[] = [], mb = toon('#ffffff', { vertexColors: true }), mf = toon('#ffffff', { vertexColors: true });
-  const m = new THREE.Matrix4(), c = new THREE.Color();
-  for (const t of CAR_TYPES) {
-    const L = spots.filter((p) => p[3] === t); if (!L.length) continue; const g = carGeometry(t);
-    const b = new THREE.InstancedMesh(g.body, mb, L.length), f = new THREE.InstancedMesh(g.fixed, mf, L.length);
-    L.forEach(([x, z, h], i) => { m.makeRotationY(h); m.setPosition(x, groundY(x, z), z); b.setMatrixAt(i, m); f.setMatrixAt(i, m); b.setColorAt(i, c.set(carColor(hash2(x, z)))); });
-    for (const im of [b, f]) { im.computeBoundingSphere(); im.name = 'geparkt-' + t; out.push(im); }
-  }
-  return out;
+  const items: [THREE.BufferGeometry, THREE.Matrix4, THREE.Color | null][] = spots.map(([x, z, h, t]) => [sparCarGeometry(t), new THREE.Matrix4().makeRotationY(h).setPosition(x, groundY(x, z), z), new THREE.Color(carColor(hash2(x, z)))]);
+  return bakeCells(items, 500, 'geparkt');
 }
 
-/** Abgestellte Velos an Veloständern: je Ankerpunkt [x, z, Drehung] ein Ständer (3 Bügel) mit 1–5 Velos
- *  (z. B. Bahnhof, grössere Haltestellen). EIN-ZEILEN-EINBAU: G.add(...buildParkedVelos(anker, (x, z) => terrain.height(x, z))); */
-export function buildParkedVelos(anchors: number[][], groundY: (x: number, z: number) => number, on = REAL.parked): THREE.InstancedMesh[] {
+/** Abgestellte Velos an Veloständern: je Ankerpunkt [x, z, Drehung] ein Ständer (3 Bügel, 108 Dreiecke) mit 1–5 Velos
+ *  (Sparform 112 Dreiecke), fest gebacken in 500-m-Zellen. EIN-ZEILEN-EINBAU: G.add(...buildParkedVelos(anker, (x, z) => terrain.height(x, z))); */
+export function buildParkedVelos(anchors: number[][], groundY: (x: number, z: number) => number, on = REAL.parked): THREE.Object3D[] {
   if (!on || !anchors.length) return [];
-  const velos: number[][] = [];
-  const m = new THREE.Matrix4(), q = new THREE.Matrix4();
+  const items: [THREE.BufferGeometry, THREE.Matrix4, THREE.Color | null][] = [];
+  const cols = ['#2F6FB8', '#C8352E', '#3A3A3A', '#2E8B3E', '#E8E4D8', '#F2B33D'];
   for (const [x, z, a = 0] of anchors) {
-    const n = 1 + Math.floor(hash2(x, z) * 5);
-    for (let k = 0; k < n; k++) { const off = -1.2 + k * 0.6, ca = Math.cos(a), sa = Math.sin(a); velos.push([x + ca * off, z - sa * off, a + Math.PI / 2 + (hash2(k, x) - 0.5) * 0.15]); }
+    items.push([sparGeometry('velostaender'), new THREE.Matrix4().makeRotationY(a).setPosition(x, groundY(x, z), z), null]);
+    const n = 1 + Math.floor(hash2(x, z) * 5), ca = Math.cos(a), sa = Math.sin(a);
+    for (let k = 0; k < n; k++) { const off = -0.9 + k * 0.45, vx = x + ca * off, vz = z - sa * off;
+      items.push([sparGeometry('velo'), new THREE.Matrix4().makeRotationY(a + (hash2(k, x) - 0.5) * 0.15).setPosition(vx, groundY(vx, vz), vz), new THREE.Color(cols[Math.floor(hash2(vx, vz) * cols.length)])]); }
   }
-  const out = buildFurnitureList('velostaender', anchors, groundY);
-  const im = new THREE.InstancedMesh(veloGeometry(), toon('#ffffff', { vertexColors: true }), velos.length);
-  const c = new THREE.Color(), cols = ['#FFFFFF', '#F2C7C7', '#C7D9F2', '#3A3A3A', '#D9F2C7', '#F2E6C7'];
-  velos.forEach(([x, z, a], i) => { m.makeRotationY(a); q.makeTranslation(x, groundY(x, z), z); im.setMatrixAt(i, q.multiply(m)); im.setColorAt(i, c.set(cols[Math.floor(hash2(x, z) * cols.length)])); });
-  im.computeBoundingSphere(); im.name = 'velos-geparkt';
-  return [...out, im];
-}
-function buildFurnitureList(k: 'velostaender', list: number[][], groundY: (x: number, z: number) => number) {
-  return buildFurniture(k, list, groundY, toon('#ffffff', { vertexColors: true }));
+  return bakeCells(items, 500, 'velos-geparkt');
 }

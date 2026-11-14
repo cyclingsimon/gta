@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { toon, type Mask } from '../world';
 import { REAL } from './config';
 import { hash2, parts } from './geo';
-import { buildFurniture, furnitureGeometry } from './furniture';
+import { sparGeometry, sparInstances } from './spar';
 
 type M = Pick<Mask, 'at' | 'isRoad'>;
 type HY = (x: number, z: number) => number;
@@ -39,7 +39,7 @@ export function buildStops(stops: any[][], mask: M, groundY: HY, avoid: number[]
     st.computeBoundingSphere(); st.name = 'stops'; out.push(st);
   }
   // Wartehalle: offene Front (+z) zur Strasse
-  if (hall.length) out.push(...buildFurniture('wartehalle', hall, groundY, toon('#ffffff', { vertexColors: true })));
+  if (hall.length) out.push(sparInstances('wartehalle', hall, groundY, 'stops-halle')); // Lauf 3: Sparform 108 Dreiecke, Licht im selben Netz
   return out;
 }
 
@@ -54,7 +54,7 @@ export function buildLamps(lamps: number[][], mask: M, groundY: HY, on = REAL.la
   const alt: number[][] = [], main: number[][] = [], rest: number[][] = [];
   for (const l of lamps) { const [x, z] = l; const a = towardRoad(mask, x, z);
     if (on && inAlt(x, z)) alt.push([x, z, a]); else if (on && l[2]) main.push([x, z, a]); else rest.push(l); }
-  if (rest.length) { // bisherige Laterne, unverändert (inkl. 1.6× Höhe an Hauptstrassen, falls REAL.lamps = false)
+  if (rest.length && !on) { // bisherige Laterne, unverändert (inkl. 1.6× Höhe an Hauptstrassen, falls REAL.lamps = false)
     const poleG = new THREE.CylinderGeometry(0.07, 0.1, 4.6, 5); poleG.translate(0, 2.3, 0);
     const headG = new THREE.BoxGeometry(0.7, 0.22, 0.32); headG.translate(0.25, 4.65, 0);
     const pole = new THREE.InstancedMesh(poleG, toon('#3E4A45'), rest.length);
@@ -65,16 +65,16 @@ export function buildLamps(lamps: number[][], mask: M, groundY: HY, on = REAL.la
       m4.makeRotationY(-best); if (l[2]) m4.multiply(sc.makeScale(1, 1.6, 1)); m4.setPosition(x, groundY(x, z), z); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); });
     pole.name = 'lamps'; out.push(pole, head);
   }
-  const mat = toon('#ffffff', { vertexColors: true });
-  if (alt.length) out.push(...buildFurniture('kandelaber', alt, groundY, mat));
-  if (main.length) out.push(...buildFurniture('kandelaber_modern', main, groundY, mat));
-  for (const im of out) if (im.name.startsWith('moebel-kandelaber') && !im.name.endsWith('-licht')) im.name = 'lamps';
+  // Lauf 3: Sparformen, Leuchtteil im selben Netz (realMaterial) → je Art 1 Zeichenaufruf; gewöhnliche Laternen ebenfalls als Sparform
+  if (alt.length) out.push(sparInstances('kandelaber', alt, groundY, 'lamps'));
+  if (main.length) out.push(sparInstances('leuchte_modern', main, groundY, 'lamps'));
+  if (on && rest.length) out.push(sparInstances('leuchte', rest.map(([x, z]) => [x, z, towardRoad(mask, x, z)]), groundY, 'lamps'));
   return out;
 }
 
 /** Bank-Geometrie für den bestehenden Bank-Block (buildProps). EIN-ZEILEN-EINBAU: im `new THREE.InstancedMesh(colorMerge([...]), …)`
  *  den Ausdruck `colorMerge([...])` durch `realBenchGeometry() ?? colorMerge([...])` ersetzen. REAL.bench = false → null (bisherige Bank). */
 export function realBenchGeometry(on = REAL.bench): THREE.BufferGeometry | null {
-  return on ? furnitureGeometry('bank') : null;
+  return on ? sparGeometry('bank') : null; // Lauf 3: Sparform 48 Dreiecke
 }
 
