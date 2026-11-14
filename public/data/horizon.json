@@ -1,1 +1,1 @@
-{"x0": -18000, "z0": -20800, "step": 200, "nx": 209, "nz": 210, "scale": 0.1, "source": "swissALTI3D via api3.geo.admin.ch profile, 200 m"}
+{"x0": -34000, "z0": -30000, "step": 200, "nx": 289, "nz": 256, "scale": 0.1, "source": "swissALTI3D via api3.geo.admin.ch profile, 200 m; 14zc nach West/Nord erweitert (Basis 433.6 m)"}

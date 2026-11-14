@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 10:10. Fertig: **2026-11-14zb** = 14za + Hecken/Obstgärten alte Regionen. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 10:45. Fertig: **2026-11-14zc** = 14zb + Horizont West/Nord + Begleitwege. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zc (2026-11-14)
+- **Horizont erweitert**: alt x −18000..23600 / z −20800..21000 (209×210); a1, a4, a13, a14, a15, a20 lagen teils westlich x −18000 → Horizont dort am Rand geklemmt (flach gestreckt). Neu x −34000..23600 / z −30000..21000, 289×256, 200 m, Neue Punkte per api3.geo.admin.ch profile.json (COMB) im Browser, Basis 433.6 m (Abweichung alt/neu an Stichproben ±8 m, alte Daten geglättet), alte Werte unverändert übernommen. Naht West Ø 30 m Sprung = normaler Nachbarunterschied (Ø 27 m). In public/data + 22 Regionsordnern ersetzt (gleiche Datei); Ost/Süd haben lokal keinen Horizont (Server-Version bleibt alt, Grid passt dort weiter).
+- world.ts: `alongMain()` – OSM path ≥ 70 % innerhalb Fahrbahnrand+7 m einer Kantonsstrasse (L) → Asphaltfarbe cycleway statt Kiesweg; Leitpfosten auf solchen Wegen entfernt (`sidePath`).
+- Sichtprüfung Fahrersicht Kantonsstrassen a1, a5, a7, a13, a14, a20 und Luzern (5 Strassen): Leitlinie, Randlinien, Leitpfosten 50 m, Velostreifen gelb, Fahrleitung, Fussgängerstreifen ok. Kurzer weisser Querstrich links neben dem Auto an Polylinien-Knoten gesehen (vermutlich Markierung einmündender Strasse) – nicht weiter geprüft.
+- Tests: smoke_a a14 8/8 ohne Fehler; Luzern, a1, a5, a7, a13, a20 geladen ohne Seitenfehler. a18-Horizontspalt weiterhin offen (nicht untersucht).
 
 ## Version 14zb (2026-11-14)
 - Overpass (Browser) barrier=hedge, natural=tree_row, landuse=orchard für bbox 46.9513,8.1943–47.0879,8.4079 → `data/old/osm_green.json` (nicht im Repo). `greenlines.py` kennt jetzt luzern/nord/ost/west/sued (Grenzen = REG_BOUNDS). Hecken: Luzern 447/15.7 km, Nord 205/5.7, Ost 167/7.5, West 72/2.5, Süd 32/1.8; neue Bäume Luzern 234, Nord 556, Ost 73, Süd 16.

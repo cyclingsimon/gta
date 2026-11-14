@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zc  Fernsicht im Westen und Begleitwege an Kantonsstrassen
+- Berge und Hügel am Horizont jetzt auch westlich von Sursee, Willisau, Dagmersellen und Entlebuch (Höhendaten um 16 km nach Westen und 9 km nach Norden erweitert, vorher dort flach gestreckt)
+- Rad- und Gehwege direkt neben Kantonsstrassen sind jetzt Asphalt statt Kiesweg; dort keine Leitpfosten mehr mitten auf dem Weg
+- Kantonsstrassen in Sursee, Ruswil, Wolhusen, Willisau, Dagmersellen, Entlebuch und Luzern (Basel-, Obergrund-, Pilatus-, Halden-, Seeburgstrasse) angeschaut: Linien, Leitpfosten, Velostreifen, Fussgängerstreifen in Ordnung
+
 2026-11-14zb  Hecken und Obstgärten auch in Luzern, Nord, Ost, West und Süd
 - Echte Hecken (OpenStreetMap) jetzt auch in den ersten fünf Gegenden: Luzern 447 (15.7 km), Nord 205, Ost 167, West 72, Süd 32
 - Baumreihen und Hochstamm-Obstgärten dazu (Nord rund 560 neue Bäume)

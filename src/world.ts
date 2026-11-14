@@ -715,6 +715,15 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
         const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 14) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.0; vSigns.push([A[0] + ux * 12 - uz * o, A[1] + uz * 12 + ux * o, Math.atan2(ux, uz), r.v]); } }
+    // 14zc: Raster der Kantonsstrassen-Achsen (alle 4 m ein Punkt), um Begleitwege zu erkennen
+    const mainPts = new Map<string, number[][]>(); const mk = (x: number, z: number) => `${Math.floor(x / 20)},${Math.floor(z / 20)}`;
+    for (const r of d.roads) if (r.L && !r.b) for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      for (let s = 0; s <= L; s += 4) { const x = A[0] + (B[0] - A[0]) * s / Math.max(L, 1e-6), z = A[1] + (B[1] - A[1]) * s / Math.max(L, 1e-6), k = mk(x, z); if (!mainPts.has(k)) mainPts.set(k, []); mainPts.get(k)!.push([x, z, r.w / 2]); } }
+    const sidePath = new Map<string, number[][]>(); // Begleitwege: dort keine Leitpfosten (stünden auf dem Weg)
+    const nearMain = (x: number, z: number) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20);
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of mainPts.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2] + 7) return true; return false; };
+    const alongMain = (p: number[][]) => { let n = 0, hit = 0; for (let i = 1; i < p.length; i++) { const A = p[i - 1], B = p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      for (let s = 0; s < L; s += 6) { n++; if (nearMain(A[0] + (B[0] - A[0]) * s / L, A[1] + (B[1] - A[1]) * s / L)) hit++; } } return n >= 3 && hit / n > 0.7; };
     const wegweiser: any[][] = [], arrows: number[][] = [], hsSigns: number[][] = [], leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
@@ -764,7 +773,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') continue; // eigene Holzbrücke
       const c = new THREE.Color(ROAD_COL[r.c] || '#999');
       const y = (ROAD_LAYER[r.c] ?? 0.35) + (r.b ? 0.04 : 0);
-      const soft = ['pedestrian', 'living_street', 'path', 'steps', 'track'].includes(r.c); // Fuss- und Velowege (footway, cycleway): Asphalt-Textur
+      // 14zc: Weg (path) direkt neben einer Kantonsstrasse = Rad-/Gehweg mit Asphalt (Fotos Surental, Willisau), nicht Kies/Pflaster
+      const besideMain = r.c === 'path' && alongMain(r.p);
+      if (besideMain) { c.set(ROAD_COL.cycleway); for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]); for (let q = 0; q <= L; q += 2) { const x = A[0] + (B[0] - A[0]) * q / Math.max(L, 1e-6), z = A[1] + (B[1] - A[1]) * q / Math.max(L, 1e-6), k = mk(x, z); if (!sidePath.has(k)) sidePath.set(k, []); sidePath.get(k)!.push([x, z, r.w / 2 + 0.6]); } } }
+      const soft = !besideMain && ['pedestrian', 'living_street', 'path', 'steps', 'track'].includes(r.c); // Fuss- und Velowege (footway, cycleway): Asphalt-Textur
       const t = soft ? cobble : asph;
       ribbon(t.pos, t.col, r.p, r.w, y, c, true);
       const last = r.p[r.p.length - 1];
@@ -892,6 +904,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
     kantonsPaket(d, props, terrain, group, vAt, nk);
+    { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
+      if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
       const pa = g.getAttribute('position'); for (let k = 0; k < pa.count; k++) { const yy = pa.getY(k); const dark = yy > 0.72 && yy < 0.92; ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = dark ? 0.08 : 0.95; } g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
       const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
