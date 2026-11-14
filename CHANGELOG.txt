@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zk  Navi über die Grenze, weniger Ruckeln beim Nachladen (kommt mit dem ZIP 2026-11-15a)
+- Navi findet Ziele in der Nachbargegend: die Route führt über eine Strasse, die über die Grenze geht (vorher nur Luftlinie)
+- Unterwegs ins Spital und in eine neue Gegend gefahren: Luksi nimmt das nähere Spital
+- Eine Gegend, in der gerade ein Ziel liegt, wird nicht mehr aus dem Speicher geworfen
+- Weniger Ruckeln: neue Gegenden werden Stück für Stück eingeblendet, die Grafik wird vorab vorbereitet, das Navi der neuen Gegend wird schon während des Bau-Hinweises gebaut
+
 2026-11-14zj  Echte Häuser in allen Gegenden, mehr Übergänge
 - Fehler behoben: In den Gegenden ausserhalb Luzern (Sursee, Willisau, Wolhusen …) kamen im Modus «Echt» die echten 3D-Häuser gar nicht – sie werden jetzt gebaut
 - Auch eine unterwegs dazugeladene Gegend bekommt im Modus «Echt» nachträglich ihre 3D-Häuser («Die Bauarbeiter stellen die echten Häuser auf …»)
