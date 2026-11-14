@@ -16,7 +16,7 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-14zi';
+export const VERSION = '2026-11-14zj';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -708,6 +708,7 @@ function drawMinimap() {
   mctx.rotate(Math.PI + car.heading); // Fahrtrichtung oben
   mctx.scale(sc, sc);
   mctx.translate(-car.x, -car.z);
+  for (const sl of slots.values()) if (sl.world !== world) mctx.drawImage(sl.world.minimap, sl.world.bounds[0], sl.world.bounds[1], sl.world.minimap.width * 2, sl.world.minimap.height * 2); // 14zj: Nachbargegenden mitzeichnen
   mctx.drawImage(world.minimap, X0, Z0, world.minimap.width * 2, world.minimap.height * 2);
   if (route && route.length > 1) {
     mctx.strokeStyle = '#F39204'; mctx.lineWidth = 6; mctx.lineCap = 'round'; mctx.lineJoin = 'round';
@@ -1354,27 +1355,31 @@ async function boot() {
 }
 
 /** Stufe B: echte 3D-Häuser (swisstopo) und feiner Boden im Hintergrund bauen, dann austauschen */
-async function stageB(pB: Promise<any>, data: CityData, props: any) {
-  const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
-  try {
-    const r = await pB; memLog('pB');
-    if (!r) throw new Error('Daten fehlen');
-    const [bm, bb, roof, gm, gb] = r;
-    let b3d: any = undefined;
-    if (bm) { b3dMeta = bm;
+/** Stufe B (3D-Häuser, feiner Boden) bauen – für die Start-Gegend und (14zj) nachträglich für dazugeladene Gegenden */
+async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: THREE.Texture | undefined, fm: ForestMask | undefined, onT: (t: string) => void, globals: boolean): Promise<World> {
+  const [bm, bb, roof, gm, gb] = r;
+  let b3d: any = undefined;
+  if (bm) {
     // Positionen: Int16 dm, bei rel=true relativ zum Gebäudemittelpunkt → absolut (dm) als Float32
     const raw16 = new Int16Array(bb, 0, bm.posBytes / 2);
     let pos: ArrayLike<number> = raw16;
     if (bm.rel) { const f = new Float32Array(raw16.length); for (const m of bm.buildings) { const vS = m[1], vC = m[2], cx = m[5] * 10, cz = m[6] * 10; for (let k = vS; k < vS + vC; k++) { f[k * 3] = raw16[k * 3] + cx; f[k * 3 + 1] = raw16[k * 3 + 1]; f[k * 3 + 2] = raw16[k * 3 + 2] + cz; } } pos = f; }
     b3d = { roof, meta: bm, pos, idx: new Uint16Array(bb, bm.posBytes + bm.pad, bm.idxCount), edges: new Uint16Array(bb, bm.posBytes + bm.pad + bm.idxCount * 2, bm.edgeCount) };
-    b3dData = b3d; roofData = roof; }
-    const g16 = new Int16Array(gb, 0, gm.posBytes / 2);
-    let gpos: ArrayLike<number> = g16;
-    if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
-    const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-    const nw = await buildWorld(data, terrain, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; const st = document.getElementById('load-status'); if (st) st.textContent = 'Echte Häuser: ' + t; }, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: aerialTex, aerialHr: aerialHrTex, forestMask, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+    if (globals) { b3dMeta = bm; b3dData = b3d; roofData = roof; } }
+  const g16 = new Int16Array(gb, 0, gm.posBytes / 2);
+  let gpos: ArrayLike<number> = g16;
+  if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
+  const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+}
+async function stageB(pB: Promise<any>, data: CityData, props: any) {
+  const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
+  try {
+    const r = await pB; memLog('pB');
+    if (!r) throw new Error('Daten fehlen');
+    const nw = await buildStageB(r, data, props, terrain, aerialTex, forestMask, (t) => { memLog('B:' + t); ind.textContent = '🏗️ ' + t; const st = document.getElementById('load-status'); if (st) st.textContent = 'Echte Häuser: ' + t; }, true);
     memLog('worldB'); swapWorld(nw); memLog('swapped');
-    ind.textContent = RA && !b3d ? '✔ Gelände fertig' : '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
+    ind.textContent = RA && !r[0] ? '✔ Gelände fertig' : '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2500);
   } catch (e) { console.warn('Stufe B fehlgeschlagen, bleibe bei OSM-Häusern', e); ind.remove(); }
   enableShadows(scene);
   fullReady = true; (window as any).__luksiReady = true;
@@ -1383,7 +1388,8 @@ function swapWorld(nw: World) {
   const old = world.group;
   scene.remove(old);
   old.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
-  scene.remove(world.tunnels); world = nw; scene.add(nw.group); enableShadows(nw.group); scene.add(nw.tunnels);
+  scene.remove(world.tunnels); nw.hospital = world.hospital; world = nw; scene.add(nw.group); enableShadows(nw.group); scene.add(nw.tunnels);
+  { const sl = slots.get(REGION); if (sl) { sl.world = nw; linkSlots(); } } // 14zj: Slot zeigt auf die neue Welt
   for (const p of players) { p.car.mask = nw.mask; if (p.car.blocked(p.car.x, p.car.z, p.car.heading)) placeCar(p.car.x, p.car.z, undefined, p.car); }
   if (traffic) { traffic.setMask(nw.mask); const pg = nw.group.getObjectByName('props') as any; if (pg && pg.signalPos) { traffic.setSignals(pg.signalPos, pg.signalLamp); const tr = traffic; buses?.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
   if (save.evening) setEvening(true);
@@ -1587,10 +1593,12 @@ requestAnimationFrame(frame);
 
 // ---------------- 14zh Durchgehende Welt (Wunsch Simon 14.11.): Nachbargegenden im Hintergrund laden, ohne Neuladen wechseln ----------------
 const STREAM = !/[?&]nostream/.test(location.search);
-interface Slot { id: string; dir: string; data: CityData; props: any; terrain: Terrain; world: World; nav?: NavGraph; bus?: any; trains?: any; ma?: any }
+interface Slot { id: string; dir: string; data: CityData; props: any; terrain: Terrain; world: World; nav?: NavGraph; bus?: any; trains?: any; ma?: any; tex?: THREE.Texture; fm?: ForestMask; echt?: boolean }
 const slots = new Map<string, Slot>();
 let horData: any = null, busWires: THREE.Object3D | null = null, hospSign: THREE.Sprite | null = null;
 let loadingSlot = '', streamT = 0;
+let buildQ: Promise<unknown> = Promise.resolve(); // 14zj: Hintergrund-Bauten nacheinander (AERIAL ist global)
+const serial = <T,>(f: () => Promise<T>): Promise<T> => { const p = buildQ.then(f, f); buildQ = p.catch(() => undefined); return p; };
 function setHospital(w: World, id: string) {
   const ra = REGIONS_A[id];
   if (id === 'ost') w.hospital = { x: 5715, z: 171, name: 'Bahnhof Meggen' };   // 14o: OSM-Bahnhof statt erfundener Rettungsposten
@@ -1616,12 +1624,25 @@ async function loadSlot(id: string): Promise<Slot> {
   const fm = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1], dir);
   let tex: THREE.Texture | undefined;
   if (!/[?&]noaerial/.test(location.search)) { tex = new THREE.TextureLoader().load(dir + 'aerial_s.jpg'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; }
-  const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(id));
-  let w: World;
-  try { w = await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true }); }
-  finally { Object.assign(AERIAL, keep); }
+  const w: World = await serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(id));
+  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true }); }
+  finally { Object.assign(AERIAL, keep); } });
   setHospital(w, id);
-  return { id, dir, data, props, terrain: t, world: w, bus, trains: trainsJ, ma };
+  if (QUALITY !== 'echt') { data.buildings = []; (data as any).green = (data as any).green?.filter((g: any) => g.k === 'meadow' || g.k === 'park' || g.k === 'playground'); } // 14zj: Speicher sparen – Häuser stehen schon; Wiesen (Kühe), Parks und Spielplätze (Herzen) bleiben
+  return { id, dir, data, props, terrain: t, world: w, bus, trains: trainsJ, ma, tex, fm };
+}
+/** 14zj: Echt-Modus – dazugeladene Gegend bekommt nachträglich 3D-Häuser und feinen Boden */
+function upgradeSlot(s: Slot) {
+  const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = '🏗️ Die Bauarbeiter stellen die echten Häuser auf …'; document.body.appendChild(ind);
+  const RA2 = REGIONS_A[s.id];
+  Promise.all(RA2 ? [opt(getJSON('b3d.json', s.dir)), opt(getBuf('b3d.bin', s.dir)), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)]
+    : [getJSON('b3d.json', s.dir), getBuf('b3d.bin', s.dir), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)])
+    .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false); } finally { Object.assign(AERIAL, keep); } }))
+    .then((nw) => { if (!slots.has(s.id)) return; setHospital(nw, s.id);
+      if (REGION === s.id) swapWorld(nw);
+      else { scene.remove(s.world.group); scene.remove(s.world.tunnels); s.world.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); s.world = nw; scene.add(nw.group); scene.add(nw.tunnels); enableShadows(nw.group); linkSlots(); }
+      ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2200); })
+    .catch((e) => { console.warn('[welt] 3D-Häuser fehlen', s.id, e); ind.remove(); });
 }
 function linkSlots() {
   const all = [...slots.values()];
@@ -1662,6 +1683,7 @@ function activate(s: Slot) {
   save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
   stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;
   toast(`👋 Willkommen in ${REGION_NAME[s.id] || s.id}!`, 3000); updateHud();
+  if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
   console.log('[welt] aktiv', s.id, 'von', from);
 }
 function streamTick(dt: number) {
@@ -1690,4 +1712,5 @@ function streamTick(dt: number) {
     if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]);
   }
 }
-if (TEST) (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot });
+if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot });
+  (window as any).__weltLoad = (id: string) => loadSlot(id).then((sl) => { slots.set(sl.id, sl); scene.add(sl.world.group); scene.add(sl.world.tunnels); linkSlots(); return renderer.info.memory; }); }

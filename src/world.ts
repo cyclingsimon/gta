@@ -554,6 +554,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const m = new THREE.Mesh(g, groundMat); m.name = 'ground';
       // Detailstufe: ab 650 m ein 10-m-Raster (Kachel 400 m → 3200 statt bis zu 60'000 Dreiecke)
       const [tx, tz] = key.split(',').map((v) => +v * 400);
+      // 14zj: Bodenkacheln ausserhalb des Feldes (Bodennetz reicht über den Rand, z. B. a7) → ohne Grobstufe (sonst Fehler, Stufe B brach ab)
+      if (Math.min(X1, tx + 400) - Math.max(X0, tx) < 10 || Math.min(Z1, tz + 400) - Math.max(Z0, tz) < 10) { group.add(m); continue; }
       const cg = gridMesh(terrain, Math.max(X0, tx), Math.max(Z0, tz), Math.min(X1, tx + 400), Math.min(Z1, tz + 400), 10, -0.45, 12); if (opts.aerial) setAerialUV(cg);
       const coarse = new THREE.Mesh(cg, groundMat); coarse.name = 'ground-far';
       // LOD misst den Abstand zur Objektposition: LOD in die Kachelmitte setzen, Kinder zurückschieben (Geometrie bleibt in Weltkoordinaten).
@@ -1998,7 +2000,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
   const tileOf = (cx: number, cz: number) => {
     const k = Math.floor(cx / 400) + ',' + Math.floor(cz / 400);
     let t = tiles.get(k);
-    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk(), blockShop: mk(), modernShop: mk() }, l: [] }; tiles.set(k, t); }
+    if (!t) { const mk = () => ({ pos: [] as number[], nor: [] as number[], col: [] as number[], uv: [] as number[] }); t = { B: { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk(), blockShop: mk(), modernShop: mk(), barn: mk(), hall: mk() }, l: [] }; tiles.set(k, t); }
     return t;
   };
   for (const m of b.meta.buildings) {

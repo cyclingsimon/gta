@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14zj  Echte Häuser in allen Gegenden, mehr Übergänge
+- Fehler behoben: In den Gegenden ausserhalb Luzern (Sursee, Willisau, Wolhusen …) kamen im Modus «Echt» die echten 3D-Häuser gar nicht – sie werden jetzt gebaut
+- Auch eine unterwegs dazugeladene Gegend bekommt im Modus «Echt» nachträglich ihre 3D-Häuser («Die Bauarbeiter stellen die echten Häuser auf …»)
+- Minikarte zeigt die Nachbargegenden mit
+- Weitere Übergänge ohne Neuladen geprüft: Luzern–Emmenbrücke (Nord), Luzern–Meggen (Ost)
+
 2026-11-14zi  Ganze Kette, Schnellreise ohne Laden, neue Fahrzeuge
 - Durchgehend gefahren und geprüft: Stansstad (Süd) – Luzern – Littau – Malters – Wolhusen, jeder Übergang ohne Neuladen
 - Schnellreise lädt nicht mehr neu: die Zielgegend wird im Hintergrund gebaut, dann steht Luksi dort

@@ -1,9 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 17:15. Fertig: **2026-11-14zi** = durchgehende Welt M2/M3 (ganze Kette Süd–Luzern–West–a8–a7, Schnellreise ohne Neuladen) + neue Fahrzeuge. ZIP an Simon, nicht hochgeladen. Plan claude/WELT-STREAMING.md. Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 18:45. Fertig: **2026-11-14zj**. ZIP an Simon, nicht hochgeladen. Hauptfokus durchgehende Welt (Plan claude/WELT-STREAMING.md). Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14zj (2026-11-14)
+- **Alter Fehler gefunden** (vermutlich seit 13k/14q): Stufe B (3D-Häuser) brach in A-Gegenden im Echt-Modus ab → nur OSM-Häuser. Ursachen: (1) Bodennetz-Kacheln ausserhalb des Feldes → gridMesh mit negativer Grösse (jetzt: Kachel ohne Grobstufe), (2) b3d-Kachelpuffer ohne Stile `barn`/`hall` (rural.py) → `v.pos` undefined. Geprüft: Echt-Boot a7, a13, a20, a2 ohne Fehler (Süd lokal ohne ground/b3d → erwartet 404).
+- `buildStageB()` ausgelagert; `upgradeSlot()` baut im Echt-Modus nach `activate` die 3D-Häuser der Gegend (Bau-Hinweis), `serial()`-Warteschlange für alle Hintergrund-Bauten (AERIAL global). swapWorld aktualisiert Slot.
+- Minikarte: alle geladenen Slots unter der aktiven Gegend gezeichnet.
+- Speicher (tests/mem_stream.py, Leicht, Software): JS-Heap Luzern 462 MB, + West 623 MB, + a8 891 MB (673/716 Geometrien). Handy auf 2 Gegenden begrenzt. Nachbar-`data.buildings` werden im Leicht-Modus nach dem Bau verworfen (brachte im Heap nichts Messbares).
+- Übergänge getestet: Luzern→Nord (z −1100, Nord 19.8 s), Luzern→Ost (x 2700), ohne Fehler. Echt a8→a7: Wechsel ok, 3D-Häuser a7 nach Fix nicht erneut gefahren (Boot-Test genügt nicht ganz – Annahme: gleicher Code).
+- Tests: smoke a1 8/8, travel_stream ok.
 
 ## Version 14zi (2026-11-14)
 - Kette getestet (je Übergang eigener Lauf, /tmp/stream_gen.py bzw. stream_i.py, Route per /tmp/route.py Dijkstra über city.json): Luzern→Süd bei z 6300 (Süd in 17.9 s geladen), West→a8 bei x −8500 (14 s), a8→a7 bei x −14500 (24.8 s), Luzern→West (14zh). Alle ohne Seitenfehler, Wechsel «aktiv» korrekt.
