@@ -1,5 +1,47 @@
 # P-B «Atmosphäre, Ton, Oberfläche» – Laufprotokoll
 
+## 14.11.2026 22:55 – Lauf P-B (Lauf 3)
+
+Vorab `claude/13i-gebiet-a` hineingemergt (Fast-Forward bis 1f16b7d, enthält P-B Lauf 2 und `bindAmbience` in main.ts schon eingebaut).
+
+### Gemacht
+1. **Pegeltest per OfflineAudioContext** (neu): `tests/par/amb.html` + `amb.ts` + `amb_vite.config.mjs`, Runner `tests/par/amb_offline.py`. Rechnet den Ton ohne Lautsprecher, gleiche Kette wie im Spiel (Master 0,6, Effekte 0,8, Kulissenbus `AMB_GAIN·VOL.bus`). Misst je Baustein, für Sirene/Effekttöne, für den lautesten Fall (Motor Vollgas + Sirene + Hupe + Sterne-Ton) und für eine 72-s-Mischung über `initAmbience/updateAmbience` (Stadt → See → Wald → Land + Stundenschlag → Bahnhof + Gong + Zug → Tunnel + Sirene → Stadt, Musik-Ducking, Ton aus/an): Spitze, RMS, Klick-Verdacht (harte Einsätze/Abbrüche, Hüllkurve 10 ms; Schwelle < 3,5 ms von −40 dB auf halbe Höhe). **Positivkontrolle**: der Effektton-Einsatz von Lauf 2 (Sprung auf volle Lautstärke) wird als Klick erkannt.
+2. **Fehler Sirene gefunden und behoben** (`src/ambience/horn.ts`): Das eingebaute WebAudio-Rechteck ist auf Spitze 1 normiert (Gibbs-Überschwinger), das Plateau liegt bei ≈ 0,85. Gemessen klang die Sirene bisher **575 / 451 Hz, Verhältnis 1,276** – ausserhalb der Vorschrift (4:3 = 1,333, Toleranz −3 %/+7 % → 1,293–1,427). Jetzt eigenes Rechteck ohne Normierung: **gemessen 586,5 / 440,0 Hz** (Soll 586,7/440), Folge hoch–tief–hoch–tief je 0,7 s, Neustart beginnt hoch (gemessen). Sirene und Effekttöne sind dafür als Bausteine `buildSiren()` / `blipTo()` nach `src/ambience/horn.ts` gezogen; `audio.ts` nutzt sie (gleiche Lautstärken).
+3. **Knackfreie Einsätze**: Effekttöne (Hupe, Sterne, Funk, Klick …) 6 ms Einschwingen statt Sprung, Ende sauber auf 0; Spielmusik-Arpeggio/Bass 5/8 ms; Glocken/Kuhglocke/Gong linearer 6-ms-Anschlag; Vögel 10 ms; Schienenstösse 8 ms. Nach den Änderungen: **0 Klick-Verdachte** in allen Segmenten.
+4. **Rauschschleife** 7,3 s statt 3 s (Wiederholung in gefiltertem Rauschen war hörbar möglich), Schleifenstelle mit 80-ms-Überblendung nahtlos.
+5. **Neue Klänge** (Luzern-typisch, selten und leise):
+   - **Trolleybus der VBL** in der Stadt (Stadt-Gewicht > 0,5, alle 20–45 s): Fahrmotor-Singen beim Anfahren + Reifen. Beleg, dass Luzern Trolleybusse fährt: https://en.wikipedia.org/wiki/Trolleybuses_in_Lucerne. Tonhöhen = **Annahme (Vertrauen gering)**.
+   - **Schiffshorn** eines Kursschiffs am See (See-Gewicht > 0,4, alle 2–5 min): tiefer, dumpfer Ton aus der Ferne, manchmal zweimal. SGV-Kursschiffe: https://www.lakelucerne.ch/. Tonhöhe/Länge = **Annahme (Vertrauen gering)**.
+6. **Credits** (`index.html`, Pause → Steuerung & Credits): Zeile «Töne» – alles selbst synthetisiert (keine fremden Aufnahmen, daher keine CC-Lizenzen nötig), SBB-Dreiklang nachgespielt, Konzertmusik von Simon, Radio LuZ nur auf Wunsch.
+
+### Messwerte (OfflineAudioContext, 48 kHz, Spielkette; dBFS)
+| Segment | Spitze | RMS |
+|---|---|---|
+| Kulisse Stadt / See / Wald | −48 / −37 / −41 | −61 / −53 / −54 |
+| Land + Stundenschlag c1 | −31 | −48 |
+| Bahnhof + Gong + Zug | −38 | −57 |
+| Tunnel + Sirene / Stadt + Sirene | −20 / −22 | −29 / −28 |
+| Stadt mit Spielmusik (geduckt) | −55 | −66 |
+| Ton aus | Stille | Stille |
+| **Lautester Fall** (Motor Vollgas + Sirene + Hupe + Sterne) | **−12,6** | −25 |
+
+Kein Clipping (Reserve ≥ 12 dB). Die Kulisse liegt 20–30 dB unter Motor/Sirene → im Fahrzeug eher Hintergrund. **Gehört wurde nichts** (Testrechner ohne Tonausgabe); ob das zu leise ist, entscheidet die Hörprobe – Regler bleibt `AMB_GAIN` (index.ts).
+
+### Geprüft
+- `npx tsc --noEmit -p .` fehlerfrei; `OUT=dist_pb sh tools/dist.sh` läuft durch (nur Luzern-Daten im Klon, Regionen fehlen → Hinweise erwartet).
+- `tests/par/amb_offline.py`: wie oben, BEFUNDE keine, keine Seitenfehler.
+- `tests/par/ui_pb.py` auf dem gemergten Stand (Leicht, Software-Rendering, Luzern): Laden 26 s, 12 Schritte, «Fertig! Geladen in 0:13». Handy 800×380 und 390×844 (Touch): Fahrbahn frei in freier Fahrt, mit Funk und in Pause, keine Touch-Ziele < 48 px. PC 1280×720 / 1920×1080: Fahrbahn frei; Pause-Optionen 34–36 px und Funk-Knöpfe 39–42 px (Maus, bewusst wie Lauf 1). Screenshots angesehen (h800_funk, h390_frei, pc1280_pause): sauber.
+- **Kulisse erstmals mit echter Welt-Abfrage im Spiel** (bindAmbience ist jetzt in main.ts): Bahnhof Luzern → Stadt 1, Bahnhof 1, Gong/Zug/Trolleybus ausgelöst; KKL-Quai → See 1, Schiffshorn ausgelöst; Gütsch → **Wald 0,83** (Waldmaske greift), Vogel ausgelöst; Ton aus → Bus 0. Tunnel nur erzwungen geprüft (Hall verbunden, Brummen 0,12) – keine echte Tunnelfahrt.
+- Nicht geprüft: Hörprobe, echte Geräte, echte Tunnelfahrt, Echt-Modus.
+
+### Einbau-Hinweise
+Keine neuen. `main.ts`/`world.ts` unverändert. (Optional aus Lauf 1 weiterhin: `import './ui'` von travel.ts nach main.ts verschieben, Kriechen in loader.ts entfernen.)
+
+### Offen / nächster Lauf
+- Hörprobe auf Gerät (Kopfhörer): Kulisse evtl. +3–6 dB (`AMB_GAIN` 0,7 → 1,0), wenn sie neben dem Motor untergeht.
+- Echte Tunnelfahrt (Sonnenberg/Spier) mit Hall prüfen.
+- Glocke der Stundenschläge weiterhin Annahme c1.
+
 ## 14.11.2026 20:10 – Lauf 2
 
 Vorab `claude/13i-gebiet-a` hineingemergt (Merge-Commit 7c1c805, keine Konflikte). Einbau 1 (bindAmbience) bewusst **nicht** selbst gemacht.
