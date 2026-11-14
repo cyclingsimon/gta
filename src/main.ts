@@ -1,3 +1,4 @@
+import { bindAmbience } from './ambience';
 import { openTravel } from './travel';
 import { REGIONS_A } from './regionsA';
 import { Stats } from './stats';
@@ -1312,6 +1313,11 @@ async function boot() {
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
   if (TEST) (window as any).__dbgWorld = scene;
   memLog('worldA'); status.textContent = 'Navi wird eingerichtet …'; loaderProgress(0.8);
+  bindAmbience({ // 15a, P-B Einbau 1: Geräuschkulisse fragt die echte Welt ab
+    mask: (x, z) => (world ? world.mask.at(x, z) : 3),
+    forest: (x, z) => { const f = forestMask; if (!f) return false; const i = Math.floor((x - f.x0) / f.step), j = Math.floor((z - f.z0) / f.step); return i >= 0 && j >= 0 && i < f.w && j < f.h && f.data[j * f.w + i] === 1; },
+    tunnel: (x, z) => !!terrain && terrain.anyTun && terrain.inTunnel(x, z, car.y),
+  });
   await new Promise((r) => setTimeout(r, 30));
   { const t0 = performance.now(); nav = new NavGraph(data, world.mask); console.log('[bau] Navi', (performance.now() - t0).toFixed(0), 'ms'); }
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
