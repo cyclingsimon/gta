@@ -763,13 +763,42 @@ function drawBigMap() {
 }
 
 // ---------------- Route / Navi ----------------
+/** 14zk: Ziel liegt in einer anderen (geladenen) Gegend – Route über eine Strasse, die über die Grenze führt.
+ *  Übergänge = Knoten der aktiven Gegend nahe am Feldrand, bei denen die Nachbargegend auch eine Strasse hat. */
+let crossCache: { key: string; gates: [number, number][] } | null = null;
+function crossRoute(a: number, t: [number, number]): number[][] | null {
+  const B = REG_BOUNDS[REGION]; if (!STREAM || !B || a < 0) return null;
+  if (t[0] > B[0] + 30 && t[0] < B[2] - 30 && t[1] > B[1] + 30 && t[1] < B[3] - 30) return null;
+  const tid = regionAt(t[0], t[1]).find((k) => k !== REGION && slots.has(k)); if (!tid) return null;
+  const ts = slots.get(tid)!; if (!ts.nav) ts.nav = new NavGraph(ts.data, ts.world.mask);
+  const tn = ts.nav;
+  const key = REGION + '>' + tid;
+  if (!crossCache || crossCache.key !== key) { // Übergänge einmal je Paar suchen
+    const gates: [number, number][] = [];
+    const seen = new Set<string>();
+    for (let i = 0; i < nav.xs.length; i++) { const x = nav.xs[i], z = nav.zs[i];
+      if (!nav.carNode[i] || !nav.adj[i].length || Math.min(x - B[0], B[2] - x, z - B[1], B[3] - z) > 120 || !regionAt(x, z, 0).includes(tid)) continue;
+      const cell = Math.round(x / 50) + ',' + Math.round(z / 50); if (seen.has(cell)) continue; // je 50-m-Feld ein Übergang
+      const j = tn.nearest(x, z, true); if (j >= 0 && Math.hypot(tn.xs[j] - x, tn.zs[j] - z) < 25) { gates.push([i, j]); seen.add(cell); } }
+    crossCache = { key, gates }; console.log('[welt] Übergänge', key, gates.length);
+  }
+  if (!crossCache.gates.length) return null;
+  let bt = tn.nearest(t[0], t[1], true); if (bt < 0) bt = tn.nearest(t[0], t[1]); if (bt < 0) return null;
+  // die acht vielversprechendsten Übergänge (Luftlinie) wirklich durchrechnen
+  const cand = crossCache.gates.map((g) => [g, Math.hypot(nav.xs[g[0]] - car.x, nav.zs[g[0]] - car.z) + Math.hypot(tn.xs[g[1]] - t[0], tn.zs[g[1]] - t[1])] as [[number, number], number])
+    .sort((p, q) => p[1] - q[1]).slice(0, 8);
+  let best: number[][] | null = null, bl = 1e18;
+  for (const [[gi, gj]] of cand) { const r1 = nav.route(a, gi), r2 = tn.route(gj, bt); if (!r1 || !r2) continue;
+    const L = pathLength(r1) + pathLength(r2); if (L < bl) { bl = L; best = r1.concat(r2); } }
+  return best;
+}
 function updateRoute(dt: number) {
   if (!target) { routeMesh.visible = false; arrow.visible = false; $('#dist').textContent = ''; return; }
   routeTimer -= dt;
   if (routeTimer <= 0 || !route) {
     routeTimer = 1.2;
-    const a = nav.nearestVisible(car.x, car.z, world.mask, car.heading), b = nav.nearestVisible(target[0], target[1], world.mask);
-    const r = nav.route(a, b);
+    const a = nav.nearestVisible(car.x, car.z, world.mask, car.heading);
+    const r = crossRoute(a, target) || nav.route(a, nav.nearestVisible(target[0], target[1], world.mask));
     route = r ? [[car.x, car.z], ...r, target] : [[car.x, car.z], target];
     const showLine = save.diff === 'entdecken';
     routeMesh.visible = showLine;
@@ -1150,6 +1179,7 @@ function frame(now: number) {
     }
     if (playing && fullReady) { save.km = (save.km || 0) + Math.abs(car.speed) * dt; badgeT += dt; if (badgeT > 30) { badgeT = 0; checkBadges(); writeSave(); } }
     stats.players = players.length; if (fullReady) stats.tick(dt, playing ? players.map((p) => p.car.speed) : [], car.siren, [car.x, car.z]); // Mini-Spiele zählen als Spielzeit; Ladezeit nicht
+    if (revealQ.length) revealTick();
     if (playing && fullReady && STREAM) streamTick(dt); else if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
@@ -1516,7 +1546,7 @@ if (location.search.includes('test')) {
     offer: () => { offerTimer = 0; },
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
-    car: () => ({ x: car.x, z: car.z, heading: car.heading }),
+    car: () => ({ x: car.x, z: car.z, heading: car.heading, speed: car.speed }),
     speed: (v: number) => { car.speed = v; },
     head: (h: number) => { car.heading = h; }, warp: (x: number, z: number, h: number) => { car.x = x; car.z = z; car.heading = h; car.speed = 0; car.y = terrain.height(x, z); updateCamera(0, true); }, under: () => underground, // 14zg Tests
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
@@ -1527,6 +1557,7 @@ if (location.search.includes('test')) {
     quiet: () => { offerTimer = 1e9; $('#ui').style.display = 'none'; },
     drive: (on: boolean) => { (window as any).__autodrive = on; },
     grid: (x: number, z: number, r: number) => { const rows: string[] = []; for (let j = -r; j <= r; j += 2) { let l = ''; for (let i = -r; i <= r; i += 2) { const v = world.mask.at(x + i, z + j); l += Math.abs(i) < 1 && Math.abs(j) < 1 ? 'X' : v === 2 ? '#' : v === 1 ? '~' : world.mask.isRoad(x + i, z + j) ? '.' : ' '; } rows.push(l); } return rows.join('\n'); },
+    tgt: (x: number, z: number) => { setTarget([x, z]); route = null; routeTimer = 0; },
     goHospital: () => { current = missions[0]; phase = 'toHospital'; phaseTime = 0; setTarget(hospitalBay, '#3FA9FF'); },
     tris: () => { const o: Record<string, number> = {}; world.group.traverse((m: any) => { if (m.isMesh || m.isLineSegments) { const g = m.geometry; const n = (g.index ? g.index.count : g.getAttribute('position').count) / (m.isMesh ? 3 : 2) * (m.count || 1); const k = (m.material.map ? 'tex:' : '') + (m.name || m.type) + '/' + (m.material.color ? m.material.color.getHexString() : ''); o[k] = (o[k] || 0) + Math.round(n); } }); return Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12); },
     reach: () => missions.map((m) => { const a = nav.nearestVisible(hospitalBay[0], hospitalBay[1], world.mask), b = nav.nearestVisible(m.at[0], m.at[1], world.mask); const r1 = nav.route(a, b), r2 = nav.route(b, a); return [m.id, r1 ? Math.round(pathLength(r1)) : null, r2 ? Math.round(pathLength(r2)) : null]; }),
@@ -1640,9 +1671,22 @@ function upgradeSlot(s: Slot) {
     .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false); } finally { Object.assign(AERIAL, keep); } }))
     .then((nw) => { if (!slots.has(s.id)) return; setHospital(nw, s.id);
       if (REGION === s.id) swapWorld(nw);
-      else { scene.remove(s.world.group); scene.remove(s.world.tunnels); s.world.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); s.world = nw; scene.add(nw.group); scene.add(nw.tunnels); enableShadows(nw.group); linkSlots(); }
+      else { enableShadows(nw.group); void addGradually(nw.group, nw.tunnels).then(() => { if (!slots.has(s.id)) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
+        if (REGION === s.id) { scene.remove(nw.group); scene.remove(nw.tunnels); swapWorld(nw); return; }
+        scene.remove(s.world.group); scene.remove(s.world.tunnels); s.world.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); s.world = nw; linkSlots(); }); }
       ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2200); })
     .catch((e) => { console.warn('[welt] 3D-Häuser fehlen', s.id, e); ind.remove(); });
+}
+/** 14zk: Ruckeln vermeiden – Shader vorab übersetzen, Teile nach und nach (wenige pro Bild) einblenden und hochladen */
+const revealQ: THREE.Object3D[] = [];
+async function addGradually(...gs: THREE.Object3D[]) {
+  for (const g of gs) { try { await (renderer as any).compileAsync(g, camera, scene); } catch { /* älterer Browser: dann eben beim ersten Bild */ } }
+  for (const g of gs) { for (const c of g.children) if (c.visible) { c.visible = false; revealQ.push(c); } scene.add(g); }
+}
+function revealTick() { for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; n++) revealQ.shift()!.visible = true; }
+/** 14zk: Navi der neuen Gegend schon vorbereiten, solange der Hinweis noch steht – nicht erst an der Grenze */
+function prepNav(s: Slot) {
+  setTimeout(() => { if (!slots.has(s.id) || s.nav) return; const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi vorab', s.id, (performance.now() - t0).toFixed(0), 'ms'); }, 2500);
 }
 function linkSlots() {
   const all = [...slots.values()];
@@ -1675,7 +1719,10 @@ function activate(s: Slot) {
   if (s.trains) { trains = new Trains(terrain, s.trains, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); }
   for (const o of [fun, animals, ships, boats]) if (o) scene.remove(o.group);
   fun = null; animals = null; ships = null; boats = null;
-  hospitalBay = snap([world.hospital.x, world.hospital.z]);
+  { const nb = snap([world.hospital.x, world.hospital.z]); // 14zk: unterwegs ins Spital – das nähere Spital nehmen
+    if (phase === 'toHospital' && Math.hypot(hospitalBay[0] - car.x, hospitalBay[1] - car.z) < Math.hypot(nb[0] - car.x, nb[1] - car.z)) { /* altes bleibt */ }
+    else { hospitalBay = nb; if (phase === 'toHospital') setTarget(hospitalBay, '#3FA9FF'); } }
+  crossCache = null;
   MA = s.ma || null;
   if (phase === 'offer') declineOffer();
   setupMissions(); setupFun(s.data); placeHospSign();
@@ -1686,7 +1733,19 @@ function activate(s: Slot) {
   if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
   console.log('[welt] aktiv', s.id, 'von', from);
 }
+/** 15a: Strecke bis zum Rand der geladenen Welt in Fahrtrichtung (nur wo dahinter eine bekannte, noch nicht geladene Gegend liegt) → Tempo-Deckel.
+ *  400 m voraus frei = kein Deckel; 100 m = 36 km/h; am Rand Schritttempo. Am echten Weltrand (keine Gegend dahinter) greift das nicht. */
+function streamCap() {
+  for (const pl of players) {
+    const c = pl.car; let cap = Infinity;
+    const loaded = (x: number, z: number) => { const r = regionAt(x, z); return r.length === 0 || r.some((k) => slots.has(k)); };
+    if (!loaded(c.x, c.z)) cap = 3;
+    else if (c.speed > 1) for (let f = 40; f <= 400; f += 40) if (!loaded(c.x + c.fx * f, c.z + c.fz * f)) { cap = Math.max(4, (f - 40) / 6); break; }
+    c.vcap = cap;
+  }
+}
 function streamTick(dt: number) {
+  streamCap();
   streamT -= dt; if (streamT > 0) return; streamT = 0.5;
   const c = players[0].car;
   // 1) Wechsel: Ambulanz hat das aktive Feld verlassen und steht in einer geladenen Nachbargegend
@@ -1697,20 +1756,27 @@ function streamTick(dt: number) {
   }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && Math.abs(c.speed) > 2) {
-    const look = [[0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
+    const look = [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
     let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r)); if (k) { want = k; break; } }
-    if (want) { loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
+    if (want) { streamTrim((MOBILE ? 2 : 3) - 1); // 15a: zuerst Platz schaffen – sonst lagen kurz 4 Gegenden im Speicher
+      loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
       const t0 = performance.now();
-      loadSlot(want).then((s) => { slots.set(s.id, s); scene.add(s.world.group); scene.add(s.world.tunnels); linkSlots();
+      loadSlot(want).then(async (s) => { await addGradually(s.world.group, s.world.tunnels); slots.set(s.id, s); linkSlots();
+        prepNav(s);
         ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit!`; setTimeout(() => ind.remove(), 2200);
         console.log('[welt] geladen', s.id, (performance.now() - t0).toFixed(0), 'ms');
       }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); }).finally(() => { loadingSlot = ''; }); }
   }
-  // 3) Entladen: höchstens 3 Gegenden; weit entfernte (> 2.5 km vom Feldrand) zuerst
-  if (slots.size > (MOBILE ? 2 : 3)) { // Handy: höchstens 2 Gegenden im Speicher
-    const far = [...slots.values()].filter((s) => s.id !== REGION).map((s) => { const b = REG_BOUNDS[s.id]; const dx = Math.max(b[0] - c.x, 0, c.x - b[2]), dz = Math.max(b[1] - c.z, 0, c.z - b[3]); return [Math.hypot(dx, dz), s] as [number, Slot]; }).sort((a, b) => b[0] - a[0]);
-    if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]);
+  // 3) Entladen: höchstens 3 Gegenden (Handy 2); weit entfernte (> 1.5 km vom Feldrand) zuerst
+  streamTrim(MOBILE ? 2 : 3);
+}
+/** Entlädt die am weitesten entfernten, nicht aktiven Gegenden (> 1.5 km), bis höchstens `keep` geladen sind */
+function streamTrim(keep: number) {
+  const c = players[0].car;
+  while (slots.size > keep) {
+    const far = [...slots.values()].filter((s) => s.id !== REGION && !(target && regionAt(target[0], target[1]).includes(s.id))).map((s) => { const b = REG_BOUNDS[s.id]; const dx = Math.max(b[0] - c.x, 0, c.x - b[2]), dz = Math.max(b[1] - c.z, 0, c.z - b[3]); return [Math.hypot(dx, dz), s] as [number, Slot]; }).sort((a, b) => b[0] - a[0]);
+    if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]); else break;
   }
 }
-if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot });
+if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot, vcap: players[0].car.vcap, drin: regionAt(players[0].car.x, players[0].car.z).some((k) => slots.has(k)) });
   (window as any).__weltLoad = (id: string) => loadSlot(id).then((sl) => { slots.set(sl.id, sl); scene.add(sl.world.group); scene.add(sl.world.tunnels); linkSlots(); return renderer.info.memory; }); }

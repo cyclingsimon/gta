@@ -93,9 +93,9 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
 /** Fassaden-Atlas 2×2: vier Varianten derselben Fensterachse (v = 0..3) in einer Textur. Der Shader (withFacade) wählt je
  *  Achse und Geschoss eine Variante → die Fassade wiederholt sich nicht mehr Fenster für Fenster. Die Kachelränder müssen in
  *  allen Varianten gleich aussehen (Gesimse, Putz), sonst entstehen sichtbare Nähte. */
-function atlasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D, v: number) => void) {
-  return canvasTex(w * 2, h * 2, (g) => {
-    for (let v = 0; v < 4; v++) { g.save(); g.translate((v % 2) * w, Math.floor(v / 2) * h); g.beginPath(); g.rect(0, 0, w, h); g.clip(); draw(g, v); g.restore(); }
+function atlasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D, v: number) => void, rows = 2) {
+  return canvasTex(w * 2, h * rows, (g) => {
+    for (let v = 0; v < rows * 2; v++) { g.save(); g.translate((v % 2) * w, Math.floor(v / 2) * h); g.beginPath(); g.rect(0, 0, w, h); g.clip(); draw(g, v); g.restore(); }
   });
 }
 /** Vorhang/Store hinter dem Glas (halbtransparent), Rollladen oder dunkles offenes Fenster – kleine Unterschiede je Variante */
@@ -151,17 +151,41 @@ function facadeTextures() {
     if (v === 0 || v === 3) { g.fillStyle = '#9b5b3a'; g.fillRect(48, 100, 32, 6);
       g.fillStyle = v === 0 ? '#E2463F' : '#E9A7C0'; for (const fx of [52, 60, 68, 76]) { g.beginPath(); g.arc(fx, 100, 3, 0, 7); g.fill(); } }
   });
-  const modern = canvasTex(128, 128, (g) => {
+  // 15a: «modern» in vier Bautypen (Zeile = Typ je Gebäude, Spalte = Variante je Achse: 0 normal, 1 Storen)
+  //  0 Fensterband (Büro 1970–2000) · 1 Lochfassade verputzt · 2 Glasfassade im Raster · 3 Betonraster mit Brüstungsband
+  const modern = atlasTex(128, 128, (g, v) => {
+    const typ = Math.floor(v / 2), st = v % 2 === 1;
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
     noise(g, 128, 128, 300, 0.05);
-    g.fillStyle = '#d9d6cf'; g.fillRect(0, 0, 128, 16);
-    glass(g, 0, 26, 128, 70);
-    g.fillStyle = '#BFC5CB'; for (const x of [0, 62]) g.fillRect(x, 26, 5, 70);
-    g.fillStyle = '#BFC5CB'; g.fillRect(0, 58, 128, 3);
-    g.strokeStyle = ink; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 26); g.lineTo(128, 26); g.moveTo(0, 96); g.lineTo(128, 96); g.stroke();
-    g.fillStyle = '#e8e4dc'; g.fillRect(0, 96, 128, 32);
-    g.fillStyle = 'rgba(59,48,43,.25)'; g.fillRect(0, 97, 128, 2);
-  });
+    if (typ === 0) {
+      g.fillStyle = '#d9d6cf'; g.fillRect(0, 0, 128, 16);
+      glass(g, 0, 26, 128, 70);
+      if (st) { blind(g, 5, 26, 57, 70, 0.5, 'rgba(226,228,226,.9)'); }
+      g.fillStyle = '#BFC5CB'; for (const x of [0, 62]) g.fillRect(x, 26, 5, 70);
+      g.fillStyle = '#BFC5CB'; g.fillRect(0, 58, 128, 3);
+      g.strokeStyle = ink; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 26); g.lineTo(128, 26); g.moveTo(0, 96); g.lineTo(128, 96); g.stroke();
+      g.fillStyle = '#e8e4dc'; g.fillRect(0, 96, 128, 32);
+      g.fillStyle = 'rgba(59,48,43,.25)'; g.fillRect(0, 97, 128, 2);
+    } else if (typ === 1) {
+      for (const x of [12, 72]) { g.fillStyle = '#8E979E'; g.fillRect(x - 3, 28, 50, 62); glass(g, x, 31, 44, 56);
+        if (st && x === 72) blind(g, x, 31, 44, 56, 0.6, 'rgba(226,228,226,.92)'); if (st && x === 12) blind(g, x, 31, 44, 56, 0.25, 'rgba(226,228,226,.92)');
+        g.fillStyle = '#E9E5DC'; g.fillRect(x + 20, 31, 4, 56); g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(x - 3, 28, 50, 62);
+        g.fillStyle = '#CFCAC0'; g.fillRect(x - 6, 90, 56, 5); }
+      g.fillStyle = 'rgba(59,48,43,.16)'; g.fillRect(0, 124, 128, 4);
+    } else if (typ === 2) {
+      glass(g, 0, 0, 128, 128);
+      g.fillStyle = 'rgba(40,70,90,.30)'; g.fillRect(0, 96, 128, 32); // Brüstungsglas dunkler
+      if (st) blind(g, 3, 4, 60, 92, 0.4, 'rgba(235,238,238,.75)');
+      g.fillStyle = '#9CA6AD'; for (const x of [0, 62, 124]) g.fillRect(x, 0, 4, 128); g.fillRect(0, 0, 128, 4); g.fillRect(0, 94, 128, 3);
+    } else {
+      g.fillStyle = '#5B6670'; g.fillRect(8, 20, 112, 62); glass(g, 12, 24, 104, 54);
+      if (st) blind(g, 12, 24, 50, 54, 0.7, 'rgba(232,170,80,.85)');
+      g.fillStyle = '#E4E0D8'; g.fillRect(62, 20, 5, 62);
+      g.fillStyle = 'rgba(59,48,43,.10)'; g.fillRect(0, 0, 8, 128); g.fillRect(120, 0, 8, 128); // Betonpfeiler
+      g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(8, 20, 112, 62);
+      g.fillStyle = 'rgba(59,48,43,.14)'; g.fillRect(0, 88, 128, 34); g.fillStyle = 'rgba(59,48,43,.3)'; g.fillRect(0, 86, 128, 2.5); g.fillRect(0, 122, 128, 2); // Brüstungsband
+    }
+  }, 4);
   const stone = canvasTex(128, 256, (g) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 256);
     g.strokeStyle = 'rgba(80,65,50,.18)'; g.lineWidth = 2;
@@ -1038,7 +1062,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           const reps = Math.max(1, Math.round(len / tile));
           const u1 = reps;
           const v1 = Math.max(1, Math.round(h / floorH));
-          const quad = [[x1, base, z1, 0, 0], [x2, base, z2, u1, 0], [x2, top, z2, u1, v1], [x1, base, z1, 0, 0], [x2, top, z2, u1, v1], [x1, top, z1, 0, v1]];
+          const vo = style === 'modern' ? 64 * FACADE_TYPE(cx, cz, kind || undefined) : 0, v1o = Math.min(v1, 47) + vo;
+          const quad = [[x1, base, z1, 0, vo], [x2, base, z2, u1, vo], [x2, top, z2, u1, v1o], [x1, base, z1, 0, vo], [x2, top, z2, u1, v1o], [x1, top, z1, 0, v1o]];
           const ex = x2 - x1, ez = z2 - z1;
           const flip = -ez * nx + ex * nz < 0;
           const order = flip ? [0, 2, 1, 3, 5, 4] : [0, 1, 2, 3, 4, 5];
@@ -1097,7 +1122,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const mats: Record<string, THREE.Material> = {
       oldGreen: withFacade(toon('#ffffff', { vertexColors: true, map: tex.oldGreen })),
       oldRed: withFacade(toon('#ffffff', { vertexColors: true, map: tex.oldRed })),
-      modern: toon('#ffffff', { vertexColors: true, map: tex.modern }),
+      modern: withFacade(toon('#ffffff', { vertexColors: true, map: tex.modern }), undefined, 4, true),
       block: withFacade(toon('#ffffff', { vertexColors: true, map: tex.block })),
       stone: toon('#ffffff', { vertexColors: true, map: tex.stone }),
       flatRoof: toon('#ffffff', { vertexColors: true, map: tex.gravel }),
@@ -1110,7 +1135,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       luks: toon('#ffffff', { vertexColors: true, map: tex.luks }),
       luksTurm: toon('#ffffff', { vertexColors: true, map: tex.luksTurm }),
       blockShop: withFacade(toon('#ffffff', { vertexColors: true, map: tex.block }), tex.shopNeu),
-      modernShop: withShop(toon('#ffffff', { vertexColors: true, map: tex.modern }), tex.shopNeu),
+      modernShop: withFacade(toon('#ffffff', { vertexColors: true, map: tex.modern }), tex.shopNeu, 4, true),
       barn: toon('#ffffff', { vertexColors: true, map: tex.barn }),
       hall: toon('#ffffff', { vertexColors: true, map: tex.hall }),
     };
@@ -2120,7 +2145,8 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       if (Math.abs(ny) < 0.3) {
         buf = (style === 'block' || style === 'modern') && shopNear ? B[style + 'Shop'] : B[style]; col = facade;
         const tl = Math.hypot(nx, nz) || 1, tx = -nz / tl, tz = nx / tl;
-        uvf = (p) => [(p[0] * tx + p[2] * tz) / tile, (p[1] - base) / floorH];
+        const vo = style === 'modern' ? 64 * FACADE_TYPE(cx, cz, st ? st.kind : undefined) : 0;
+        uvf = (p) => [(p[0] * tx + p[2] * tz) / tile, Math.max(-15.9, Math.min(47.9, (p[1] - base) / floorH)) + vo];
       } else if (ny > 0.96) {
         buf = B.flatRoof; col = roofFlat; uvf = (p) => [p[0] / 4, p[2] / 4];
       } else {
@@ -2700,24 +2726,34 @@ function withRows(m: THREE.MeshToonMaterial, amount: number) {
   return m;
 }
 
-/** Fassade aus einem 2×2-Atlas (atlasTex): je Fensterachse und Geschoss eine von vier Varianten (40/20/25/15 %),
- *  optional mit Ladengeschoss (unterstes Geschoss aus shopTex, wie withShop). textureGrad hält die Mip-Stufe an den Kachelgrenzen stabil. */
-function withFacade(m: THREE.MeshToonMaterial, shopTex?: THREE.Texture) {
+/** Fassade aus einem Atlas (atlasTex, 2 Spalten × rows Zeilen).
+ *  rows = 2: je Fensterachse und Geschoss eine von vier Varianten (40/20/25/15 %).
+ *  byBuilding: Zeile = Bautyp des Gebäudes (im Geometrie-Bau als v + 64·Typ codiert, FACADE_TYPE), Spalte = Variante je Achse (70/30 %).
+ *  Optional Ladengeschoss (unterstes Geschoss aus shopTex). textureGrad hält die Mip-Stufe an den Kachelgrenzen stabil. */
+function withFacade(m: THREE.MeshToonMaterial, shopTex?: THREE.Texture, rows = 2, byBuilding = false) {
   m.onBeforeCompile = (sh) => {
     if (shopTex) sh.uniforms.shopMap = { value: shopTex };
     sh.fragmentShader = (shopTex ? 'uniform sampler2D shopMap;\n' : '') + sh.fragmentShader.replace('#include <map_fragment>',
       `#ifdef USE_MAP
-        vec2 fCell = floor(vMapUv);
+        ${byBuilding ? 'float fTyp = clamp(floor((vMapUv.y + 16.0) / 64.0), 0.0, ' + (rows - 1).toFixed(1) + '); vec2 fLoc = vec2(vMapUv.x, vMapUv.y - 64.0 * fTyp);' : 'vec2 fLoc = vMapUv;'}
+        vec2 fCell = floor(fLoc);
         float fRnd = fract(sin(dot(fCell, vec2(127.1, 311.7))) * 43758.5453);
-        vec2 fOff = fRnd < 0.4 ? vec2(0.0, 1.0) : fRnd < 0.6 ? vec2(1.0, 1.0) : fRnd < 0.85 ? vec2(0.0, 0.0) : vec2(1.0, 0.0);
-        vec2 fUv = (clamp(fract(vMapUv), 0.004, 0.996) + fOff) * 0.5;
-        vec4 sampledDiffuseColor = textureGrad( map, fUv, dFdx(vMapUv) * 0.5, dFdy(vMapUv) * 0.5 );
-        ${shopTex ? 'if (vMapUv.y < 1.0) sampledDiffuseColor = texture2D( shopMap, vMapUv );' : ''}
+        ${byBuilding ? 'vec2 fOff = vec2(step(0.7, fRnd), ' + (rows - 1).toFixed(1) + ' - fTyp);'
+          : 'vec2 fOff = fRnd < 0.4 ? vec2(0.0, 1.0) : fRnd < 0.6 ? vec2(1.0, 1.0) : fRnd < 0.85 ? vec2(0.0, 0.0) : vec2(1.0, 0.0);'}
+        vec2 fDiv = vec2(0.5, ${(1 / rows).toFixed(4)});
+        vec2 fUv = (clamp(fract(fLoc), 0.004, 0.996) + fOff) * fDiv;
+        vec4 sampledDiffuseColor = textureGrad( map, fUv, dFdx(vMapUv) * fDiv, dFdy(vMapUv) * fDiv );
+        ${shopTex ? 'if (fLoc.y < 1.0) sampledDiffuseColor = texture2D( shopMap, fLoc );' : ''}
         diffuseColor *= sampledDiffuseColor;
       #endif`);
   };
-  m.customProgramCacheKey = () => 'facade' + (shopTex ? shopTex.uuid : '');
+  m.customProgramCacheKey = () => 'facade' + rows + byBuilding + (shopTex ? shopTex.uuid : '');
   return m;
+}
+/** Bautyp 0..3 eines «modern»-Gebäudes (fest je Standort); Wahrzeichen behalten ihren Typ */
+function FACADE_TYPE(cx: number, cz: number, kind?: string) {
+  if (kind === 'bahnhof') return 2; if (kind) return 0;
+  const r = hash(cx + 11.3, cz - 5.7); return r < 0.34 ? 0 : r < 0.62 ? 1 : r < 0.8 ? 2 : 3;
 }
 
 function withShop(m: THREE.MeshToonMaterial, shopTex: THREE.Texture) {
