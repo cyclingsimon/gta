@@ -32,7 +32,7 @@ let saved: AmbienceProbe | null = null;
 let lastX = 0, lastZ = 0, mix: AmbienceMix = { music: 0, venue: 0, siren: false, muted: false, hidden: false };
 
 /** Lautstärken je Schicht (relativ; vor AMB_GAIN und Master 0.6). Lauf 2: konservativ – Stadtverkehr deutlich leiser und seltener. */
-const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05, trolley: 0.02, ship: 0.03 };
+export const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05, trolley: 0.02, ship: 0.03 };
 
 export function initAmbience(c: AudioContext, master: AudioNode, sfx: AudioNode) {
   if (ctx) return; ctx = c;

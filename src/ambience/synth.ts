@@ -76,7 +76,7 @@ export function bird(ctx: AudioContext, out: AudioNode, vol: number) {
     const f = amsel ? base * [1, 1.25, 1.12, 1.5, 0.9, 1.33, 1.06][i % 7] : base * (i % 2 ? 0.82 : 1);
     const osc = ctx.createOscillator(); osc.type = 'sine';
     osc.frequency.setValueAtTime(f, t); osc.frequency.exponentialRampToValueAtTime(f * (amsel ? rnd(0.9, 1.15) : rnd(1.15, 1.4)), t + d);
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(vol * 0.003, t + d); g.gain.linearRampToValueAtTime(0, t + d + 0.015);
     osc.connect(g); g.connect(o); osc.start(t); osc.stop(t + d + 0.02);
     t += d + (amsel ? rnd(0.04, 0.12) : rnd(0.03, 0.07));
   }
@@ -87,7 +87,7 @@ function strike(ctx: AudioContext, out: AudioNode, when: number, f: number, part
   // partials: [Verhältnis, relative Lautstärke, Abklingzeit s]
   for (const [r, a, dec] of partials) {
     const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = f * r;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(vol * a, when + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, when + dec);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, when); g.gain.linearRampToValueAtTime(vol * a, when + 0.006); g.gain.exponentialRampToValueAtTime(vol * a * 0.001, when + dec); g.gain.linearRampToValueAtTime(0, when + dec + 0.04); // Lauf 3: linearer Anschlag, Ende sauber auf 0
     osc.connect(g); g.connect(out); osc.start(when); osc.stop(when + dec + 0.05);
   }
 }
@@ -131,7 +131,7 @@ export function trainPass(ctx: AudioContext, out: AudioNode, vol: number, brakin
     for (const dk of [0, 0.11]) {
       const s = ctx.createBufferSource(); s.buffer = noise(ctx);
       const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 180; bp.Q.value = 1.5;
-      const sg = ctx.createGain(); sg.gain.setValueAtTime(vol * 1.6 * env + 0.0001, k + dk); sg.gain.exponentialRampToValueAtTime(0.0001, k + dk + 0.07);
+      const sg = ctx.createGain(); sg.gain.setValueAtTime(0, k + dk); sg.gain.linearRampToValueAtTime(vol * 1.6 * env + 0.0001, k + dk + 0.008); sg.gain.exponentialRampToValueAtTime(0.0001, k + dk + 0.07); sg.gain.linearRampToValueAtTime(0, k + dk + 0.09); // Lauf 3: 8 ms Einsatz statt Sprung
       s.connect(bp); bp.connect(sg); sg.connect(out); s.start(k + dk, rnd(0, NOISE_SEC - 0.5)); s.stop(k + dk + 0.1);
     }
     k += gap; if (braking) gap *= 1.06;
