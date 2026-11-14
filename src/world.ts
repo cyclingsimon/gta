@@ -90,6 +90,19 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
   t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
 }
+/** Fassaden-Atlas 2×2: vier Varianten derselben Fensterachse (v = 0..3) in einer Textur. Der Shader (withFacade) wählt je
+ *  Achse und Geschoss eine Variante → die Fassade wiederholt sich nicht mehr Fenster für Fenster. Die Kachelränder müssen in
+ *  allen Varianten gleich aussehen (Gesimse, Putz), sonst entstehen sichtbare Nähte. */
+function atlasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D, v: number) => void) {
+  return canvasTex(w * 2, h * 2, (g) => {
+    for (let v = 0; v < 4; v++) { g.save(); g.translate((v % 2) * w, Math.floor(v / 2) * h); g.beginPath(); g.rect(0, 0, w, h); g.clip(); draw(g, v); g.restore(); }
+  });
+}
+/** Vorhang/Store hinter dem Glas (halbtransparent), Rollladen oder dunkles offenes Fenster – kleine Unterschiede je Variante */
+function blind(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, part: number, col = 'rgba(244,238,224,.82)') {
+  g.fillStyle = col; g.fillRect(x, y, w, h * part);
+  g.fillStyle = 'rgba(59,48,43,.28)'; g.fillRect(x, y + h * part - 1.5, w, 1.5);
+}
 function noise(g: CanvasRenderingContext2D, w: number, h: number, n: number, a: number, dark = true) {
   for (let i = 0; i < n; i++) {
     const x = Math.random() * w, y = Math.random() * h;
@@ -111,29 +124,32 @@ function glass(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
 }
 function facadeTextures() {
   const ink = '#3b302b';
-  const old = (shutter: string) => canvasTex(128, 128, (g) => {
+  const old = (shutter: string) => atlasTex(128, 128, (g, v) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
     noise(g, 128, 128, 500, 0.08);
     // Gurtgesims (Stockwerkband)
     g.fillStyle = '#e4dccd'; g.fillRect(0, 120, 128, 8);
     g.fillStyle = 'rgba(59,48,43,.35)'; g.fillRect(0, 119, 128, 1.5);
     // Fensterläden
-    for (const sx of [24, 86]) {
+    for (const sx of v === 1 ? [46, 64] : [24, 86]) { // v1: Läden geschlossen (vor dem Fenster)
+      if (v === 1 && sx === 46) { g.fillStyle = '#FAF7F0'; g.fillRect(42, 24, 44, 70); }
       g.fillStyle = shutter; g.fillRect(sx, 28, 18, 62);
       g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(sx, 28, 18, 62);
       g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.5;
       for (let y = 34; y < 88; y += 6) { g.beginPath(); g.moveTo(sx + 3, y); g.lineTo(sx + 15, y); g.stroke(); }
     }
     // Fensterrahmen + Glas
-    g.fillStyle = '#FAF7F0'; g.fillRect(42, 24, 44, 70);
-    glass(g, 47, 29, 34, 58);
-    g.fillStyle = '#FAF7F0'; g.fillRect(62, 29, 4, 58); g.fillRect(47, 52, 34, 3);
+    if (v !== 1) { g.fillStyle = '#FAF7F0'; g.fillRect(42, 24, 44, 70);
+      glass(g, 47, 29, 34, 58);
+      if (v === 2) blind(g, 47, 29, 34, 58, 0.45); // Store halb unten
+      if (v === 3) { g.fillStyle = 'rgba(244,238,224,.8)'; g.fillRect(47, 29, 9, 58); g.fillRect(72, 29, 9, 58); } // Vorhänge seitlich
+      g.fillStyle = '#FAF7F0'; g.fillRect(62, 29, 4, 58); g.fillRect(47, 52, 34, 3); }
     g.strokeStyle = ink; g.lineWidth = 3; g.strokeRect(42, 24, 44, 70);
     // Fensterbank
     g.fillStyle = '#d8cbb5'; g.fillRect(38, 94, 52, 6); g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(38, 94, 52, 6);
     // Blumenkiste (nur manchmal sichtbar wirkt zufällig, hier immer, aber dezent)
-    g.fillStyle = '#9b5b3a'; g.fillRect(48, 100, 32, 6);
-    g.fillStyle = '#E2463F'; for (const fx of [52, 60, 68, 76]) { g.beginPath(); g.arc(fx, 100, 3, 0, 7); g.fill(); }
+    if (v === 0 || v === 3) { g.fillStyle = '#9b5b3a'; g.fillRect(48, 100, 32, 6);
+      g.fillStyle = v === 0 ? '#E2463F' : '#E9A7C0'; for (const fx of [52, 60, 68, 76]) { g.beginPath(); g.arc(fx, 100, 3, 0, 7); g.fill(); } }
   });
   const modern = canvasTex(128, 128, (g) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
@@ -166,26 +182,30 @@ function facadeTextures() {
   });
   const gravel = canvasTex(64, 64, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); noise(g, 64, 64, 400, 0.18); });
   // Altstadt: glatter Putz, hohes Fenster mit Steineinfassung, ohne Läden
-  const altFenster = (g: CanvasRenderingContext2D) => {
+  const altFenster = (g: CanvasRenderingContext2D, v = 0) => {
     g.fillStyle = '#E9E1D2'; g.fillRect(40, 18, 48, 84); // Steingewände
     g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(40, 18, 48, 84);
     glass(g, 47, 25, 34, 66);
+    if (v === 2) blind(g, 47, 25, 34, 66, 0.5);
+    if (v === 3) { g.fillStyle = 'rgba(40,36,34,.55)'; g.fillRect(47, 25, 34, 66); g.fillStyle = 'rgba(244,238,224,.85)'; g.fillRect(47, 25, 8, 66); g.fillRect(73, 25, 8, 66); } // dunkles Zimmer, Vorhänge
     g.fillStyle = '#F4F1EA'; g.fillRect(62, 25, 4, 66); g.fillRect(47, 48, 34, 3); g.fillRect(47, 70, 34, 3);
     g.fillStyle = '#D9CFBD'; g.fillRect(36, 102, 56, 6); g.strokeRect(36, 102, 56, 6); // Fensterbank
     g.fillStyle = '#D9CFBD'; g.fillRect(36, 12, 56, 6); g.strokeRect(36, 12, 56, 6); // Verdachung
   };
-  const altstadt = canvasTex(128, 128, (g) => {
+  const altDraw = (g: CanvasRenderingContext2D, v: number) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 600, 0.07);
-    // R7: Fensterläden wie in der Altstadt (Referenz Kramgasse/Weinmarkt)
-    for (const sx of [27, 89]) {
-      g.fillStyle = '#4F7A4E'; g.fillRect(sx, 22, 12, 78); g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(sx, 22, 12, 78);
+    // R7: Fensterläden wie in der Altstadt (Referenz Kramgasse/Weinmarkt); v1 ohne Läden, v3 braunrote Läden
+    if (v !== 1) for (const sx of [27, 89]) {
+      g.fillStyle = v === 3 ? '#7A3B30' : '#4F7A4E'; g.fillRect(sx, 22, 12, 78); g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(sx, 22, 12, 78);
       g.strokeStyle = 'rgba(30,50,30,.55)'; g.lineWidth = 1.2; for (let y = 28; y < 98; y += 6) { g.beginPath(); g.moveTo(sx + 2, y); g.lineTo(sx + 10, y); g.stroke(); }
     }
-    altFenster(g);
+    altFenster(g, v);
+    if (v === 0) { g.fillStyle = '#8a5236'; g.fillRect(48, 104, 32, 5); g.fillStyle = '#D9443C'; for (const fx of [53, 61, 69, 77]) { g.beginPath(); g.arc(fx, 104, 2.6, 0, 7); g.fill(); } } // Geranien
     g.fillStyle = 'rgba(59,48,43,.18)'; g.fillRect(0, 124, 128, 4);
-  });
+  };
+  const altstadt = atlasTex(128, 128, altDraw), altstadtPlain = canvasTex(128, 128, (g) => altDraw(g, 0));
   // Bemalte Altstadtfassade (Comic-Fresko: Ornamentband, Rankenbogen über dem Fenster)
-  const painted = canvasTex(128, 128, (g) => {
+  const painted = atlasTex(128, 128, (g, v) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 500, 0.06);
     // Ornamentband
     g.fillStyle = '#B7553C'; g.fillRect(0, 112, 128, 12);
@@ -193,27 +213,30 @@ function facadeTextures() {
     // Ranken beidseits
     g.strokeStyle = '#4E7D52'; g.lineWidth = 3;
     for (const sx of [14, 114]) { g.beginPath(); g.moveTo(sx, 100); g.bezierCurveTo(sx - 10, 70, sx + 10, 50, sx, 20); g.stroke(); g.fillStyle = '#C0473A'; g.beginPath(); g.arc(sx, 18, 4, 0, 7); g.fill(); }
-    altFenster(g);
-    // Bogen-Fresko
-    g.strokeStyle = '#3F6EA0'; g.lineWidth = 4; g.beginPath(); g.arc(64, 14, 28, Math.PI, 0); g.stroke();
+    altFenster(g, v === 1 ? 0 : v);
+    // Bogen-Fresko (v1: Wappenschild statt Bogen, v3: ockerfarbener Bogen)
+    if (v === 1) { g.fillStyle = '#C9A13A'; g.strokeStyle = ink; g.lineWidth = 2; g.beginPath(); g.moveTo(56, 2); g.lineTo(72, 2); g.lineTo(72, 9); g.lineTo(64, 15); g.lineTo(56, 9); g.closePath(); g.fill(); g.stroke(); }
+    else { g.strokeStyle = v === 3 ? '#B8862E' : '#3F6EA0'; g.lineWidth = 4; g.beginPath(); g.arc(64, 14, 28, Math.PI, 0); g.stroke(); }
   });
   // Neustadt (Gründerzeit): Sandsteingewände, Gesims, Balkonbrüstung
-  const gruenderzeit = canvasTex(128, 128, (g) => {
+  const gruenderzeit = atlasTex(128, 128, (g, v) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 500, 0.08);
     g.fillStyle = '#E3D9C6'; g.fillRect(0, 0, 128, 10); g.fillStyle = 'rgba(59,48,43,.3)'; g.fillRect(0, 10, 128, 2); // Gesims
     g.fillStyle = '#D6C7A8'; g.fillRect(36, 20, 56, 86); g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(36, 20, 56, 86);
     glass(g, 43, 27, 42, 72);
+    if (v === 1) blind(g, 43, 27, 42, 72, 0.4);
+    if (v === 3) { g.fillStyle = 'rgba(244,238,224,.85)'; g.fillRect(43, 27, 10, 72); g.fillRect(75, 27, 10, 72); }
     g.fillStyle = '#F4F1EA'; g.fillRect(62, 27, 4, 72); g.fillRect(43, 50, 42, 3);
-    // Balkonbrüstung (Schmiedeeisen)
-    g.strokeStyle = '#3b302b'; g.lineWidth = 2; g.strokeRect(30, 92, 68, 14);
-    for (let x = 34; x < 98; x += 6) { g.beginPath(); g.moveTo(x, 92); g.lineTo(x, 106); g.stroke(); }
-    g.fillStyle = '#CDBF9F'; g.fillRect(26, 106, 76, 5);
+    // Balkonbrüstung (Schmiedeeisen) – nicht an jeder Achse (v2: nur Fensterbank)
+    if (v !== 2) { g.strokeStyle = '#3b302b'; g.lineWidth = 2; g.strokeRect(30, 92, 68, 14);
+      for (let x = 34; x < 98; x += 6) { g.beginPath(); g.moveTo(x, 92); g.lineTo(x, 106); g.stroke(); } }
+    g.fillStyle = '#CDBF9F'; g.fillRect(v === 2 ? 32 : 26, 106, v === 2 ? 64 : 76, 5);
   });
   // Hotel am Quai: weiss, breite Fenster, durchgehende Balkone
-  const hotel = canvasTex(128, 128, (g) => {
+  const hotel = atlasTex(128, 128, (g, v) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 300, 0.05);
     g.fillStyle = '#EDE6D8'; g.fillRect(28, 16, 72, 84); g.strokeStyle = ink; g.lineWidth = 2.5; g.strokeRect(28, 16, 72, 84);
-    glass(g, 34, 22, 60, 72); g.fillStyle = '#F7F4EE'; g.fillRect(62, 22, 4, 72);
+    glass(g, 34, 22, 60, 72); if (v === 1) blind(g, 34, 22, 60, 72, 0.35, 'rgba(232,196,106,.85)'); if (v === 2) { g.fillStyle = 'rgba(250,247,240,.85)'; g.fillRect(34, 22, 12, 72); g.fillRect(82, 22, 12, 72); } if (v === 3) blind(g, 34, 22, 60, 72, 0.7); g.fillStyle = '#F7F4EE'; g.fillRect(62, 22, 4, 72);
     g.fillStyle = '#D8D0C0'; g.fillRect(0, 100, 128, 6); g.strokeStyle = '#3b302b'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(0, 88); g.lineTo(128, 88); g.stroke(); for (let x = 2; x < 128; x += 8) { g.beginPath(); g.moveTo(x, 88); g.lineTo(x, 100); g.stroke(); }
   });
@@ -231,10 +254,10 @@ function facadeTextures() {
   });
   const shopAlt = shop(true, '#7A4A2E'), shopNeu = shop(false, '#2F5E7A');
   // Wohnblock (1950–2000): Verputz, zwei Einzelfenster mit Rahmen je Achse, Balkonplatte mit Geländer
-  const block = canvasTex(128, 128, (g) => {
+  const block = atlasTex(128, 128, (g, v) => {
     g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
     noise(g, 128, 128, 260, 0.05);
-    for (const x of [14, 74]) { g.fillStyle = '#7C8C99'; g.fillRect(x - 3, 30, 46, 64); glass(g, x, 33, 40, 58); g.fillStyle = '#E9E5DC'; g.fillRect(x + 18, 33, 4, 58); g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(x - 3, 30, 46, 64); }
+    for (const x of [14, 74]) { g.fillStyle = '#7C8C99'; g.fillRect(x - 3, 30, 46, 64); glass(g, x, 33, 40, 58); const k = v * 2 + (x > 40 ? 1 : 0); if (k === 2 || k === 5) blind(g, x, 33, 40, 58, 0.55, 'rgba(226,228,226,.9)'); if (k === 3) blind(g, x, 33, 40, 58, 0.95, 'rgba(226,228,226,.92)'); if (k === 6) blind(g, x, 33, 40, 58, 0.3, 'rgba(232,150,70,.85)'); if (k === 7) { g.fillStyle = 'rgba(250,247,240,.8)'; g.fillRect(x, 33, 9, 58); g.fillRect(x + 31, 33, 9, 58); } g.fillStyle = '#E9E5DC'; g.fillRect(x + 18, 33, 4, 58); g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(x - 3, 30, 46, 64); }
     g.fillStyle = '#C9C3B8'; g.fillRect(0, 100, 128, 7);                       // Balkonplatte
     g.fillStyle = 'rgba(59,48,43,.35)'; g.fillRect(0, 107, 128, 3);
     g.strokeStyle = '#8A8F94'; g.lineWidth = 2; for (let x = 4; x < 128; x += 9) { g.beginPath(); g.moveTo(x, 82); g.lineTo(x, 100); g.stroke(); }
@@ -261,7 +284,7 @@ function facadeTextures() {
     for (let x = 0; x < 128; x += 6) { g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(x, 0, 2, 128); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 3, 0, 1, 128); }
     g.fillStyle = '#6F7880'; g.fillRect(0, 14, 128, 22); glass(g, 2, 17, 124, 16); for (let x = 0; x < 128; x += 32) { g.fillStyle = '#B8BEC2'; g.fillRect(x, 14, 3, 22); }
     g.fillStyle = 'rgba(80,80,80,.45)'; g.fillRect(0, 112, 128, 16); });
-  return { block, shopAlt, shopNeu, oldGreen: old('#5E8C5A'), oldRed: old('#A9483B'), modern, stone, tiles, gravel, altstadt, painted, gruenderzeit, hotel, luks, luksTurm, barn, hall };
+  return { block, shopAlt, shopNeu, oldGreen: old('#5E8C5A'), oldRed: old('#A9483B'), modern, stone, tiles, gravel, altstadt, altstadtPlain, painted, gruenderzeit, hotel, luks, luksTurm, barn, hall };
 }
 
 /** Walmdach über dem kleinsten umschliessenden Rechteck (nur bei rechteckähnlichen Grundrissen) */
@@ -1053,7 +1076,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (ERKER.length) { // Erker als Instanzen: Kasten mit Fenstern + kleines Kupferdach
       const body = new THREE.BoxGeometry(2.6, 1, 1.1); body.translate(0, 0.5, 0);
       const cap = new THREE.ConeGeometry(1.95, 1.4, 4); cap.rotateY(Math.PI / 4); cap.scale(1, 1, 0.6); cap.translate(0, 0.7, 0);
-      const bm = new THREE.InstancedMesh(body, withNight(toon('#ffffff', { map: tex.altstadt })), ERKER.length), cm = new THREE.InstancedMesh(cap, toon('#5E8C78'), ERKER.length);
+      const bm = new THREE.InstancedMesh(body, withNight(toon('#ffffff', { map: tex.altstadtPlain })), ERKER.length), cm = new THREE.InstancedMesh(cap, toon('#5E8C78'), ERKER.length);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
       ERKER.forEach(([x, z, y, hh, rot, cr, cg, cb], i) => {
         e.set(0, rot, 0); q.setFromEuler(e);
@@ -1072,21 +1095,21 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       group.add(dome, outline(dome), tip);
     }
     const mats: Record<string, THREE.Material> = {
-      oldGreen: toon('#ffffff', { vertexColors: true, map: tex.oldGreen }),
-      oldRed: toon('#ffffff', { vertexColors: true, map: tex.oldRed }),
+      oldGreen: withFacade(toon('#ffffff', { vertexColors: true, map: tex.oldGreen })),
+      oldRed: withFacade(toon('#ffffff', { vertexColors: true, map: tex.oldRed })),
       modern: toon('#ffffff', { vertexColors: true, map: tex.modern }),
-      block: toon('#ffffff', { vertexColors: true, map: tex.block }),
+      block: withFacade(toon('#ffffff', { vertexColors: true, map: tex.block })),
       stone: toon('#ffffff', { vertexColors: true, map: tex.stone }),
       flatRoof: toon('#ffffff', { vertexColors: true, map: tex.gravel }),
       tiles: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
       slate: toon('#ffffff', { vertexColors: true, map: tex.tiles }),
-      altstadt: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.altstadt }), tex.shopAlt), 0.85),
-      painted: withRows(withShop(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.8),
-      gruenderzeit: withShop(toon('#ffffff', { vertexColors: true, map: tex.gruenderzeit }), tex.shopNeu),
-      hotel: withShop(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
+      altstadt: withRows(withFacade(toon('#ffffff', { vertexColors: true, map: tex.altstadt }), tex.shopAlt), 0.85),
+      painted: withRows(withFacade(toon('#ffffff', { vertexColors: true, map: tex.painted }), tex.shopAlt), 0.8),
+      gruenderzeit: withFacade(toon('#ffffff', { vertexColors: true, map: tex.gruenderzeit }), tex.shopNeu),
+      hotel: withFacade(toon('#ffffff', { vertexColors: true, map: tex.hotel }), tex.shopNeu),
       luks: toon('#ffffff', { vertexColors: true, map: tex.luks }),
       luksTurm: toon('#ffffff', { vertexColors: true, map: tex.luksTurm }),
-      blockShop: withShop(toon('#ffffff', { vertexColors: true, map: tex.block }), tex.shopNeu),
+      blockShop: withFacade(toon('#ffffff', { vertexColors: true, map: tex.block }), tex.shopNeu),
       modernShop: withShop(toon('#ffffff', { vertexColors: true, map: tex.modern }), tex.shopNeu),
       barn: toon('#ffffff', { vertexColors: true, map: tex.barn }),
       hall: toon('#ffffff', { vertexColors: true, map: tex.hall }),
@@ -2037,7 +2060,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
       }
     }
     if (style !== 'stone' && style !== 'modern' && style !== 'block' && style !== 'luks' && style !== 'luksTurm') {
-      if (zone === 'altstadt') { const plaza = PAINTED_SQUARES.some(([px, pz, pr]) => Math.hypot(cx - px, cz - pz) < pr); style = plaza || r < 0.18 ? 'painted' : 'altstadt'; facade = new THREE.Color(['#F4EEE2', '#EFDDBA', '#E9C9A3', '#E6C8C0', '#DCE3CF', '#F2E2B4', '#E8D9C9'][Math.floor(hash(cz + 3, cx) * 7)]); }
+      if (zone === 'altstadt') { const plaza = PAINTED_SQUARES.some(([px, pz, pr]) => Math.hypot(cx - px, cz - pz) < pr); style = (plaza && r < 0.5) || r < 0.12 ? 'painted' : 'altstadt'; /* 15a: nicht jedes Haus am Platz bemalt (wirkte wie Tapete) */ facade = new THREE.Color(['#F4EEE2', '#EFDDBA', '#E9C9A3', '#E6C8C0', '#DCE3CF', '#F2E2B4', '#E8D9C9'][Math.floor(hash(cz + 3, cx) * 7)]); }
       else if (zone === 'neustadt') { style = 'gruenderzeit'; facade = new THREE.Color(['#DCCFB4', '#D3C6AA', '#E4D9C3', '#CFC0A3', '#E8DCC6'][Math.floor(r * 5)]); slateRoof = hash(cx + 7, cz) < 0.45; }
       else if (zone === 'quai') { style = 'hotel'; facade = new THREE.Color(['#F3F0E8', '#F1E9D8', '#EEE7DA'][Math.floor(r * 3)]); slateRoof = hash(cx + 7, cz) < 0.6; }
     }
@@ -2576,16 +2599,19 @@ function hrAffine(): [THREE.Vector3, THREE.Vector3] {
 function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture) {
   detail.wrapS = detail.wrapT = THREE.RepeatWrapping;
   const [hA, hB] = hr ? hrAffine() : [new THREE.Vector3(), new THREE.Vector3()];
+  // 14zk: scharfes Luftbild erst einblenden, wenn die Datei wirklich geladen ist – fehlt sie (oder lädt sie noch), blieb der Boden der Kernzone schwarz
+  const hrOn = { value: 0 };
+  if (hr) { const t0 = performance.now(), iv = setInterval(() => { const im = hr.image as HTMLImageElement | undefined; if (im && im.width > 0) { hrOn.value = 1; clearInterval(iv); } else if (performance.now() - t0 > 180000) clearInterval(iv); }, 500); }
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: detail };
-    if (hr) { sh.uniforms.hrMap = { value: hr }; sh.uniforms.hrA = { value: hA }; sh.uniforms.hrB = { value: hB }; }
+    if (hr) { sh.uniforms.hrMap = { value: hr }; sh.uniforms.hrA = { value: hA }; sh.uniforms.hrB = { value: hB }; sh.uniforms.hrOn = hrOn; }
     sh.vertexShader = 'varying vec2 vWXZ;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\nuniform float hrOn;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
        #ifdef USE_HR
        vec2 huv = vec2(dot(hrA, vec3(vWXZ, 1.0)), dot(hrB, vec3(vWXZ, 1.0)));
        vec2 he = min(huv, 1.0 - huv);
-       float hw = smoothstep(0.0, 0.03, min(he.x, he.y));
+       float hw = smoothstep(0.0, 0.03, min(he.x, he.y)) * hrOn;
        if (hw > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(hrMap, huv).rgb, hw);
        #endif
        float dg = texture2D(detailMap, vWXZ / 9.0).r * 0.6 + texture2D(detailMap, vWXZ / 31.0).r * 0.4;
@@ -2671,6 +2697,26 @@ function withRows(m: THREE.MeshToonMaterial, amount: number) {
       #endif`);
   };
   m.customProgramCacheKey = () => 'rows' + amount + (prevKey ? prevKey() : '');
+  return m;
+}
+
+/** Fassade aus einem 2×2-Atlas (atlasTex): je Fensterachse und Geschoss eine von vier Varianten (40/20/25/15 %),
+ *  optional mit Ladengeschoss (unterstes Geschoss aus shopTex, wie withShop). textureGrad hält die Mip-Stufe an den Kachelgrenzen stabil. */
+function withFacade(m: THREE.MeshToonMaterial, shopTex?: THREE.Texture) {
+  m.onBeforeCompile = (sh) => {
+    if (shopTex) sh.uniforms.shopMap = { value: shopTex };
+    sh.fragmentShader = (shopTex ? 'uniform sampler2D shopMap;\n' : '') + sh.fragmentShader.replace('#include <map_fragment>',
+      `#ifdef USE_MAP
+        vec2 fCell = floor(vMapUv);
+        float fRnd = fract(sin(dot(fCell, vec2(127.1, 311.7))) * 43758.5453);
+        vec2 fOff = fRnd < 0.4 ? vec2(0.0, 1.0) : fRnd < 0.6 ? vec2(1.0, 1.0) : fRnd < 0.85 ? vec2(0.0, 0.0) : vec2(1.0, 0.0);
+        vec2 fUv = (clamp(fract(vMapUv), 0.004, 0.996) + fOff) * 0.5;
+        vec4 sampledDiffuseColor = textureGrad( map, fUv, dFdx(vMapUv) * 0.5, dFdy(vMapUv) * 0.5 );
+        ${shopTex ? 'if (vMapUv.y < 1.0) sampledDiffuseColor = texture2D( shopMap, vMapUv );' : ''}
+        diffuseColor *= sampledDiffuseColor;
+      #endif`);
+  };
+  m.customProgramCacheKey = () => 'facade' + (shopTex ? shopTex.uuid : '');
   return m;
 }
 
