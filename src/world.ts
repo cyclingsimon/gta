@@ -1466,6 +1466,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     });
   }
 
+  signBacks(group);
   return { group, mask, minimap, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
 
@@ -2279,6 +2280,20 @@ function colorMerge(parts: [THREE.BufferGeometry, string][]) {
   return mergeGeometries(gs, false)!;
 }
 /** InstancedMesh räumlich aufteilen (Zellgrösse in m) – bessere Sichtbarkeitsprüfung */
+/** 14ze: Verkehrsschilder nur vorne bedruckt, Rückseite grau (vorher beidseitig → Spiegelschrift, Kreiselpfeile verkehrt herum) */
+const SIGN_NAMES = new Set(['fgsSignal', 'tempo', 'wegweiser', 'hauptstrasse', 'kreisel-signal', 'umfahren']);
+function signBacks(root: THREE.Object3D) {
+  const backs = new Map<THREE.Material, THREE.Material>(), add: [THREE.Object3D, THREE.Mesh][] = [];
+  root.traverse((o: any) => {
+    if (!o.isMesh || !SIGN_NAMES.has(o.name) || !(o.material instanceof THREE.MeshBasicMaterial) || !o.material.map || (o.material.side !== THREE.DoubleSide && !backs.has(o.material))) return;
+    const mat = o.material as THREE.MeshBasicMaterial; let bm = backs.get(mat);
+    if (!bm) { const b = new THREE.MeshBasicMaterial({ map: mat.map, transparent: mat.transparent, alphaTest: mat.alphaTest, side: THREE.BackSide, color: '#9EA3A8' });
+      b.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = diffuse;'); };
+      backs.set(mat, bm = b); mat.side = THREE.FrontSide; mat.needsUpdate = true; }
+    const c = o.clone(); c.material = bm; c.name = o.name + '-rueck'; add.push([o.parent, c]);
+  });
+  for (const [p, c] of add) p.add(c);
+}
 export function chunkInstanced(im: THREE.InstancedMesh, cell: number): THREE.Object3D {
   const m = new THREE.Matrix4(), cells = new Map<string, number[]>();
   for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m); const k = Math.floor(m.elements[12] / cell) + ',' + Math.floor(m.elements[14] / cell); let a = cells.get(k); if (!a) cells.set(k, (a = [])); a.push(i); }
@@ -2797,13 +2812,16 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.3, x = A[0] + ux * 4 - uz * o, z = A[1] + uz * 4 + ux * o;
         const nm = nameAt(A[0], A[1]); if (!nm || tafeln.some((t) => Math.hypot(t[0] - x, t[1] - z) < 25)) continue;
         tafeln.push([x, z, Math.atan2(ux, uz), nm, !inTown]); } }
-    for (const [x, z, h, nm, ende] of tafeln) {
-      const tex = canvasTex(256, 96, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#1F4E9C'; g.fillRect(5, 5, 246, 86);
+    // 14ze: Vorder- und Rückseite getrennt (vorher DoubleSide → Rückseite mit Spiegelschrift). Rückseite = Gegenstück (Ortsbeginn ↔ Ortsende), wie in der Schweiz üblich
+    const tafelTex = (nm: string, ende: boolean) => canvasTex(256, 96, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#1F4E9C'; g.fillRect(5, 5, 246, 86);
         g.fillStyle = '#fff'; let fs = 40; g.font = `bold ${fs}px sans-serif`; while (g.measureText(nm).width > 226 && fs > 18) { fs -= 2; g.font = `bold ${fs}px sans-serif`; }
         g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(nm, 128, 50);
         if (ende) { g.strokeStyle = '#D52B1E'; g.lineWidth = 9; g.beginPath(); g.moveTo(14, 84); g.lineTo(242, 12); g.stroke(); } }, false);
-      const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.56), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
-      const y = terrain.height(x, z); pl.position.set(x, y + 2.1, z); pl.rotation.y = h + Math.PI; pl.name = 'ortstafel'; group.add(pl);
+    for (const [x, z, h, nm, ende] of tafeln) {
+      const y = terrain.height(x, z);
+      for (const back of [false, true]) {
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.56), new THREE.MeshBasicMaterial({ map: tafelTex(nm, back ? !ende : ende) }));
+        pl.position.set(x, y + 2.1, z); pl.rotation.y = h + (back ? 0 : Math.PI); pl.name = 'ortstafel'; group.add(pl); }
       const pg = new THREE.CylinderGeometry(0.045, 0.045, 2.1, 6); const pm = new THREE.Mesh(pg, steel); pm.position.set(x, y + 1.05, z); group.add(pm); }
   }
   const nWeg = wegweiser(d, terrain, group, steel);

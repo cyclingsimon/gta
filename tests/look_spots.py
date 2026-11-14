@@ -11,6 +11,7 @@ async def main():
         await pg.evaluate('localStorage.clear()'); await pg.click('#start-btn')
         await pg.wait_for_function('window.__luksiReady', timeout=900000)
         await pg.evaluate("document.querySelectorAll('.radio,#radio,#offer').forEach(e=>e.style.display='none')")
+        if os.environ.get('EVE'): await pg.evaluate('window.__dbg.evening(true)')
         for i, (x, z, h, cam) in enumerate(spots):
             if cam < 0: await pg.evaluate(f'window.__cam=[{x},{h},{z},{x+(-cam%1000)-500},{h-28},{z+(-cam//1000)-500}]')
             else: await pg.evaluate(f'window.__cam=null;window.__dbg.tp({x},{z},{h})')

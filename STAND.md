@@ -1,9 +1,15 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 14.11.2026 11:15. Fertig: **2026-11-14zd** = 14zc + Fernsicht-Übergang. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** Branch `claude/13i-gebiet-a`, nicht in main.
+Stand: 14.11.2026 12:00. Fertig: **2026-11-14ze** = 14zd + Schilder-Rückseiten. ZIP an Simon, nicht hochgeladen. **Keine neuen Gegenden – Qualität statt Grösse (45/30/20/5).** PC/Browser ab jetzt aus. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
+
+## Version 14ze (2026-11-14)
+- world.ts `signBacks()` (am Ende von buildWorld): Meshes fgsSignal, tempo, wegweiser, hauptstrasse, kreisel-signal, umfahren mit MeshBasicMaterial+map+DoubleSide → FrontSide + Klon mit BackSide-Material (graue Farbe, Alpha aus der Textur). Ortstafeln: zwei Ebenen Rücken an Rücken, Rückseite = Gegenstück (Ortsbeginn ↔ Ortsende).
+- Sichtprüfung: Abend-Modus Eigenthal/Luzern mit neuer Fernsicht ok; Ortstafel Mauensee (a1) vorne «Mauensee», hinten durchgestrichen, keine Spiegelschrift. Zählung a1: 22 Ortstafel-Ebenen (11 Tafeln), Tempo 4/4, Wegweiser 15/13 Rückseiten.
+- «Weisser Querstrich links neben dem Auto»: bewegt sich mit dem Fahrzeug (Test a20 vor/nach 10 m Fahrt) → Teil der Fahrzeug-Darstellung, kein Strassenfehler; Quelle in vehicle.ts nicht gefunden (keine passende Geometrie), offen, klein.
+- Tests: smoke_a a1 8/8 ohne Fehler; Luzern lädt ohne Fehler.
 
 ## Version 14zd (2026-11-14)
 - a18-«Horizontspalt» erklärt: kein Loch, sondern Nebel der Nahszene (Fog 260–1500 m, #CFE9F5) macht Hügel bei 1–1.5 km weiss; dahinter Fernsicht (farScene) mit eigener, dunklerer Färbung → harte helle Silhouette. Fix in `horizonMesh`: Shader mischt bis 1500 m Kameradistanz Nebelfarbe (`HZ_FOG`, folgt Tag/Abend), Übergang bis 4000 m; Tiefland-Dunst 0.45 → 0.2. Ergebnis: Kante deutlich weicher, aber noch sichtbar von hoch oben (freie Kamera 1000 m).

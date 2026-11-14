@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-14ze  Schilder mit richtiger Rückseite
+- Ortstafeln: Rückseite zeigt jetzt das Ortsende (rot durchgestrichen) bzw. den Ortsbeginn – wie in der Schweiz. Vorher stand der Name hinten in Spiegelschrift
+- Tempo-, Kreisel-, Hauptstrassen-, Fussgängerstreifen-Signale und Wegweiser: hinten grau statt spiegelverkehrt (Kreiselpfeile zeigten von hinten in die falsche Richtung)
+- Abend-Modus mit der neuen Fernsicht geprüft: passt
+
 2026-11-14zd  Weicherer Übergang zur Fernsicht
 - Am Ende der Sichtweite gab es eine harte helle Kante: nahe Hügel im Dunst weiss, dahinter die Fernsicht dunkler (gut sichtbar von Anhöhen, z. B. Eigenthal). Die Fernsicht beginnt jetzt in derselben Dunstfarbe und wird erst mit der Entfernung farbig
 - Ebenen in der Fernsicht weniger weiss
