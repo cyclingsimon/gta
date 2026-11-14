@@ -497,6 +497,8 @@ export class Mask {
 
 export interface World {
   group: THREE.Group;
+  /** 15a: Rechtecke, in denen Umland/Aussenfläche nicht gezeichnet werden (geladene Nachbargegenden) */
+  clip?: { value: THREE.Vector4[] };
   /** 14zg: Strassentunnels (Röhren, Portale) – eigene Gruppe, bleibt sichtbar, wenn die Kamera im Berg ist */
   tunnels: THREE.Group;
   mask: Mask;
@@ -617,6 +619,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     lap('Boden-LOD');
   } else group.add(ground);
   // Umland: grobes Gitter mit Randhöhen, damit am Spielfeldrand keine Klippe entsteht
+  const clip = { value: [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector4(1, 1, 0, 0)) }; // Rechtecke geladener Nachbargegenden (main.ts linkSlots)
   const apronTex = groundTex.clone(); apronTex.needsUpdate = true;
   const apronG = gridMesh(terrain, X0 - 2520, Z0 - 2500, X1 + 2480, Z1 + 2500, 60, -0.6, 12, [X0 + 1, Z0 + 1, X1 - 1, Z1 - 1]);
   if (RURAL_HOUSES) { // Gebiet A: Umland als Flickenteppich aus Wiesen, Äckern und Waldstücken (statt einfarbig, wirkte aus der Luft wie Wüste)
@@ -631,12 +634,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     apronG.setAttribute('color', new THREE.BufferAttribute(col, 3));
   }
   const apron = new THREE.Mesh(apronG, RURAL_HOUSES ? toon('#ffffff', { map: apronTex, vertexColors: true }) : toon('#B9C995', { map: apronTex }));
-  apron.name = 'apron'; group.add(apron);
+  apron.name = 'apron'; group.add(apron); withClip(apron.material as THREE.MeshToonMaterial, clip);
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), toon('#A9C285', { fog: true }));
   // tief: sonst deckt sie das Reussbett unterhalb des Nadelwehrs (Wasser < Seespiegel); Region Nord: Rotsee/Reuss bis 17 m unter Seespiegel
   let lowest = -9; { const [bx0, bz0, bx1, bz1] = d.meta.bounds; for (let x = bx0; x < bx1; x += 50) for (let z = bz0; z < bz1; z += 50) lowest = Math.min(lowest, terrain.ground(x, z)); }
   outer.rotation.x = -Math.PI / 2; outer.position.y = Math.min(-12, lowest - 3);
-  outer.name = 'outer'; group.add(outer);
+  outer.name = 'outer'; group.add(outer); withClip(outer.material as THREE.MeshToonMaterial, clip);
 
   // ---- Wasser ----
   const waterMeshes: THREE.Mesh[] = [];
@@ -1543,7 +1546,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   signBacks(group);
-  return { group, tunnels, mask, minimap, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
+  return { group, tunnels, mask, minimap, clip, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
 
 /** Mesh nach Dreiecks-Schwerpunkt in Kacheln aufteilen (Attribute bleiben geteilt bzw. werden kopiert) */
@@ -2599,6 +2602,18 @@ function hrAffine(): [THREE.Vector3, THREE.Vector3] {
     return new THREE.Vector3(...b).applyMatrix3(m);
   };
   return [solve((E) => (E - AERIAL_HR.E0) / (AERIAL_HR.E1 - AERIAL_HR.E0)), solve((_E, N) => (N - AERIAL_HR.N0) / (AERIAL_HR.N1 - AERIAL_HR.N0))];
+}
+/** Zeichnet das Material nicht innerhalb der Rechtecke `clip` (x0, z0, x1, z1 in Weltmetern; leeres Rechteck = x0 > x1) */
+function withClip(m: THREE.MeshToonMaterial, clip: { value: THREE.Vector4[] }) {
+  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m);
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r); sh.uniforms.uClip = clip;
+    sh.vertexShader = 'varying vec2 vClipP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vClipP = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = 'uniform vec4 uClip[6];\nvarying vec2 vClipP;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+      for (int i = 0; i < 6; i++) { vec4 c = uClip[i]; if (vClipP.x > c.x && vClipP.x < c.z && vClipP.y > c.y && vClipP.y < c.w) discard; }`);
+  };
+  m.customProgramCacheKey = () => 'clip' + (prevKey ? prevKey() : '');
+  return m;
 }
 function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture) {
   detail.wrapS = detail.wrapT = THREE.RepeatWrapping;

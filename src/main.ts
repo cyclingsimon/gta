@@ -435,7 +435,7 @@ const missionsAP: Promise<any> | null = RA ? fetch(`${DIR}missions.json?v=${VERS
 function setupMissionsA() {
   const G: Record<string, any> = { plaster: plasterGame, bandage: bandageGame, memory: memoryGame, water: waterGame, thermo: thermoGame, cat: catGame, comfort: comfortGame };
   const PR: Record<string, any> = { kid: propKid, cat: propCat, bike: propBike, tourist: propTourist };
-  missions = (MA?.missions || []).map((m) => ({ id: m.id, title: m.title, radio: m.radio, place: m.place, at: snap(m.at, true), game: G[m.game] || comfortGame, transport: m.transport, prop: PR[m.prop] || propKid, thanks: m.thanks }));
+  missions = (MA?.missions || []).map((m) => ({ id: m.id, title: m.title, radio: m.radio.replace(/^Auf dem (Sporthalle|Turnhalle|Mehrzweckhalle)/, 'Bei der $1').replace(/^Beim (Schule|Schulanlage|Kirche|Kapelle)/, 'Bei der $1'), place: m.place, at: snap(m.at, true), game: G[m.game] || comfortGame, transport: m.transport, prop: PR[m.prop] || propKid, thanks: m.thanks }));
 }
 
 function setupMissionsSued() {
@@ -692,7 +692,7 @@ function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
   if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (RA ? `Freie Fahrt in ${RA.name}` : REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Nice City');
-  else if (phase === 'toScene') m.textContent = `${current.title}: zum ${current.place}`;
+  else if (phase === 'toScene') m.textContent = `${current.title} – Ziel: ${current.place}`; // 15a: ohne Artikel («zum Kapellbrücke» war falsch)
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
   else if (phase === 'toHospital') m.textContent = `${current.title}: ${TO_H}`;
   else m.textContent = current.title;
@@ -1155,7 +1155,10 @@ function frame(now: number) {
   if (overlayOpen && phase === 'handover' && hit('confirm')) (document.querySelector('.mg') as any)._close?.();
   else if (overlayOpen && (document.querySelector('.mg') as any)._confirm) { const o = document.querySelector('.mg') as any; if (o._nav) for (const d of ['up', 'down', 'left', 'right'] as const) if (hit(d)) o._nav(d); if (hit('confirm')) o._confirm(); else if (hit('pause')) o._cancel(); }
 
-  if (world && !paused) {
+  // 15a (Simon 14.11.): bei einem Funkspruch steht die Welt still, bis entschieden ist – «Don't text and drive»
+  const funkHalt = (phase as string) === 'offer' && (!TEST || /[?&]funkhalt/.test(location.search)); // in Tests nur mit ?funkhalt (Kamerafahrten/Autopilot laufen sonst nicht)
+  if (world && !paused && funkHalt && !overlayOpen) { if (hit('accept')) acceptOffer(); else if (hit('decline')) declineOffer(); }
+  if (world && !paused && !funkHalt) {
     const playing = !overlayOpen;
     // Mitspieler: Controller 2–4 drücken A/Start
     if (playing) for (let k = players.length; k < Math.min(4, padCount()); k++) if (padJoin(k)) addPlayer();
@@ -1703,11 +1706,23 @@ function revealTick() { for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; 
 function prepNav(s: Slot) {
   setTimeout(() => { if (!slots.has(s.id) || s.nav) return; const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi vorab', s.id, (performance.now() - t0).toFixed(0), 'ms'); }, 2500);
 }
+/** 15a: Ortsname am Standort statt Gegend-Name («Willkommen in Littau» stand in Kriens). Nächster OSM-Ort (place) aus allen geladenen Gegenden;
+ *  grössere Orte (Rang ≥ 2) gewinnen bis 1.6 km, sonst der nächste Weiler/Quartier bis 900 m. [Annäherung – keine echten Gemeindegrenzen in den Daten] */
+function placeNear(x: number, z: number, s: Slot): string {
+  let best = '', bd = 1e9;
+  for (const sl of new Set([s, ...slots.values()])) for (const pl of ((sl.data as any).places || []) as [string, number, number, number][]) {
+    const d = Math.hypot(pl[1] - x, pl[2] - z); const lim = pl[3] >= 2 ? 1600 : 900; if (d > lim) continue;
+    const score = d / (pl[3] >= 3 ? 2.2 : pl[3] >= 2 ? 1.6 : 1); if (score < bd) { bd = score; best = pl[0]; } }
+  return best;
+}
 function linkSlots() {
   const all = [...slots.values()];
   for (const s of all) { const others = all.filter((o) => o !== s); s.terrain.nb = others.map((o) => o.terrain); s.world.mask.nb = others.map((o) => o.world.mask);
     // Umland/Aussenfläche einer Gegend tiefer legen, wenn Nachbarn geladen sind (sonst ragt das grobe Umland in die Nachbarstrassen)
-    for (const n of ['apron', 'outer']) { const o = s.world.group.getObjectByName(n); if (o) { if (o.userData.y0 === undefined) o.userData.y0 = o.position.y; o.position.y = o.userData.y0 - (all.length > 1 ? 4 : 0); } } }
+    for (const n of ['apron', 'outer']) { const o = s.world.group.getObjectByName(n); if (o) { if (o.userData.y0 === undefined) o.userData.y0 = o.position.y; o.position.y = o.userData.y0 - (all.length > 1 ? 4 : 0); } }
+    // 15a: Umland/Aussenfläche dort gar nicht zeichnen, wo eine andere geladene Gegend liegt (lag sonst als grüne Fläche über Strassen und See der Nachbargegend)
+    const cl = (s.world as any).clip as { value: THREE.Vector4[] } | undefined;
+    if (cl) cl.value.forEach((v, i) => { const o = others[i]; const b = o ? REG_BOUNDS[o.id] : null; if (b) v.set(b[0], b[1], b[2], b[3]); else v.set(1, 1, 0, 0); }); }
 }
 function unloadSlot(s: Slot) {
   scene.remove(s.world.group); scene.remove(s.world.tunnels);
@@ -1745,7 +1760,7 @@ function activate(s: Slot) {
   if (underground) { underground = false; setUnderground(true); }
   save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
   stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;
-  toast(`👋 Willkommen in ${REGION_NAME[s.id] || s.id}!`, 3000); updateHud();
+  toast(`👋 Willkommen in ${placeNear(car.x, car.z, s) || REGION_NAME[s.id] || s.id}!`, 3000); updateHud();
   if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
   console.log('[welt] aktiv', s.id, 'von', from);
 }
