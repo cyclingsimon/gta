@@ -1,5 +1,5 @@
 Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-15b
-Neu in 15b: echte Gemeindegrenzen bei «Willkommen in …», scharfes Luftbild (1.25 m) von Emmen bis Stans, Züge und Schiffe nach Vorbild, Sirene exakt 586,7/440 Hz, Spiel wartet bei Funkspruch, «Freie Fahrt in …» entfernt.
+Neu in 15b: echte Gemeindegrenzen bei «Willkommen in …», scharfes Luftbild (1.25 m) von Emmen bis Stans, Züge und Schiffe nach Vorbild, Sirene exakt 586,7/440 Hz, Spiel wartet bei Funkspruch, «Freie Fahrt in …» entfernt. Nach dem ZIP 15b dazugekommen: Tankstellen an echten Standorten (ohne Funktion), Luftbild Ebikon/Rontal, PostAuto und Doppelstockzug in belegten Farben.
 Neu in 15a: Häuser mit abwechslungsreichen Fenstern, echter Rettungswagen und Busfarben, Baumarten, Wartehallen, Geräusche je nach Ort, Schwierigkeit beim ersten Start wählen, Funkspruch hält das Spiel an, grüne Flächen über Strassen behoben.
 Neu in 14zj: echte 3D-Häuser auch ausserhalb Luzern (Modus Echt), Minikarte mit Nachbargegenden.
 Neu in 14zi: Stans bis Wolhusen am Stück, Schnellreise ohne Laden, Feuerwehr/Glace-Wagen/Monster-Ambulanz.
