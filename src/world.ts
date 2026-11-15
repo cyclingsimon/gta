@@ -780,7 +780,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const DRV = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'service', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street']);
     const lift = new Array(nComp).fill(0);
     if (!/[?&]altbruecken/.test(location.search)) {
-      const under: [number[][], number][] = [...((d as any).railAll || d.rail || []).map((l: any) => [l.p || l, 5.6] as [number[][], number]), ...d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
+      const under: [number[][], number][] = [...((d as any).railAll || d.rail || []).map((l: any) => [l.p || l, 5.6] as [number[][], number]), ...d.roads.filter((r) => !r.b && !(r as any).tu && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
       const X = (a: number[], b: number[], c: number[], e: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); const o1 = o(a, b, c), o2 = o(a, b, e), o3 = o(c, e, a), o4 = o(c, e, b); if (!(o1 * o2 < 0 && o3 * o4 < 0)) return -1; return o3 / (o3 - o4); };
       brs.forEach((r, i) => { if (r.c === 'steps') return; const L = blen(r.p) || 1; /* 16a-3: auch Fuss-/Velobrücken (Passerelle Ebikon) bekommen lichte Höhe */
         const bx0 = Math.min(...r.p.map((q) => q[0])), bx1 = Math.max(...r.p.map((q) => q[0])), bz0 = Math.min(...r.p.map((q) => q[1])), bz1 = Math.max(...r.p.map((q) => q[1]));
@@ -796,6 +796,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const nodeLift = new Map<string, [number, number]>(); // Knoten → [Deckhöhe inkl. Δ, Δ]
       brs.forEach((r, i) => { const dl = lift[comp[i]]; if (!dl) return; const L = blen(r.p) || 1; let acc = 0; for (let m = 0; m < r.p.length; m++) { if (m) acc += Math.hypot(r.p[m][0] - r.p[m - 1][0], r.p[m][1] - r.p[m - 1][1]); const k = bkey(r.p[m]); if (!nodeLift.has(k)) nodeLift.set(k, [lin[i][0] + (lin[i][1] - lin[i][0]) * acc / L + dl, dl]); } });
       if (nodeLift.size) for (let qi = 0; qi < roads.length; qi++) { const q = roads[qi]; if (q.b || holz(q) || q.p.length < 2 || (q as any).tu) continue;
+        { const n0 = nodeLift.get(bkey(q.p[0])), n1 = nodeLift.get(bkey(q.p[q.p.length - 1])); // P-C D4: beide Enden an gehobenen Decks → ganze Strasse von Deck zu Deck
+          if (n0 && n1) { const ramp: any = { ...q, b: 1, ramp: 1 }; rampH.set(ramp, [n0[0], n1[0]]); nRamp++; roads[qi] = ramp; changed = true; continue; } }
         for (const e of [0, 1]) { const node = e ? q.p[q.p.length - 1] : q.p[0], nl = nodeLift.get(bkey(node)); if (!nl) continue;
           const P = e ? q.p.slice().reverse() : q.p.slice(), Lq = blen(P), Lr = Math.max(30, Math.min(110, nl[1] / 0.07));
           let rampP = P, rest: number[][] | null = null;
@@ -1613,7 +1615,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (o.spiel.length) group.add(buildPlaygrounds(o.spiel, gy));
     if (o.bue.length) group.add(buildLevelCrossings(o.bue, gy));
     if (o.turm.length) group.add(buildMasts(o.turm, gy));
-    { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) !== 2); console.log('[bau] Strassenmöbel', (o.hydrant?.length || 0) + (o.post?.length || 0) + (o.recycling?.length || 0) + (o.blitzer?.length || 0), 'Dreiecke', m.userData.dreiecke || 0); group.add(m); } }
+    { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z) /* P-C D6 */); console.log('[bau] Strassenmöbel', (o.hydrant?.length || 0) + (o.post?.length || 0) + (o.recycling?.length || 0) + (o.blitzer?.length || 0), 'Dreiecke', m.userData.dreiecke || 0); group.add(m); } }
   if (opts.fuel?.length) group.add(buildFuelStations(opts.fuel, d.roads, (x, z) => terrain.height(x, z))); // 15b: Tankstellen (Rückmeldung Simon)
 
   // ---- Berge am Horizont (Pilatus im SW, Rigi im O) ----

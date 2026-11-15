@@ -1,3 +1,4 @@
+import './poly';
 import { bindAmbience } from './ambience';
 import { openTravel } from './travel';
 import { REGIONS_A } from './regionsA';
@@ -1796,7 +1797,7 @@ async function loadSlot(id: string): Promise<Slot> {
   let tex: THREE.Texture | undefined;
   if (!/[?&]noaerial/.test(location.search)) { tex = new THREE.TextureLoader().load(dir + 'aerial_s.jpg'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; }
   const w: World = await serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(id));
-  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true }); }
+  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true, railBridges: railBrFor(id), osm: osmFor(id), fuel: fuelFor(id) /* P-C D2 */ }); }
   finally { Object.assign(AERIAL, keep); } });
   setHospital(w, id);
   if (QUALITY !== 'echt') { data.buildings = []; (data as any).green = (data as any).green?.filter((g: any) => g.k === 'meadow' || g.k === 'park' || g.k === 'playground'); } // 14zj: Speicher sparen – Häuser stehen schon; Wiesen (Kühe), Parks und Spielplätze (Herzen) bleiben
