@@ -1293,7 +1293,9 @@ async function boot() {
     const ld = (f: string) => f; // Datei wird erst geladen, wenn eine Gegend die Kachel braucht (midsFor)
     midDefs = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }, { tex: ld('aerial_mid3.jpg'), box: AERIAL_MID3, x0: -2700, z0: -6620 },
       { tex: ld('aerial_mid4.jpg'), box: { E0: 2658280, E1: 2663400, N0: 1208000, N1: 1213120 }, x0: -7820, z0: -1500 }, // West: Littau, Reussbühl, Sonnenberg
-      { tex: ld('aerial_mid5.jpg'), box: { E0: 2668520, E1: 2673640, N0: 1208000, N1: 1213120 }, x0: 2420, z0: -1500 }]; }
+      { tex: ld('aerial_mid5.jpg'), box: { E0: 2668520, E1: 2673640, N0: 1208000, N1: 1213120 }, x0: 2420, z0: -1500 },
+      { tex: ld('aerial_mid6.jpg'), box: { E0: 2663400, E1: 2668520, N0: 1197760, N1: 1202880 }, x0: -2700, z0: 8720 }, // Süd: Hergiswil, Lopper
+      { tex: ld('aerial_mid7.jpg'), box: { E0: 2668520, E1: 2673640, N0: 1197760, N1: 1202880 }, x0: 2420, z0: 8720 }]; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;
