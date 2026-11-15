@@ -14,11 +14,12 @@ const LANE = 1.7;
 
 /** Betreiber-Farben (P-A Lauf 1, Quellen in docs/par/realismus.md):
  *  VBL: «mainly white, with blue finish» (Wikipedia Verkehrsbetriebe Luzern) → weiss mit blauem Unterteil [belegt; Blauton Annahme].
- *  PostAuto: gelb (postauto.ch «Die Marke») [belegt]; dunkles Unterteil/Stossfänger und roter Schriftzug [Annahme].
+ *  PostAuto (Lauf 9, de.wikipedia «PostAuto»): gelber Rumpf, rote umlaufende Linie an der Fensterunterkante, weisses Dach [belegt];
+ *  Posthorn = Logo, nicht gezeichnet; dunkles Unterteil/Stossfänger und roter Schriftzug [Annahme].
  *  AAGS: rot-weiss (Wikipedia Auto AG Schwyz) [belegt; Aufteilung Annahme].
- *  ZVB: weiss mit Blau [Annahme, Vertrauen mittel]. AAGR, ARAG, AAGU, SGV: neutral weiss/grau [Annahme, Lackierung nicht belegt]. */
+ *  ZVB: «Linienbusse in Blau-Weiss» (de.wikipedia «Zugerland Verkehrsbetriebe») [belegt; Aufteilung Annahme]. AAGR, ARAG, AAGU, SGV: neutral weiss/grau [Annahme, Lackierung nicht belegt]. */
 function brand(op: string) {
-  if (op === 'PAG') return { pag: true, top: '#FFCC00', low: '#FFCC00', skirt: '#3A3F44', txt: '#D2001E', name: 'PostAuto' };
+  if (op === 'PAG') return { pag: true, top: '#FFCC00', low: '#FFCC00', skirt: '#3A3F44', txt: '#D2001E', name: 'PostAuto', roof: '#F4F4F2', line: '#D2001E' };
   if (op === 'VBL') return { pag: false, top: '#F4F6F8', low: '#0B5CAB', skirt: '#0B5CAB', txt: '#FFFFFF', name: 'vbl' };
   if (op === 'AAGS') return { pag: false, top: '#F4F6F8', low: '#C8102E', skirt: '#C8102E', txt: '#FFFFFF', name: 'Auto AG Schwyz' };
   if (op === 'ZVB') return { pag: false, top: '#F4F6F8', low: '#1F6DB5', skirt: '#1F6DB5', txt: '#FFFFFF', name: 'zvb' };
@@ -33,7 +34,7 @@ function sideTex(op: string, ref: string, flip = false) {
   g.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 10; x < 512; x += 64) g.fillRect(x, 28, 8, 48); // Spiegelung
   g.fillStyle = '#1B1F24'; for (let x = 62; x < 512; x += 64) g.fillRect(x, 24, 4, 56);             // Fensterpfosten
   g.fillStyle = B.low; g.fillRect(0, 84, 512, 44);                                   // Unterteil
-  if (pag) { g.fillStyle = B.skirt; g.fillRect(0, 116, 512, 12); }                   // dunkler Schweller (Annahme)
+  if (pag) { g.fillStyle = B.skirt; g.fillRect(0, 116, 512, 12); g.fillStyle = (B as any).line; g.fillRect(0, 80, 512, 5); } // dunkler Schweller (Annahme); rote Linie an der Fensterunterkante (belegt)
   else { g.fillStyle = '#FFFFFF'; g.fillRect(0, 80, 512, 4); }
   // Doppeltür (Glas bis unten) – je Wagenkasten eine, Lage je Seite gespiegelt
   const dx = flip ? 392 : 64; g.fillStyle = '#2C3A45'; g.fillRect(dx, 18, 56, 110); g.fillStyle = '#5F7586'; g.fillRect(dx + 4, 22, 22, 104); g.fillRect(dx + 30, 22, 22, 104);
@@ -67,7 +68,7 @@ function busAtlas(op: string, ref: string, to: string) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const draw = () => {
     g.drawImage(st, 0, 0, 512, 128); g.drawImage(st2, 0, 128, 512, 128); g.drawImage(fr, 512, 0, 256, 256);
-    g.fillStyle = brand(op).top; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
+    g.fillStyle = (brand(op) as any).roof || brand(op).top; g.fillRect(768, 0, 256, 128); g.fillStyle = '#1B1F24'; g.fillRect(768, 128, 256, 128);
     g.drawImage(rt.image as HTMLCanvasElement, 0, 256, 512, 560); t.needsUpdate = true;
   };
   draw(); (rt as any).listeners.push(draw);

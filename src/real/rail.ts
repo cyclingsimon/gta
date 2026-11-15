@@ -3,7 +3,7 @@
 // Unterkante y = 0.5, Länge carL (SBB 24 m, zb 19 m). Je Wagen ≤ 120 Dreiecke.
 // Belege (s. docs/par/realismus.md, Lauf 7): FLIRT verkehrt als S-Bahn u. a. im Kanton Luzern (sbb.ch); Voralpen-Express = SOB Traverso,
 // «copper and red livery (with black window frames and grey doors)» (Wikipedia Voralpen Express), «kupferfarben» (SOB 06.06.2018).
-// [Annahme] Farbaufteilung FLIRT/Dosto (SBB) und Zentralbahn; Traverso auf der Strecke über Küssnacht (VAE Luzern–Arth-Goldau).
+// IC2000-Doppelstock (Lauf 9): Farbgebung nach de.wikipedia «IC2000» belegt. [Annahme] Farbaufteilung FLIRT (SBB) und Zentralbahn; Traverso auf der Strecke über Küssnacht (VAE Luzern–Arth-Goldau).
 import * as THREE from 'three';
 import { REAL } from './config';
 import { sparParts, box, quad, tris, type SparPart } from './geo';
@@ -19,7 +19,7 @@ export function trainTypeFor(kind: string, name = ''): TrainType {
 }
 const STYLE: Record<TrainType, { W: number; H: number; body: string; win: string; band: string; low: string; door: string; front: string; rows: number }> = {
   flirt: { W: 2.9, H: 3.4, body: '#F4F4F2', win: '#26313B', band: '#D52B1E', low: '#5E656B', door: '#D52B1E', front: '#D52B1E', rows: 1 },     // [Annahme]
-  dosto: { W: 2.9, H: 4.3, body: '#F4F4F2', win: '#26313B', band: '#D52B1E', low: '#D52B1E', door: '#9AA0A6', front: '#D52B1E', rows: 2 },     // [Annahme] rot-weiss
+  dosto: { W: 2.9, H: 4.3, body: '#E9EAE6', win: '#2E3338', band: '#E9EAE6', low: '#2E3338', door: '#F06A5A', front: '#D52B1E', rows: 2 }, // Lauf 9 belegt (IC2000, de.wikipedia): Anthrazit oben/unten, Mittelband grauweiss, korallenrote Türstreifen, rote Front
   zb: { W: 2.65, H: 3.3, body: '#F4F4F2', win: '#2B3036', band: '#C8202C', low: '#C8202C', door: '#C8202C', front: '#C8202C', rows: 1 },       // [Annahme] weiss-rot, schmaler (Meterspur)
   traverso: { W: 2.9, H: 3.6, body: '#B87333', win: '#151719', band: '#B87333', low: '#8E2A22', door: '#8A8F94', front: '#8E2A22', rows: 1 },  // belegt: kupfer/rot, schwarze Fensterrahmen, graue Türen
 };
