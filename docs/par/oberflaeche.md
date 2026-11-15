@@ -1,5 +1,55 @@
 # P-B «Atmosphäre, Ton, Oberfläche» – Laufprotokoll
 
+## 15.11.2026 19:56 – Lauf 5 (Schnellreise-Karte «realistischer», Rückmeldung Simon 19:45)
+
+`claude/13i-gebiet-a` (6f563d1) hineingemergt.
+
+### Gemacht
+- **`tools/geo/karte.py`** zeichnet eine Übersichtskarte aller 25 Gegenden, ohne Text. Es liest nur `/home/claude/gta/public/data`:
+  - Land beige, Wald grün aus den Waldmasken `forest.png` plus OSM-Waldflächen.
+  - Siedlungen hellgrau-rosa: 95 700 Gebäude gefüllt und verwischt.
+  - Seen und Flüsse blau aus den OSM-Gewässern.
+  - Autobahn orange-rot, Haupt- und Nebenstrassen weiss-gelb mit dunklem Rand; Tunnelstücke weggelassen.
+  - Bahn dünn schwarz gestrichelt.
+  - Relief aus dem 200-m-Höhenraster `horizon.bin` (swissALTI3D), dezent, Licht von Nordwesten.
+  - Ausserhalb der Gegenden: entsättigtes Hellgrau-Grün mit Relief, weich ausgeblendet, keine Gegendgrenzen.
+  - Seen ausserhalb der Gegenden (Vierwaldstättersee-Arme, Zugersee) aus flachen Stellen im Höhenraster. Am Rand der Gegenden ergänzt der Vierwaldstättersee-Spiegel die dort abgeschnittenen OSM-Seeflächen.
+  - Laufzeit etwa 5 s.
+- **`public/karte.jpg`**: 1400×1130 px, **235 kB** (240 540 Bytes), Qualität 80. **`public/karte.json`** (188 Bytes): x0 −27700, z0 −21800, x1 14800, z1 12500, also 30,4 m/px.
+- **`src/travel.ts`**:
+  - Lädt `karte.json` und `karte.jpg` beim Start vom eigenen Server vor. Ist beides da, ist die Karte der Hintergrund der Schnellreise, im richtigen Verhältnis über die Grenzen aus `karte.json`.
+  - Ziele, «Du bist hier» und die aktuelle Gegend (feiner, heller, gestrichelter Rahmen) liegen darüber.
+  - Ortsnamen dunkel mit hellem Schein.
+  - Jedes Ziel hat eine unsichtbare Trefferfläche, höchstens halb so gross wie der Abstand zum nächsten Ziel und bis Radius 46 Einheiten.
+  - Fehlt die Karte (404) oder ist sie noch nicht geladen, bleibt die bisherige Kästchen-Karte.
+- **`src/style.css`**: Stil für die Bildkarte; hochkant am Handy ist die Karte höher (40vh).
+- **Testszene ohne Welt**: `tests/par/pb_reise.html/.ts`, `pb_reise_vite.config.mjs`, `pb_reise.py`.
+
+### Geprüft
+- Karte als Bild angesehen, mit eingezeichneten Kontrollpunkten aus `places`:
+  - Luzern am Nordwestende des Vierwaldstättersees, Horw an der Horwer Bucht, Kastanienbaum auf der Halbinsel.
+  - Hergiswil und Stans im Süden, Sempachersee nordwestlich mit Sursee am Nordende, Baldeggersee bei Hochdorf im Norden.
+  - Küssnacht am Seearm, Zugersee im Nordosten.
+  - Autobahnen A2 (Sempachersee → Luzern → Hergiswil/Stans) und A14 (Rotkreuz) richtig.
+- Testszene (`pb_reise.py`) bei 390×844 und 800×380 mit Touch sowie 1280×720 und 1920×1080:
+  - Bildkarte geladen, Karte und Karte ganz im Bild, nicht verzerrt (viewBox 1,24 wie das Bild).
+  - Rahmen der aktuellen Gegend und «Du bist hier» sichtbar.
+  - Antippen bzw. Klicken neben dem Pin «Spital Nidwalden» löst die Reise nach `sued` aus.
+  - Keine Seitenfehler. Fallback bei 404 zeigt die alte Darstellung.
+  - Screenshots angesehen.
+- **Trefferflächen**:
+  - PC: Median 57 px, 16 von 26 Zielen ≥ 44 px.
+  - Handy: Median 35–39 px, nur 6 von 26 Zielen ≥ 44 px. Die Ziele liegen dicht (Luzern–Emmen–Littau); grössere Flächen würden sich überlappen. Am Handy bleibt die Liste daneben bzw. darunter der sichere Weg (Knöpfe ≥ 48 px).
+- tsc grün, Build `OUT=dist_pb` enthält `karte.jpg` und `karte.json`.
+
+### Nicht geprüft
+- Im echten Spiel (kein Weltlauf), insbesondere ob das Vorladen beim Programmstart vor dem ersten «T» fertig ist. Sonst erscheint beim ersten Öffnen noch die alte Darstellung.
+- Gegenden, deren Daten nur im Hauptcheckout liegen: Die Karte ist daraus gezeichnet, im Spiel aber unabhängig davon.
+
+### Offen
+- Am Handy dichte Ziele: z. B. beim Antippen das nächste Ziel wählen (Abstand statt Trefferkreis) oder die Karte zoombar machen.
+- Wird eine Gegend dazugebaut, `python3 tools/geo/karte.py` neu laufen lassen. Der Kartenausschnitt wächst mit, `karte.json` passt sich an.
+
 ## 15.11.2026 13:50 – Lauf 4
 
 `claude/13i-gebiet-a` (fa785c4) hineingemergt, Fast-Forward. Cloud-Lauf 3 (horn.ts, Sirene, Credits «Töne») nicht doppelt gebaut.
