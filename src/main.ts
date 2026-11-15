@@ -1487,8 +1487,15 @@ window.addEventListener('keydown', (e) => { const w = document.getElementById('d
   if ((e.code === 'Enter' || e.code === 'Space') && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || w)) { e.preventDefault(); startOrPick(); } });
 // Gamepad-Start
 const startPoll = setInterval(() => {
-  const p = Array.from(navigator.getGamepads?.() || []).find((x) => x && x.buttons.some((b) => b.pressed));
-  if (p && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || document.getElementById('diff-wahl'))) { startOrPick(); clearInterval(startPoll); }
+  const pads = Array.from(navigator.getGamepads?.() || []).filter((x) => !!x) as Gamepad[];
+  // P-C N10: Schwierigkeitswahl auch mit Controller – Steuerkreuz oder linker Stick links/rechts wechselt den Knopf, jede andere Taste wählt
+  const w = document.getElementById('diff-wahl');
+  if (w && document.getElementById('start')) for (const g of pads) {
+    const dir = (g.buttons[15]?.pressed || g.axes[0] > 0.6 ? 1 : 0) - (g.buttons[14]?.pressed || g.axes[0] < -0.6 ? 1 : 0);
+    if (dir) { const bs = [...w.querySelectorAll('button')] as HTMLElement[]; const i = Math.max(0, bs.indexOf(document.activeElement as HTMLElement)); bs[Math.max(0, Math.min(bs.length - 1, i + dir))].focus(); return; }
+  }
+  const p = pads.find((x) => x.buttons.some((b, i) => b.pressed && !(w && (i === 14 || i === 15))));
+  if (p && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || w)) { startOrPick(); clearInterval(startPoll); }
   if (!document.getElementById('start')) clearInterval(startPoll);
 }, 200);
 
