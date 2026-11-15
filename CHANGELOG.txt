@@ -433,6 +433,6 @@ Luksi Rescue Luzern – Änderungen
 - Ambulanz mit Blaulicht, Hupe, Navi-Pfeil, Minimap und grosser Karte
 - 4 Einsätze mit Mini-Spielen, Sterne, Übergabe im Kinderspital
 - Pause, Autosave, Tastatur und Gamepad, 3 Modi, 3 Kameras
-- Luftbild 1.25 m jetzt auch im Norden (Emmenbrücke, Flugplatz Emmen, Reuss) und in allen Nachbargegenden, soweit die Kacheln reichen
+- Luftbild 1.25 m jetzt auch im Norden (Emmenbrücke, Flugplatz Emmen, Reuss), Westen (Littau) und Osten (Meggen); Kacheln laden erst bei Bedarf
 - Sirene exakt 586,7/440 Hz, weichere Toneinsätze, Trolleybus- und Schiffshorn-Klang
 - Beim Gegendwechsel wird Grafikspeicher von Verkehr, Zügen, Schiffen freigegeben
