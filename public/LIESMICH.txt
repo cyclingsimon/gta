@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-14zj
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-15a
+Neu in 15a: Häuser mit abwechslungsreichen Fenstern, echter Rettungswagen und Busfarben, Baumarten, Wartehallen, Geräusche je nach Ort, Schwierigkeit beim ersten Start wählen, Funkspruch hält das Spiel an, grüne Flächen über Strassen behoben.
 Neu in 14zj: echte 3D-Häuser auch ausserhalb Luzern (Modus Echt), Minikarte mit Nachbargegenden.
 Neu in 14zi: Stans bis Wolhusen am Stück, Schnellreise ohne Laden, Feuerwehr/Glace-Wagen/Monster-Ambulanz.
 Neu in 14zh: durchgehend weiterfahren ohne Neuladen (Luzern – Littau – Malters getestet).
