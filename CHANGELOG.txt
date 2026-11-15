@@ -2,12 +2,16 @@ Luksi Rescue Luzern – Änderungen
 
 2026-11-15a  Mehr echtes Luzern
 - Häuser wiederholen sich nicht mehr Fenster für Fenster: Läden auf und zu, Storen, Vorhänge, Geranien; moderne Bauten in vier Arten (Fensterband, Einzelfenster, Glas, Beton)
-- Ambulanz sieht aus wie ein echter Rettungswagen («144», Warnstreifen); Busse in den Farben ihrer Betriebe
+- Ambulanz sieht aus wie der echte Rettungswagen (weiss mit rot-blauem Band, «144»); Busse in den Farben ihrer Betriebe
 - Bäume in Arten (Linde, Kastanie, Platane, Tanne …), Wartehallen an Haltestellen, Altstadt-Laternen, geparkte Autos, Veloständer, verschiedene Autotypen
 - Geräusche je nach Ort: Stadt, See mit Möwen, Wald mit Vögeln, Kuhglocken, Bahnhof, Tunnelhall; Sirene als Schweizer Zweiklanghorn
 - Ist die nächste Gegend noch nicht fertig gebaut, rollt die Ambulanz sanft langsamer statt ins Leere zu fahren
 - Fehler behoben: schwarzer Boden in der Innenstadt, wenn das scharfe Luftbild fehlte; Spiel startet auch, wenn eine gespeicherte Gegend nicht lädt; Spielstand wird beim Wegwechseln gespeichert
 - Handy: grössere Knöpfe, nichts verdeckt die Strasse; Ladebild zeigt echte Schritte
+- Beim allerersten Start die Schwierigkeit wählen (Einfach, Mittel, Schnell)
+- Kommt ein Funkspruch, steht die Welt still, bis du antwortest
+- Grüne Flächen über Strassen und See behoben; «Willkommen in …» nennt den Ort, an dem du wirklich bist
+- Abfallkübel, Robidog, Briefkästen und Hydranten am Strassenrand
 
 2026-11-14zl  Streaming fertig: weniger Speicher, Einsatz über die Grenze (kommt mit dem ZIP 2026-11-15a)
 - Weniger Speicher: Brücken-Höhen werden nur noch dort gespeichert, wo Brücken sind (Luzern mit zwei Nachbargegenden rund 70 MB weniger)
