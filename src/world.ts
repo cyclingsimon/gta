@@ -528,7 +528,7 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { aerialMid?: THREE.Texture; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
@@ -575,7 +575,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   // Luftbild (SWISSIMAGE 2 m, leicht stilisiert) als Bodenfarbe: Wiesen, Wald, Plätze wie in echt
   if (opts.aerial) setAerialUV(groundGeo);
   lap('Luftbild-UV');
-  const groundMat = opts.aerial ? withDetail(toon('#ffffff', { map: opts.aerial }), groundTex, opts.aerialHr) : toon('#BDB9B0', { map: groundTex });
+  const groundMat = opts.aerial ? withDetail(toon('#ffffff', { map: opts.aerial }), groundTex, opts.aerialHr, opts.aerialMid) : toon('#BDB9B0', { map: groundTex });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.name = 'ground';
   if (groundMesh) {
@@ -2594,16 +2594,18 @@ export function horizonMesh(t: Terrain, hole: number[]) {
 /** Luftbild + feine Körnung aus Weltkoordinaten (2-m-Pixel wirken aus Fahrerhöhe sonst verwaschen) */
 /** Scharfes Luftbild der Kernzone (0.625 m statt 2 m): LV95-Ausschnitt; Weltkoordinaten → UV per Ausgleichsebene (Restfehler < 1 m) */
 export const AERIAL_HR = { E0: 2664760, E1: 2667320, N0: 1210400, N1: 1212960 };
-function hrAffine(): [THREE.Vector3, THREE.Vector3] {
-  // kleinste Quadrate auf einem 9×9-Gitter über die Kernzone
-  const pts: number[][] = []; for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) pts.push([-1300 + i * 325, -1400 + j * 325]);
+/** 15b: mittlere Stufe – SWISSIMAGE 1.25 m, 4096², Stadt Luzern, Kriens Zentrum, Allmend, Tribschen (WMS, im Browser geholt 15.11.2026) */
+export const AERIAL_MID = { E0: 2663400, E1: 2668520, N0: 1208000, N1: 1213120 };
+function hrAffine(B = AERIAL_HR, x0 = -1300, z0 = -1400, d = 325): [THREE.Vector3, THREE.Vector3] {
+  // kleinste Quadrate auf einem 9×9-Gitter über die Zone
+  const pts: number[][] = []; for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) pts.push([x0 + i * d, z0 + j * d]);
   const solve = (f: (E: number, N: number) => number) => {
     const M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
     for (const [x, z] of pts) { const [E, N] = lv95(x, z); const r = [x, z, 1], y = f(E, N); for (let a = 0; a < 3; a++) { b[a] += r[a] * y; for (let c = 0; c < 3; c++) M[a][c] += r[a] * r[c]; } }
     const m = new THREE.Matrix3().set(M[0][0], M[0][1], M[0][2], M[1][0], M[1][1], M[1][2], M[2][0], M[2][1], M[2][2]).invert();
     return new THREE.Vector3(...b).applyMatrix3(m);
   };
-  return [solve((E) => (E - AERIAL_HR.E0) / (AERIAL_HR.E1 - AERIAL_HR.E0)), solve((_E, N) => (N - AERIAL_HR.N0) / (AERIAL_HR.N1 - AERIAL_HR.N0))];
+  return [solve((E) => (E - B.E0) / (B.E1 - B.E0)), solve((_E, N) => (N - B.N0) / (B.N1 - B.N0))];
 }
 /** Zeichnet das Material nicht innerhalb der Rechtecke `clip` (x0, z0, x1, z1 in Weltmetern; leeres Rechteck = x0 > x1) */
 function withClip(m: THREE.MeshToonMaterial, clip: { value: THREE.Vector4[] }) {
@@ -2617,18 +2619,28 @@ function withClip(m: THREE.MeshToonMaterial, clip: { value: THREE.Vector4[] }) {
   m.customProgramCacheKey = () => 'clip' + (prevKey ? prevKey() : '');
   return m;
 }
-function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture) {
+function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture, mid?: THREE.Texture) {
   detail.wrapS = detail.wrapT = THREE.RepeatWrapping;
   const [hA, hB] = hr ? hrAffine() : [new THREE.Vector3(), new THREE.Vector3()];
   // 14zk: scharfes Luftbild erst einblenden, wenn die Datei wirklich geladen ist – fehlt sie (oder lädt sie noch), blieb der Boden der Kernzone schwarz
   const hrOn = { value: 0 };
-  if (hr) { const t0 = performance.now(), iv = setInterval(() => { const im = hr.image as HTMLImageElement | undefined; if (im && im.width > 0) { hrOn.value = 1; clearInterval(iv); } else if (performance.now() - t0 > 180000) clearInterval(iv); }, 500); }
+  const watch = (t: THREE.Texture, on: { value: number }) => { const t0 = performance.now(), iv = setInterval(() => { const im = t.image as HTMLImageElement | undefined; if (im && im.width > 0) { on.value = 1; clearInterval(iv); } else if (performance.now() - t0 > 180000) clearInterval(iv); }, 500); };
+  if (hr) watch(hr, hrOn);
+  const midOn = { value: 0 }; const [mA, mB] = mid ? hrAffine(AERIAL_MID, -2700, -1500, 650) : [new THREE.Vector3(), new THREE.Vector3()];
+  if (mid) watch(mid, midOn);
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: detail };
     if (hr) { sh.uniforms.hrMap = { value: hr }; sh.uniforms.hrA = { value: hA }; sh.uniforms.hrB = { value: hB }; sh.uniforms.hrOn = hrOn; }
+    if (mid) { sh.uniforms.midMap = { value: mid }; sh.uniforms.midA = { value: mA }; sh.uniforms.midB = { value: mB }; sh.uniforms.midOn = midOn; }
     sh.vertexShader = 'varying vec2 vWXZ;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\nuniform float hrOn;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\nuniform float hrOn;\n' : '') + (mid ? '#define USE_MID\nuniform sampler2D midMap;\nuniform vec3 midA, midB;\nuniform float midOn;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
+       #ifdef USE_MID
+       vec2 muv = vec2(dot(midA, vec3(vWXZ, 1.0)), dot(midB, vec3(vWXZ, 1.0)));
+       vec2 me = min(muv, 1.0 - muv);
+       float mw = smoothstep(0.0, 0.03, min(me.x, me.y)) * midOn;
+       if (mw > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(midMap, muv).rgb, mw);
+       #endif
        #ifdef USE_HR
        vec2 huv = vec2(dot(hrA, vec3(vWXZ, 1.0)), dot(hrB, vec3(vWXZ, 1.0)));
        vec2 he = min(huv, 1.0 - huv);
@@ -2638,7 +2650,7 @@ function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE
        float dg = texture2D(detailMap, vWXZ / 9.0).r * 0.6 + texture2D(detailMap, vWXZ / 31.0).r * 0.4;
        diffuseColor.rgb *= mix(0.86, 1.1, dg);`);
   };
-  m.customProgramCacheKey = () => 'detail' + detail.uuid + (hr ? 'hr' : '');
+  m.customProgramCacheKey = () => 'detail' + detail.uuid + (hr ? 'hr' : '') + (mid ? 'mid' : '');
   return m;
 }
 

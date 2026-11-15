@@ -262,7 +262,7 @@ let ships: Ships | null = null;
 let boats: Boats | null = null;
 let trains: Trains | null = null;
 let gondola: Gondola | null = null;
-let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined;
+let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined, aerialMidTex: THREE.Texture | undefined;
 let forestMask: ForestMask | undefined;
 /** Waldmaske (aus Luftbild, 4 m) laden: PNG → Bytes */
 async function loadForestMask(x0: number, z0: number, dir = DIR): Promise<ForestMask | undefined> {
@@ -1289,6 +1289,7 @@ async function boot() {
   const status = $('#load-status');
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
+  if (aerialHrTex && !/[?&]nomid/.test(location.search)) { aerialMidTex = new THREE.TextureLoader().load(DIR + 'aerial_mid.jpg'); aerialMidTex.colorSpace = THREE.SRGBColorSpace; aerialMidTex.anisotropy = 8; } // 15b: 1.25 m rund um die Kernzone
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;
@@ -1312,7 +1313,7 @@ async function boot() {
   forestMask = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1]);
   cityData = data; propsData = props ? JSON.parse(JSON.stringify(props)) : null;
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
-  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, aerialMid: aerialMidTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
@@ -1415,7 +1416,7 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   let gpos: ArrayLike<number> = g16;
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, aerialMid: globals ? aerialMidTex : undefined, forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
   const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
