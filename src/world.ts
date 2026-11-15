@@ -1,3 +1,4 @@
+import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
 import { buildStops, buildLamps, realBenchGeometry } from './real/props';
@@ -528,7 +529,7 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { aerialMid?: THREE.Texture; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
@@ -1196,7 +1197,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     if (s.kind === 'ship') {
       G.position.y = 0; // Seespiegel
-      G.add(steamship(s.b.p));
+      G.add(realSteamship(s.b.p) ?? steamship(s.b.p)); // 15b, P-A E10a
       landmarks.push({ name: s.b.n || 'Dampfschiff', x: cx, z: cz });
     }
     if (s.kind === 'kkl') {
@@ -2596,6 +2597,9 @@ export function horizonMesh(t: Terrain, hole: number[]) {
 export const AERIAL_HR = { E0: 2664760, E1: 2667320, N0: 1210400, N1: 1212960 };
 /** 15b: mittlere Stufe – SWISSIMAGE 1.25 m, 4096², Stadt Luzern, Kriens Zentrum, Allmend, Tribschen (WMS, im Browser geholt 15.11.2026) */
 export const AERIAL_MID = { E0: 2663400, E1: 2668520, N0: 1208000, N1: 1213120 };
+/** zweite Kachel südlich davon: Horw, Kriens Süd, Biregg (bis über den Feldrand hinaus) */
+export const AERIAL_MID2 = { E0: 2663400, E1: 2668520, N0: 1202880, N1: 1208000 };
+export type MidLayer = { tex: THREE.Texture; box: { E0: number; E1: number; N0: number; N1: number }; x0: number; z0: number };
 function hrAffine(B = AERIAL_HR, x0 = -1300, z0 = -1400, d = 325): [THREE.Vector3, THREE.Vector3] {
   // kleinste Quadrate auf einem 9×9-Gitter über die Zone
   const pts: number[][] = []; for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) pts.push([x0 + i * d, z0 + j * d]);
@@ -2619,28 +2623,25 @@ function withClip(m: THREE.MeshToonMaterial, clip: { value: THREE.Vector4[] }) {
   m.customProgramCacheKey = () => 'clip' + (prevKey ? prevKey() : '');
   return m;
 }
-function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture, mid?: THREE.Texture) {
+function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE.Texture, mids: MidLayer[] = []) {
   detail.wrapS = detail.wrapT = THREE.RepeatWrapping;
   const [hA, hB] = hr ? hrAffine() : [new THREE.Vector3(), new THREE.Vector3()];
   // 14zk: scharfes Luftbild erst einblenden, wenn die Datei wirklich geladen ist – fehlt sie (oder lädt sie noch), blieb der Boden der Kernzone schwarz
   const hrOn = { value: 0 };
   const watch = (t: THREE.Texture, on: { value: number }) => { const t0 = performance.now(), iv = setInterval(() => { const im = t.image as HTMLImageElement | undefined; if (im && im.width > 0) { on.value = 1; clearInterval(iv); } else if (performance.now() - t0 > 180000) clearInterval(iv); }, 500); };
   if (hr) watch(hr, hrOn);
-  const midOn = { value: 0 }; const [mA, mB] = mid ? hrAffine(AERIAL_MID, -2700, -1500, 650) : [new THREE.Vector3(), new THREE.Vector3()];
-  if (mid) watch(mid, midOn);
+  const ML = mids.map((l) => { const on = { value: 0 }; watch(l.tex, on); const [a, b] = hrAffine(l.box, l.x0, l.z0, 650); return { l, on, a, b }; });
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: detail };
     if (hr) { sh.uniforms.hrMap = { value: hr }; sh.uniforms.hrA = { value: hA }; sh.uniforms.hrB = { value: hB }; sh.uniforms.hrOn = hrOn; }
-    if (mid) { sh.uniforms.midMap = { value: mid }; sh.uniforms.midA = { value: mA }; sh.uniforms.midB = { value: mB }; sh.uniforms.midOn = midOn; }
+    ML.forEach((q, i) => { sh.uniforms['midMap' + i] = { value: q.l.tex }; sh.uniforms['midA' + i] = { value: q.a }; sh.uniforms['midB' + i] = { value: q.b }; sh.uniforms['midOn' + i] = q.on; });
     sh.vertexShader = 'varying vec2 vWXZ;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\nuniform float hrOn;\n' : '') + (mid ? '#define USE_MID\nuniform sampler2D midMap;\nuniform vec3 midA, midB;\nuniform float midOn;\n' : '') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader = (hr ? '#define USE_HR\nuniform sampler2D hrMap;\nuniform vec3 hrA, hrB;\nuniform float hrOn;\n' : '') + ML.map((_q, i) => `uniform sampler2D midMap${i};\nuniform vec3 midA${i}, midB${i};\nuniform float midOn${i};\n`).join('') + 'uniform sampler2D detailMap;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
-       #ifdef USE_MID
-       vec2 muv = vec2(dot(midA, vec3(vWXZ, 1.0)), dot(midB, vec3(vWXZ, 1.0)));
-       vec2 me = min(muv, 1.0 - muv);
-       float mw = smoothstep(0.0, 0.03, min(me.x, me.y)) * midOn;
-       if (mw > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(midMap, muv).rgb, mw);
-       #endif
+       ${ML.map((_q, i) => `{ vec2 muv = vec2(dot(midA${i}, vec3(vWXZ, 1.0)), dot(midB${i}, vec3(vWXZ, 1.0)));
+         vec2 me = min(muv, 1.0 - muv);
+         float mw = smoothstep(0.0, 0.012, min(me.x, me.y)) * midOn${i};
+         if (mw > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(midMap${i}, muv).rgb, mw); }`).join('\n')}
        #ifdef USE_HR
        vec2 huv = vec2(dot(hrA, vec3(vWXZ, 1.0)), dot(hrB, vec3(vWXZ, 1.0)));
        vec2 he = min(huv, 1.0 - huv);
@@ -2650,7 +2651,7 @@ function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE
        float dg = texture2D(detailMap, vWXZ / 9.0).r * 0.6 + texture2D(detailMap, vWXZ / 31.0).r * 0.4;
        diffuseColor.rgb *= mix(0.86, 1.1, dg);`);
   };
-  m.customProgramCacheKey = () => 'detail' + detail.uuid + (hr ? 'hr' : '') + (mid ? 'mid' : '');
+  m.customProgramCacheKey = () => 'detail' + detail.uuid + (hr ? 'hr' : '') + 'mid' + ML.length;
   return m;
 }
 

@@ -6,7 +6,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -262,7 +262,7 @@ let ships: Ships | null = null;
 let boats: Boats | null = null;
 let trains: Trains | null = null;
 let gondola: Gondola | null = null;
-let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined, aerialMidTex: THREE.Texture | undefined;
+let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined, aerialMidTex: MidLayer[] | undefined;
 let forestMask: ForestMask | undefined;
 /** Waldmaske (aus Luftbild, 4 m) laden: PNG → Bytes */
 async function loadForestMask(x0: number, z0: number, dir = DIR): Promise<ForestMask | undefined> {
@@ -1289,7 +1289,9 @@ async function boot() {
   const status = $('#load-status');
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
-  if (aerialHrTex && !/[?&]nomid/.test(location.search)) { aerialMidTex = new THREE.TextureLoader().load(DIR + 'aerial_mid.jpg'); aerialMidTex.colorSpace = THREE.SRGBColorSpace; aerialMidTex.anisotropy = 8; } // 15b: 1.25 m rund um die Kernzone
+  if (aerialHrTex && !/[?&]nomid/.test(location.search)) { // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
+    const ld = (f: string) => { const t = new THREE.TextureLoader().load(DIR + f); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+    aerialMidTex = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }]; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;

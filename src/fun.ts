@@ -1,5 +1,7 @@
 // Spass-Objekte: Leitkegel bei Baustellen und Abfalleimer an Haltestellen fliegen «Boing!» weg,
 // 40 Luksi-Herzen verstecken sich in Stadt, Kriens und Horw (Sammeln, Spielstand bleibt).
+import { realTrainCar } from './real/rail';
+import { realKursschiff } from './real/ships';
 import * as THREE from 'three';
 import type { Terrain } from './terrain';
 import { toon, steamship } from './world';
@@ -207,7 +209,7 @@ export class Ships {
     this.group.name = 'ships';
     routes.forEach((r, i) => {
       const curve = new THREE.CatmullRomCurve3(r.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal');
-      const obj = steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]); this.group.add(obj);
+      const obj = realKursschiff(i, [[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]) ?? steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]); this.group.add(obj); // 15b, P-A E10b
       this.ships.push({ obj, curve, len: curve.getLength(), s: i * 0.37 % 1, dwell: 0, v: 5.5 });
     });
     // Motorboote (Simon 13.11.: mehr Schiffe in der Luzerner Bucht): fahren ohne Halt, schneller
@@ -302,7 +304,7 @@ export class Trains {
       const n = line.kind === 'zb' ? 3 : 4, carL = line.kind === 'zb' ? 19 : 24;
       const geo = trainCarGeo(carL);
       const cars: THREE.Object3D[] = [];
-      for (let k = 0; k < n; k++) { const b = new THREE.Mesh(geo, m[0]); this.group.add(b); cars.push(b); }
+      for (let k = 0; k < n; k++) { const b = (realTrainCar(line.kind, line.name, carL, k, n) ?? new THREE.Mesh(geo, m[0])); this.group.add(b); cars.push(b); } // 15b, P-A E9
       this.tr.push({ line, C, L: C[C.length - 1], s: (i * 0.29 % 1) * C[C.length - 1], dir: i % 2 ? -1 : 1, wait: 0, cars, carL, v: 0, tooted: 0 });
     });
     // Tunnelportale (Lage aus OpenStreetMap tunnel=*): Steinrahmen mit dunkler Öffnung, je Portal nur einmal
