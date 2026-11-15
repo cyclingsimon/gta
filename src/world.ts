@@ -1,3 +1,4 @@
+import { buildFuelStations } from './real/fuel';
 import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
@@ -529,7 +530,7 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { fuel?: [number, number][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
@@ -1515,6 +1516,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         acc -= L; } }
     console.log('[bau] Laternen ergänzt', add);
     await onProgress('Stege und Laternen …'); group.add(buildProps(props, terrain, mask)); }
+  if (opts.fuel?.length) group.add(buildFuelStations(opts.fuel, d.roads, (x, z) => terrain.height(x, z))); // 15b: Tankstellen (Rückmeldung Simon)
 
   // ---- Berge am Horizont (Pilatus im SW, Rigi im O) ----
   if (!terrain.hz) group.add(mountains());

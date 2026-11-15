@@ -438,3 +438,5 @@ Luksi Rescue Luzern – Änderungen
 - Beim Gegendwechsel wird Grafikspeicher von Verkehr, Zügen, Schiffen freigegeben
 - «Freie Fahrt in …» entfernt (Rückmeldung Simon)
 - Luftbild 1.25 m auch im Süden (Stans); Kacheln werden beim Gegendwechsel wieder freigegeben
+- Tankstellen an 163 echten Standorten (OpenStreetMap), ohne Funktion (Rückmeldung Simon)
+- PostAuto und SBB-Doppelstock in belegten Farben; Luftbild auch für Ebikon/Rontal
