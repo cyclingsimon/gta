@@ -1117,6 +1117,7 @@ function openTravelMap() {
       if (STREAM && players.length === 1) { // 14zi: Schnellreise ohne Neuladen – Zielgegend im Hintergrund bauen, dann hinsetzen
         const arrive = (s: Slot) => { activate(s); const t = to === 'hosp' ? hospitalBay : to; placeCar(t[0], t[1]); car.speed = 0; updateCamera(0, true); sfxPlay.reset(); document.querySelector('.mg.tr')?.remove(); toast(`🗺️ Angekommen in ${name}!`, 2500); writeSave(); };
         const have = slots.get(region); if (have) { arrive(have); return; }
+        if (loadingSlot === region && loadingP) { void loadingP.then(() => setTimeout(() => { const s2 = slots.get(region); if (s2) arrive(s2); }, 50)); return; } // P-C N5: nicht doppelt bauen
         loadingSlot = region;
         loadSlot(region).then((s) => { slots.set(s.id, s); scene.add(s.world.group); scene.add(s.world.tunnels); linkSlots(); arrive(s);
           for (const o of [...slots.values()]) if (o.id !== s.id) unloadSlot(o); // nach der Reise nur die Zielgegend behalten
@@ -1157,7 +1158,7 @@ function frame(now: number) {
 
   // 15a (Simon 14.11.): bei einem Funkspruch steht die Welt still, bis entschieden ist – «Don't text and drive»
   const funkHalt = (phase as string) === 'offer' && (!TEST || /[?&]funkhalt/.test(location.search)); // in Tests nur mit ?funkhalt (Kamerafahrten/Autopilot laufen sonst nicht)
-  if (world && !paused && funkHalt && !overlayOpen) { if (hit('accept')) acceptOffer(); else if (hit('decline')) declineOffer(); }
+  if (world && !paused && funkHalt) { updateEngine(0, 0); if (!overlayOpen) { if (hit('accept')) acceptOffer(); else if (hit('decline')) declineOffer(); } } // P-C N11: Motor leise im Funkhalt
   if (world && !paused && !funkHalt) {
     const playing = !overlayOpen;
     // Mitspieler: Controller 2–4 drücken A/Start
@@ -1326,7 +1327,8 @@ async function boot() {
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
   { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
   setHospital(world, REGION);
-  slots.set(REGION, { id: REGION, dir: DIR, data, props, terrain, world, nav, bus: await pBus, trains: await pTrains, ma: missionsAP ? await missionsAP : null });
+  slots.set(REGION, { id: REGION, dir: DIR, data, props, terrain, world, nav, bus: await pBus, trains: await pTrains, ma: missionsAP ? await missionsAP : null,
+    tex: aerialTex, fm: forestMask, echt: !!pB } as Slot); // P-C N1: Start-Gegend nicht ein zweites Mal über upgradeSlot bauen
   hospitalBay = snap([world.hospital.x, world.hospital.z]);
   if (missionsAP) MA = await missionsAP;
   setupMissions();
@@ -1375,11 +1377,11 @@ async function boot() {
   }
   // Luksi mit Kissen wartet am Kinderspital
   const lkTex = new THREE.TextureLoader().load('img/luksi-kissen.png'); lkTex.colorSpace = THREE.SRGBColorSpace;
-  const lk = new THREE.Sprite(new THREE.SpriteMaterial({ map: lkTex, transparent: true, alphaTest: 0.2 }));
+  const lk = hospLk = new THREE.Sprite(new THREE.SpriteMaterial({ map: lkTex, transparent: true, alphaTest: 0.2 }));
   lk.center.set(0.5, 0.03); lk.scale.set(3.4 * 0.88, 3.4, 1);
   lk.position.set(hospitalBay[0] + 7, gy(hospitalBay[0] + 7, hospitalBay[1]) + 0.2, hospitalBay[1]);
   scene.add(lk);
-  const bay = new THREE.Mesh(new THREE.RingGeometry(5, 6.2, 32), new THREE.MeshBasicMaterial({ color: '#3FA9FF', side: THREE.DoubleSide }));
+  const bay = hospRing = new THREE.Mesh(new THREE.RingGeometry(5, 6.2, 32), new THREE.MeshBasicMaterial({ color: '#3FA9FF', side: THREE.DoubleSide }));
   bay.rotation.x = -Math.PI / 2; bay.position.set(hospitalBay[0], gy(hospitalBay[0], hospitalBay[1]) + 0.6, hospitalBay[1]);
   scene.add(bay);
 
@@ -1437,7 +1439,9 @@ function swapWorld(nw: World) {
   if (save.evening) setEvening(true);
 }
 
+let started = false;
 function start() {
+  if (started) return; started = true; // P-C N3: zweimal Enter startete doppelt
   goFullscreen();
   initAudio(); if (REGION === 'luzern') setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500));
   for (const ev of ['keydown', 'pointerdown']) addEventListener(ev, radioKick);
@@ -1451,6 +1455,7 @@ $('#start-btn').onclick = start;
 /** 15a (Simon 14.11. 22:12): beim allerersten Start die Schwierigkeit wählen – drei Knöpfe statt «Los geht's». Später im Pause-Menü änderbar.
  *  In Tests nur mit ?diffwahl (Tests klicken #start-btn). */
 function diffWahl() {
+  if (!save.diffChosen && Object.keys(save.best || {}).length) { save.diffChosen = true; try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat */ } } // P-C N10: wer schon gespielt hat, hat gewählt
   if (save.diffChosen || (TEST && !/[?&]diffwahl/.test(location.search)) || document.getElementById('diff-wahl')) return;
   // Startknopf bleibt «sichtbar» im Sinn von display (das Ladebild von P-B und die Tastatur-Logik lesen das), ist aber unsichtbar und nicht bedienbar
   const sb = $('#start-btn') as HTMLButtonElement; sb.style.position = 'absolute'; sb.style.opacity = '0'; sb.style.pointerEvents = 'none'; sb.tabIndex = -1;
@@ -1468,7 +1473,7 @@ function diffWahl() {
     row.appendChild(b);
   }
   sb.parentElement!.insertBefore(w, sb);
-  (row.children[1] as HTMLElement).focus();
+  ((row.querySelector(`[data-diff="${save.diff}"]`) || row.children[1]) as HTMLElement).focus();
 }
 /** Tastatur/Controller auf dem Startbild: mit offener Schwierigkeitswahl den fokussierten Knopf (sonst «Mittel») drücken */
 function startOrPick() {
@@ -1685,8 +1690,11 @@ function setHospital(w: World, id: string) {
   if (id === 'sued') w.hospital = { x: 3753, z: 10146, name: 'Spital Nidwalden' };
   if (ra) w.hospital = { x: ra.hosp.x, z: ra.hosp.z, name: ra.hosp.label };
 }
+let hospLk: THREE.Sprite | null = null, hospRing: THREE.Mesh | null = null; // P-C N9/C10: Ring und Luksi wandern mit dem Spital der Gegend
 function placeHospSign() {
   if (hospSign) scene.remove(hospSign);
+  if (hospLk) hospLk.position.set(hospitalBay[0] + 7, gy(hospitalBay[0] + 7, hospitalBay[1]) + 0.2, hospitalBay[1]);
+  if (hospRing) hospRing.position.set(hospitalBay[0], gy(hospitalBay[0], hospitalBay[1]) + 0.6, hospitalBay[1]);
   hospSign = textSprite(HOSP + ' ♥', '#FFF6DE', '#0E73BA', 420, 110, 'bold 50px system-ui, sans-serif');
   hospSign.position.set(world.hospital.x, gy(world.hospital.x, world.hospital.z) + 42, world.hospital.z); hospSign.scale.set(16, 4.2, 1);
   scene.add(hospSign);
@@ -1717,9 +1725,9 @@ function upgradeSlot(s: Slot) {
   Promise.all(RA2 ? [opt(getJSON('b3d.json', s.dir)), opt(getBuf('b3d.bin', s.dir)), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)]
     : [getJSON('b3d.json', s.dir), getBuf('b3d.bin', s.dir), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)])
     .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false); } finally { Object.assign(AERIAL, keep); } }))
-    .then((nw) => { if (!slots.has(s.id)) return; setHospital(nw, s.id);
+    .then((nw) => { if (slots.get(s.id) !== s) { nw.group.traverse((o: any) => o.geometry?.dispose()); return; } setHospital(nw, s.id); // P-C N7: Objekt statt Id
       if (REGION === s.id) swapWorld(nw);
-      else { enableShadows(nw.group); void addGradually(nw.group, nw.tunnels).then(() => { if (!slots.has(s.id)) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
+      else { enableShadows(nw.group); void addGradually(nw.group, nw.tunnels).then(() => { if (slots.get(s.id) !== s) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
         if (REGION === s.id) { scene.remove(nw.group); scene.remove(nw.tunnels); swapWorld(nw); return; }
         scene.remove(s.world.group); scene.remove(s.world.tunnels); s.world.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); s.world = nw; linkSlots(); }); }
       ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2200); })
@@ -1754,9 +1762,14 @@ function linkSlots() {
     const cl = (s.world as any).clip as { value: THREE.Vector4[] } | undefined;
     if (cl) cl.value.forEach((v, i) => { const o = others[i]; const b = o ? REG_BOUNDS[o.id] : null; if (b) v.set(b[0], b[1], b[2], b[3]); else v.set(1, 1, 0, 0); }); }
 }
+/** P-C N6/C5: Objektbaum freigeben (Geometrie, Instanz-Puffer, Material, Textur); die gemeinsamen P-A-Materialien bleiben */
+function freeGroup(g: THREE.Object3D | null | undefined) {
+  g?.traverse((o: any) => { if (o.isInstancedMesh) o.dispose(); o.geometry?.dispose?.();
+    if (o.material) for (const m of ([] as any[]).concat(o.material)) if (m.name !== 'realSpar' && m.name !== 'realGlow') { m.map?.dispose?.(); m.dispose?.(); } });
+}
 function unloadSlot(s: Slot) {
   scene.remove(s.world.group); scene.remove(s.world.tunnels);
-  for (const g of [s.world.group, s.world.tunnels]) g.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); if (o.material) for (const m of [].concat(o.material)) { (m as any).map?.dispose?.(); (m as any).dispose?.(); } });
+  for (const g of [s.world.group, s.world.tunnels]) freeGroup(g);
   slots.delete(s.id); linkSlots();
   console.log('[welt] entladen', s.id);
 }
@@ -1768,6 +1781,7 @@ function activate(s: Slot) {
   while (revealQ.length) revealQ.shift()!.visible = true; // 14zl: beim Betreten alles sofort zeigen (falls das Einblenden noch läuft)
   const from = REGION; setRegionVars(s.id);
   world = s.world; terrain = s.terrain; cityData = s.data; propsData = s.props ? JSON.parse(JSON.stringify(s.props)) : null;
+  if (s.fm) forestMask = s.fm; // P-C N12
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
   nav = s.nav;
   for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
@@ -1796,10 +1810,12 @@ function activate(s: Slot) {
 }
 /** 15a: Strecke bis zum Rand der geladenen Welt in Fahrtrichtung (nur wo dahinter eine bekannte, noch nicht geladene Gegend liegt) → Tempo-Deckel.
  *  400 m voraus frei = kein Deckel; 100 m = 36 km/h; am Rand Schritttempo. Am echten Weltrand (keine Gegend dahinter) greift das nicht. */
+const loadFailed = new Map<string, number>(); // P-C N2/C4: Gegend → Zeitpunkt (s) des nächsten Ladeversuchs
+let loadingP: Promise<Slot> | null = null; // P-C N5/C3: laufendes Hintergrund-Laden (Schnellreise wartet darauf)
 function streamCap() {
   for (const pl of players) {
     const c = pl.car; let cap = Infinity;
-    const loaded = (x: number, z: number) => { const r = regionAt(x, z); return r.length === 0 || r.some((k) => slots.has(k)); };
+    const loaded = (x: number, z: number) => { const r = regionAt(x, z); return r.length === 0 || r.some((k) => slots.has(k) || loadFailed.has(k)); }; // P-C N2: keine Dauerbremse vor einer Gegend, die nicht lädt
     if (!loaded(c.x, c.z)) cap = 3;
     else if (c.speed > 1) for (let f = 40; f <= 400; f += 40) if (!loaded(c.x + c.fx * f, c.z + c.fz * f)) { cap = Math.max(4, (f - 40) / 6); break; }
     c.vcap = cap;
@@ -1811,22 +1827,24 @@ function streamTick(dt: number) {
   const c = players[0].car;
   // 1) Wechsel: Ambulanz hat das aktive Feld verlassen und steht in einer geladenen Nachbargegend
   const B = REG_BOUNDS[REGION];
-  if (B && !(c.x > B[0] && c.x < B[2] && c.z > B[1] && c.z < B[3])) {
+  const HY = 25; // P-C N4/C7: erst 25 m hinter der eigenen Grenze wechseln → kein Pendeln an Linien ohne Überlappung (a3/a19, a6/a8)
+  if (B && !(c.x > B[0] - HY && c.x < B[2] + HY && c.z > B[1] - HY && c.z < B[3] + HY)) {
     const here = regionAt(c.x, c.z).find((k) => slots.has(k));
     if (here) { activate(slots.get(here)!); }
   }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && Math.abs(c.speed) > 2) {
     const look = [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
-    let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r)); if (k) { want = k; break; } }
+    const nowS = performance.now() / 1000;
+    let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r) && !((loadFailed.get(r) ?? 0) > nowS)); if (k) { want = k; break; } }
     if (want) { streamTrim((MOBILE ? 2 : 3) - 1); // 15a: zuerst Platz schaffen – sonst lagen kurz 4 Gegenden im Speicher
       loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
       const t0 = performance.now();
-      loadSlot(want).then(async (s) => { await addGradually(s.world.group, s.world.tunnels); slots.set(s.id, s); linkSlots();
+      (loadingP = loadSlot(want)).then(async (s) => { await addGradually(s.world.group, s.world.tunnels); slots.set(s.id, s); linkSlots();
         prepNav(s);
         ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit!`; setTimeout(() => ind.remove(), 2200);
         console.log('[welt] geladen', s.id, (performance.now() - t0).toFixed(0), 'ms');
-      }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); }).finally(() => { loadingSlot = ''; }); }
+      }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); loadFailed.set(want, performance.now() / 1000 + 60); }).finally(() => { loadingSlot = ''; loadingP = null; }); }
   }
   // 3) Entladen: höchstens 3 Gegenden (Handy 2); weit entfernte (> 1.5 km vom Feldrand) zuerst
   streamTrim(MOBILE ? 2 : 3);
