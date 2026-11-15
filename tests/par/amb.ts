@@ -107,15 +107,16 @@ async function sirenAndBlips() {
   return { segs: analyse(buf, [{ name: 'sirene_an_aus', t0: 0, t1: 10.5 }, { name: 'effekttoene', t0: 10.5, t1: 14.9 }, { name: 'alt_blip_positivkontrolle', t0: 14.9, t1: 16 }]), sireneHz: { ton1_hoch: pitch(d, 0.75, 1.1), ton2_hoch: pitch(d, 1.45, 1.8), ton3_tief: pitch(d, 2.15, 2.5), ton4_tief: pitch(d, 2.85, 3.2), nach_neustart_hoch: pitch(d, 7.05, 7.4) } };
 }
 
-/** Lautester Fall: Motor Vollgas + Sirene + Hupe + Sterne-Ton gleichzeitig (Summe muss unter 0 dBFS bleiben) */
+/** Lautester Fall: Motor Vollgas + Sirene + Hupe + Sterne-Ton + (Lauf 4) Kirchenglocke und Gong gleichzeitig (Summe muss unter 0 dBFS bleiben) */
 async function worst() {
-  const ctx = new OfflineAudioContext(2, 4 * SR, SR), { sfx } = chain(ctx);
+  const ctx = new OfflineAudioContext(2, 4 * SR, SR), { sfx, amb } = chain(ctx);
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
   const eg = ctx.createGain(); eg.gain.value = 0.13; const e1 = ctx.createOscillator(); e1.type = 'sawtooth'; e1.frequency.value = 120;
   const e2 = ctx.createOscillator(); e2.type = 'square'; e2.frequency.value = 60; const g2 = ctx.createGain(); g2.gain.value = 0.3;
   e1.connect(lp); e2.connect(g2); g2.connect(lp); lp.connect(eg); eg.connect(sfx); e1.start(); e2.start();
   const s = buildSiren(ctx, sfx); s.set(true);
-  ctx.suspend(1).then(() => { blipTo(ctx, sfx, 330, 0.35, 'square', 0.12); blipTo(ctx, sfx, 415, 0.35, 'square', 0.08);
+  ctx.suspend(1).then(() => { churchBell(ctx as any, amb, ctx.currentTime, 261.6, VOL.bell); stationGong(ctx as any, amb, VOL.gong); // Lauf 4: lautester Kulissenklang dazu
+    blipTo(ctx, sfx, 330, 0.35, 'square', 0.12); blipTo(ctx, sfx, 415, 0.35, 'square', 0.08);
     [0, 1, 2].forEach((i) => { blipTo(ctx, sfx, 880 + i * 220, 0.18, 'square', 0.1, 0, i * 0.12); blipTo(ctx, sfx, 1320 + i * 220, 0.22, 'sine', 0.08, 0, i * 0.12 + 0.05); });
     [523, 659, 784, 1046].forEach((f, i) => blipTo(ctx, sfx, f, 0.2, 'triangle', 0.12, 0, i * 0.09)); ctx.resume(); });
   const r = analyse(await ctx.startRendering(), [{ name: 'lautester_fall', t0: 0, t1: 4 }])[0];
