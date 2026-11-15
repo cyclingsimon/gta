@@ -564,6 +564,8 @@ function setupFun(data: CityData) {
   // Kursschiffe Seebecken + Horwer Bucht, dazu Motorboote in der Luzerner Bucht (alle Routen ≥ 20 m vom Ufer, Wasserflächen geprüft)
   ships = new Ships([[[450, -150], [1100, -250], [1800, -150], [1500, 250], [900, 150]], [[600, 4900], [1050, 5350], [900, 6100], [520, 5250]], [[700, -100], [1400, -100], [2000, 350], [2500, 650], [1800, 900], [1100, 400]], [[1500, 700], [2300, 700], [2600, 1500], [2450, 2300], [2200, 1500], [1900, 1100]]],
     [[[600, -50], [1000, -150], [1200, 100], [800, 150]], [[1300, 450], [1800, 400], [1900, 800], [1500, 800]], [[2100, 300], [2500, 500], [2400, 900], [2100, 700]], [[1200, -200], [1600, -230], [1700, 50], [1300, 0]]]);
+  // 16a: zwei Kursschiffe an den Landungsbrücken beim KKL/Bahnhofquai (Stege aus props.json: (365,69)–(415,46) und (393,100)–(440,82)), längs am Steg, 9.5 m daneben
+  ships.moor(1, 399, 62.5, 0.909, -0.418); ships.moor(0, 426, 98, 0.909, -0.418);
   // Pedalos vor Inseli, Ufschötti, Lido und Tribschen (nur auf offenem Wasser, 14 m Abstand zum Ufer)
   { const bs: number[][] = []; const wet = (x: number, z: number) => world.mask.at(x, z) === 1;
     for (const [ax, az] of [[520, 230], [1050, 520], [2250, 380], [1650, 1250], [-60, 4700]]) for (let k = 0, n = 0; k < 60 && n < 4; k++) {
@@ -1618,7 +1620,7 @@ function qaReport() {
     add('G7', 'Einsätze erreichbar', r.filter(Boolean).length, missions.length, r.every(Boolean)); }
   // G8 (R6): Brückendeck auf Uferhöhe – Deck weicht höchstens 1 m von der Linie zwischen den Brückenköpfen ab
   if (cityData) { let n = 0, bad = 0, worst = 0; const ex: any[] = [];
-    for (const r of cityData.roads) { if (!r.b || r.p.length < 2) continue;
+    for (const r of cityData.roads) { if (!r.b || (r as any).ramp || r.p.length < 2) continue;
       const a = r.p[0], b = r.p[r.p.length - 1]; const ha = terrain.height(a[0], a[1]), hb = terrain.height(b[0], b[1]);
       let L = 0; const segs: number[] = [0]; for (let i = 1; i < r.p.length; i++) { L += Math.hypot(r.p[i][0] - r.p[i - 1][0], r.p[i][1] - r.p[i - 1][1]); segs.push(L); }
       if (L < 8) continue; n++;

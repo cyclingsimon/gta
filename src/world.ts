@@ -1981,9 +1981,11 @@ function roadDecals(list: number[][], terrain: Terrain, arrows = false) {
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); m.name = 'arrows'; return m; }
   const tex = canvasTex(256, 128, (g) => {
     g.clearRect(0, 0, 256, 128); g.strokeStyle = g.fillStyle = '#F2C21B'; g.lineWidth = 7; g.lineCap = 'round';
-    // Velo (Blick von oben, Fahrtrichtung = Bild-oben), in Feld 0..128
-    g.beginPath(); g.arc(64, 30, 18, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(64, 98, 18, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.moveTo(64, 30); g.lineTo(52, 66); g.lineTo(76, 66); g.lineTo(64, 98); g.moveTo(52, 66); g.lineTo(64, 30); g.moveTo(40, 34); g.lineTo(88, 34); g.stroke();
+    // Velo als Seitenansicht wie das Schweizer Bodenpiktogramm (nach links fahrend, Räder Richtung Ankommende), in Feld 0..128; auf der Strasse 2:1 gestreckt wie das Original
+    g.lineWidth = 6; g.lineJoin = 'round';
+    g.beginPath(); g.arc(34, 88, 23, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(94, 88, 23, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(34, 88); g.lineTo(46, 50); g.lineTo(76, 50); g.lineTo(94, 88); g.lineTo(62, 88); g.lineTo(46, 50); g.moveTo(62, 88); g.lineTo(78, 44); g.stroke();
+    g.beginPath(); g.moveTo(46, 50); g.lineTo(43, 38); g.lineTo(31, 38); g.moveTo(68, 43); g.lineTo(88, 43); g.stroke();
     g.font = 'bold 56px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.save(); g.translate(192, 64); g.rotate(-Math.PI / 2); g.scale(1.6, 1); g.fillText('BUS', 0, 4); g.restore();
   }, false);
@@ -2427,6 +2429,8 @@ function rasterize(d: CityData, b3d?: B3D) {
     g.lineWidth = r.w / MASK_RES;
     g.beginPath(); r.p.forEach(([x, z], i) => (i ? g.lineTo(tx(x), tz(z)) : g.moveTo(tx(x), tz(z)))); g.stroke();
   }
+  // 16a (Simon 15.11.: «beim KKL kann man durch ein Haus fahren»): die Zufahrt in den Daten führt unter dem KKL durch – das KKL bleibt ein Hindernis
+  g.fillStyle = '#0f0'; for (const b of d.buildings) if ((b.n || '').startsWith('KKL')) poly(g, b.p, b.holes, tx, tz);
   const img = g.getImageData(0, 0, c.width, c.height).data;
   for (let i = 0, k = 0; i < mask.data.length; i++, k += 4) {
     mask.data[i] = img[k + 1] > 128 ? 2 : img[k] > 128 ? 1 : 0;

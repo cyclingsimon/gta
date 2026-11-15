@@ -221,6 +221,11 @@ export class Ships {
     this.update(0);
   }
   /** Hupe in der Nähe: Schiff antwortet (true) */
+  /** 16a (Simon 15.11.: «beim KKL sollten ein, zwei Schiffe stehen»): Kursschiff fest am Steg; (dx, dz) = Richtung des Stegs */
+  moor(i: number, x: number, z: number, dx: number, dz: number) {
+    const obj = realKursschiff(i, [[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]) ?? steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]);
+    obj.position.set(x, 0, z); obj.rotation.y = -Math.atan2(dz, dx); this.group.add(obj);
+  }
   honk(x: number, z: number) { return this.ships.some((sh) => Math.hypot(sh.obj.position.x - x, sh.obj.position.z - z) < 220); }
   update(dt: number) {
     const p = new THREE.Vector3(), t = new THREE.Vector3();
