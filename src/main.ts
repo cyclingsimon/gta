@@ -262,7 +262,7 @@ let ships: Ships | null = null;
 let boats: Boats | null = null;
 let trains: Trains | null = null;
 let gondola: Gondola | null = null;
-let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined, aerialMidTex: MidLayer[] | undefined;
+let aerialTex: THREE.Texture | undefined, aerialHrTex: THREE.Texture | undefined, midDefs: { tex: string; box: MidLayer['box']; x0: number; z0: number; t?: THREE.Texture }[] | undefined;
 let forestMask: ForestMask | undefined;
 /** Waldmaske (aus Luftbild, 4 m) laden: PNG → Bytes */
 async function loadForestMask(x0: number, z0: number, dir = DIR): Promise<ForestMask | undefined> {
@@ -1290,8 +1290,10 @@ async function boot() {
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
   if (aerialTex && QUALITY === 'echt' && !/[?&]nomid/.test(location.search)) { // auch beim Start in einer Nachbargegend // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
-    const ld = (f: string) => { const t = new THREE.TextureLoader().load(DIR + f); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-    aerialMidTex = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }, { tex: ld('aerial_mid3.jpg'), box: AERIAL_MID3, x0: -2700, z0: -6620 }]; }
+    const ld = (f: string) => f; // Datei wird erst geladen, wenn eine Gegend die Kachel braucht (midsFor)
+    midDefs = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }, { tex: ld('aerial_mid3.jpg'), box: AERIAL_MID3, x0: -2700, z0: -6620 },
+      { tex: ld('aerial_mid4.jpg'), box: { E0: 2658280, E1: 2663400, N0: 1208000, N1: 1213120 }, x0: -7820, z0: -1500 }, // West: Littau, Reussbühl, Sonnenberg
+      { tex: ld('aerial_mid5.jpg'), box: { E0: 2668520, E1: 2673640, N0: 1208000, N1: 1213120 }, x0: 2420, z0: -1500 }]; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;
@@ -1315,7 +1317,7 @@ async function boot() {
   forestMask = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1]);
   cityData = data; propsData = props ? JSON.parse(JSON.stringify(props)) : null;
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
-  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, aerialMid: aerialMidTex, coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
@@ -1404,7 +1406,14 @@ async function boot() {
 
 /** Stufe B: echte 3D-Häuser (swisstopo) und feiner Boden im Hintergrund bauen, dann austauschen */
 /** Stufe B (3D-Häuser, feiner Boden) bauen – für die Start-Gegend und (14zj) nachträglich für dazugeladene Gegenden */
-async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: THREE.Texture | undefined, fm: ForestMask | undefined, onT: (t: string) => void, globals: boolean): Promise<World> {
+/** 1.25-m-Luftbildkacheln, die eine Gegend überlappen (jede Kachel = 1 Sampler im Bodenshader; die Texturen laden erst bei Bedarf) */
+function midsFor(id: string): MidLayer[] | undefined {
+  const b = REG_BOUNDS[id]; if (!midDefs || !b) return undefined;
+  const ov = midDefs.map((l) => [Math.max(0, Math.min(b[2], l.x0 + 5120) - Math.max(b[0], l.x0)) * Math.max(0, Math.min(b[3], l.z0 + 5120) - Math.max(b[1], l.z0)), l] as const)
+    .filter((q) => q[0] > 1.5e6).sort((p, q) => q[0] - p[0]).slice(0, 3); // höchstens 3 Kacheln je Gegend (Speicher), die mit der grössten Überdeckung
+  return ov.map(([, l]) => { if (!l.t) { l.t = new THREE.TextureLoader().load('data/' + l.tex); /* liegt immer im Hauptordner, auch beim Start in einer Nachbargegend */ l.t.colorSpace = THREE.SRGBColorSpace; l.t.anisotropy = 8; } return { tex: l.t, box: l.box, x0: l.x0, z0: l.z0 }; });
+}
+async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: THREE.Texture | undefined, fm: ForestMask | undefined, onT: (t: string) => void, globals: boolean, rid = REGION): Promise<World> {
   const [bm, bb, roof, gm, gb] = r;
   let b3d: any = undefined;
   if (bm) {
@@ -1418,7 +1427,7 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   let gpos: ArrayLike<number> = g16;
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, aerialMid: aerialMidTex, // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
     forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
@@ -1736,7 +1745,7 @@ function upgradeSlot(s: Slot) {
   const RA2 = REGIONS_A[s.id];
   Promise.all(RA2 ? [opt(getJSON('b3d.json', s.dir)), opt(getBuf('b3d.bin', s.dir)), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)]
     : [getJSON('b3d.json', s.dir), getBuf('b3d.bin', s.dir), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)])
-    .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false); } finally { Object.assign(AERIAL, keep); } }))
+    .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false, s.id); } finally { Object.assign(AERIAL, keep); } }))
     .then((nw) => { if (slots.get(s.id) !== s) { nw.group.traverse((o: any) => o.geometry?.dispose()); return; } setHospital(nw, s.id); // P-C N7: Objekt statt Id
       if (REGION === s.id) swapWorld(nw);
       else { enableShadows(nw.group); void addGradually(nw.group, nw.tunnels).then(() => { if (slots.get(s.id) !== s) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
