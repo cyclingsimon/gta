@@ -2599,6 +2599,8 @@ export const AERIAL_HR = { E0: 2664760, E1: 2667320, N0: 1210400, N1: 1212960 };
 export const AERIAL_MID = { E0: 2663400, E1: 2668520, N0: 1208000, N1: 1213120 };
 /** zweite Kachel südlich davon: Horw, Kriens Süd, Biregg (bis über den Feldrand hinaus) */
 export const AERIAL_MID2 = { E0: 2663400, E1: 2668520, N0: 1202880, N1: 1208000 };
+/** dritte Kachel nördlich: Emmenbrücke, Flugplatz Emmen, Reuss, Rotsee West (Gegend «nord») */
+export const AERIAL_MID3 = { E0: 2663400, E1: 2668520, N0: 1213120, N1: 1218240 };
 export type MidLayer = { tex: THREE.Texture; box: { E0: number; E1: number; N0: number; N1: number }; x0: number; z0: number };
 function hrAffine(B = AERIAL_HR, x0 = -1300, z0 = -1400, d = 325): [THREE.Vector3, THREE.Vector3] {
   // kleinste Quadrate auf einem 9×9-Gitter über die Zone

@@ -6,7 +6,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, AERIAL_MID, AERIAL_MID2, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -1289,9 +1289,9 @@ async function boot() {
   const status = $('#load-status');
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
   if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
-  if (aerialHrTex && !/[?&]nomid/.test(location.search)) { // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
+  if (aerialTex && QUALITY === 'echt' && !/[?&]nomid/.test(location.search)) { // auch beim Start in einer Nachbargegend // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
     const ld = (f: string) => { const t = new THREE.TextureLoader().load(DIR + f); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-    aerialMidTex = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }]; }
+    aerialMidTex = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }, { tex: ld('aerial_mid3.jpg'), box: AERIAL_MID3, x0: -2700, z0: -6620 }]; }
   try { document.fonts.load('700 20px Play'); document.fonts.load('400 16px Play'); } catch { }
   memLog('boot'); setupLoader($('.start-card') as HTMLElement); loaderProgress(0.05);
   status.textContent = `Lade ${REGION_NAME[REGION] || 'Luzern'} …`;
@@ -1418,7 +1418,8 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   let gpos: ArrayLike<number> = g16;
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, aerialMid: globals ? aerialMidTex : undefined, forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, aerialMid: aerialMidTex, // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
+    forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
   const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
