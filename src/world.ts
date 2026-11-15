@@ -782,7 +782,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (!/[?&]altbruecken/.test(location.search)) {
       const under: [number[][], number][] = [...((d as any).railAll || d.rail || []).map((l: any) => [l.p || l, 5.6] as [number[][], number]), ...d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
       const X = (a: number[], b: number[], c: number[], e: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); const o1 = o(a, b, c), o2 = o(a, b, e), o3 = o(c, e, a), o4 = o(c, e, b); if (!(o1 * o2 < 0 && o3 * o4 < 0)) return -1; return o3 / (o3 - o4); };
-      brs.forEach((r, i) => { if (!DRV.has(r.c)) return; const L = blen(r.p) || 1;
+      brs.forEach((r, i) => { if (r.c === 'steps') return; const L = blen(r.p) || 1; /* 16a-3: auch Fuss-/Velobrücken (Passerelle Ebikon) bekommen lichte Höhe */
         const bx0 = Math.min(...r.p.map((q) => q[0])), bx1 = Math.max(...r.p.map((q) => q[0])), bz0 = Math.min(...r.p.map((q) => q[1])), bz1 = Math.max(...r.p.map((q) => q[1]));
         for (const [l, cl] of under) for (let k = 0; k + 1 < l.length; k++) { const c = l[k], e = l[k + 1]; if (Math.max(c[0], e[0]) < bx0 || Math.min(c[0], e[0]) > bx1 || Math.max(c[1], e[1]) < bz0 || Math.min(c[1], e[1]) > bz1) continue;
           let acc = 0; for (let m = 0; m + 1 < r.p.length; m++) { const a = r.p[m], b = r.p[m + 1], sl = Math.hypot(b[0] - a[0], b[1] - a[1]), t = X(a, b, c, e);
