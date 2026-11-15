@@ -1823,14 +1823,14 @@ function activate(s: Slot) {
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
   nav = s.nav;
   for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
-  if (traffic) { scene.remove(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
+  if (traffic) { scene.remove(traffic.group); freeGroup(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
     const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); }
-  if (buses) { scene.remove(buses.group); buses = null; } if (busWires) { scene.remove(busWires); busWires = null; }
+  if (buses) { scene.remove(buses.group); freeGroup(buses.group); buses = null; } if (busWires) { scene.remove(busWires); freeGroup(busWires); busWires = null; }
   if (s.bus && !/[?&]nobus/.test(location.search)) { buses = new Buses(s.bus, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops);
     const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
-  if (trains) { scene.remove(trains.group); trains = null; }
+  if (trains) { scene.remove(trains.group); freeGroup(trains.group); trains = null; }
   if (s.trains) { trains = new Trains(terrain, s.trains, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); }
-  for (const o of [fun, animals, ships, boats]) if (o) scene.remove(o.group);
+  for (const o of [fun, animals, ships, boats]) if (o) { scene.remove(o.group); freeGroup(o.group); } // P-C N6: GPU-Speicher beim Gegendwechsel freigeben
   fun = null; animals = null; ships = null; boats = null;
   { const nb = snap([world.hospital.x, world.hospital.z]); // 14zk: unterwegs ins Spital – das nähere Spital nehmen
     if (phase === 'toHospital' && Math.hypot(hospitalBay[0] - car.x, hospitalBay[1] - car.z) < Math.hypot(nb[0] - car.x, nb[1] - car.z)) { /* altes bleibt */ }
@@ -1872,8 +1872,9 @@ function streamTick(dt: number) {
     if (here) { activate(slots.get(here)!); }
   }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
-  if (!loadingSlot && Math.abs(c.speed) > 2) {
-    const look = [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]].map(([s2, f]) => [c.x + c.fx * f + c.fz * s2, c.z + c.fz * f - c.fx * s2]);
+  if (!loadingSlot && players.some((pl) => Math.abs(pl.car.speed) > 2)) {
+    const look: number[][] = []; // P-C N8: Blickpunkte aller Spieler (Spieler 1 zuerst)
+    for (const pl of players) { const q = pl.car; if (Math.abs(q.speed) > 2 || q !== c) for (const [s2, f] of [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]]) look.push([q.x + q.fx * f + q.fz * s2, q.z + q.fz * f - q.fx * s2]); }
     const nowS = performance.now() / 1000;
     let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r) && !((loadFailed.get(r) ?? 0) > nowS)); if (k) { want = k; break; } }
     if (want) { streamTrim((MOBILE ? 2 : 3) - 1); // 15a: zuerst Platz schaffen – sonst lagen kurz 4 Gegenden im Speicher
@@ -1890,9 +1891,8 @@ function streamTick(dt: number) {
 }
 /** Entlädt die am weitesten entfernten, nicht aktiven Gegenden (> 1.5 km), bis höchstens `keep` geladen sind */
 function streamTrim(keep: number) {
-  const c = players[0].car;
   while (slots.size > keep) {
-    const far = [...slots.values()].filter((s) => s.id !== REGION && !(target && regionAt(target[0], target[1]).includes(s.id))).map((s) => { const b = REG_BOUNDS[s.id]; const dx = Math.max(b[0] - c.x, 0, c.x - b[2]), dz = Math.max(b[1] - c.z, 0, c.z - b[3]); return [Math.hypot(dx, dz), s] as [number, Slot]; }).sort((a, b) => b[0] - a[0]);
+    const far = [...slots.values()].filter((s) => s.id !== REGION && !(target && regionAt(target[0], target[1]).includes(s.id))).map((s) => { const b = REG_BOUNDS[s.id]; let dm = Infinity; for (const pl of players) { const c = pl.car; dm = Math.min(dm, Math.hypot(Math.max(b[0] - c.x, 0, c.x - b[2]), Math.max(b[1] - c.z, 0, c.z - b[3]))); } return [dm, s] as [number, Slot]; }) // P-C N8: Abstand zum nächsten Spieler.sort((a, b) => b[0] - a[0]);
     if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]); else break;
   }
 }
