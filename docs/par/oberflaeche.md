@@ -1,5 +1,29 @@
 # P-B «Atmosphäre, Ton, Oberfläche» – Laufprotokoll
 
+## 15.11.2026 03:37 – Lauf 3
+
+`claude/13i-gebiet-a` vorab hineingemergt (keine Konflikte). Alles nur in `src/style.css` (Block «P-B Lauf 3»), kein main.ts.
+
+### Gemacht
+1. **Tempo überdeckte Auftragstext** (800–1279 px ohne Touch, bestand schon vorher): Die Tempo-Anzeige sitzt jetzt über der Minimap. Der Auftragstext steht mittig im freien Streifen rechts der Minimap: bis 999 px über die ganze Restbreite, ab 1000 px bis zur Tastenhilfe. Bei Fensterhöhe ≤ 420 px steht das Tempo unten rechts. Mit Touch war es schon getrennt (Tempo oben, Auftrag oben Mitte).
+2. **Schwierigkeitswahl `#diff-wahl`**:
+   - Fokusrahmen mit `:focus` statt nur `:focus-visible`, weil main.ts per `.focus()` fokussiert und Chrome dann keinen Rahmen zeigt. Rahmen 4 px gelb plus Mint-Schein.
+   - Die Knopfreihe darf umbrechen, hochkant ist sie zentriert.
+   - Kein Inline-Stil stört; `flex-wrap:nowrap` aus main.ts wird per `!important` überstimmt.
+3. **Funkhalt**: Am Funk-Panel hängt ein Schild «⏸ Das Spiel wartet auf dich», auf kleinen Bildschirmen «⏸ Spiel wartet». Der Annehmen-Knopf pulsiert ruhig (2,4 s, rosa Schein, kein Countdown). Bei `prefers-reduced-motion` pulsiert er nicht. Das Schild erscheint bei jedem `#radio.show`; ausserhalb der Tests hält ein Funkspruch die Welt ohnehin immer an.
+4. **Lange Willkommens-Toasts**: `overflow-wrap: anywhere` als Sicherung.
+
+### Geprüft (`tests/par/ui_pb3.py`, 2 Seitenaufrufe, Leicht, `?test&diffwahl&funkhalt`, leerer localStorage)
+- **Schwierigkeitswahl**: Alle drei Knöpfe ganz im Bild bei 1280×720, 800×380 und 390×844, Höhe 73, 54 bzw. 67 px. Fokus nach Pfeiltaste sichtbar (Rahmen 4 px). Screenshot hochkant angesehen.
+- **Ohne Touch**: Breiten 800–1280 in 40-px-Schritten, je Höhe 540 und 720 – keine Überlappung zwischen Tempo, Auftrag, Minimap, Tastenhilfe, Distanz und Sternen, nichts ausserhalb. Screenshot 960×540 angesehen.
+- **Mit Touch**: 800–1280 in 80-px-Schritten – keine Überlappung.
+- **Toasts**: «Willkommen in Küssnacht am Rigi!», «… Finsterwald b. Entlebuch!» und der lange Nord-Text bleiben bei 390×844 und 800×380 im Bild, ohne Überlauf (2–3 Zeilen hochkant). Die Toasts wurden für die Messung als DOM-Element eingesetzt.
+- **Funkhalt** bei 800×380: Schild sichtbar, Screenshot angesehen. Das Pulsieren ist im Standbild nicht prüfbar.
+- Keine Seitenfehler; tsc und Build ok.
+
+### Einbau-Hinweise
+Keine neuen.
+
 ## 14.11.2026 20:10 – Lauf 2
 
 Vorab `claude/13i-gebiet-a` hineingemergt (Merge-Commit 7c1c805, keine Konflikte). Einbau 1 (bindAmbience) bewusst **nicht** selbst gemacht.
