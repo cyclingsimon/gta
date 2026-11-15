@@ -1238,6 +1238,7 @@ function frame(now: number) {
     for (const w of world.water) { const mp = (w.material as THREE.MeshToonMaterial).map; if (mp) { mp.offset.x += dt * 0.012; mp.offset.y += dt * 0.006; } }
     (beacon.children[2] as THREE.Object3D).position.y = 9 + Math.sin(now / 300) * 0.8;
     saveTimer -= dt; if (saveTimer <= 0) { writeSave(); saveTimer = 60; }
+    gemTick(dt);
     drawMinimap();
     updateHud();
     { const kmh = Math.round(Math.abs(car.speed) * 3.6); if (kmh !== lastKmh) { lastKmh = kmh; $('#speed').innerHTML = `<b>${kmh}</b><small>km/h</small>`; } }
@@ -1753,6 +1754,32 @@ function prepNav(s: Slot) {
 }
 /** 15a: Ortsname am Standort statt Gegend-Name («Willkommen in Littau» stand in Kriens). Nächster OSM-Ort (place) aus allen geladenen Gegenden;
  *  grössere Orte (Rang ≥ 2) gewinnen bis 1.6 km, sonst der nächste Weiler/Quartier bis 900 m. [Annäherung – keine echten Gemeindegrenzen in den Daten] */
+/** 15b (Simon 14.11.: «tatsächliche Gemeindegrenzen»): swissBOUNDARIES3D-Gemeindeflächen (data/gemeinden.json, © swisstopo, auf ca. 30 m vereinfacht).
+ *  Beim Überfahren einer Gemeindegrenze: «Willkommen in Kriens!». Fehlt die Datei, bleibt die alte Meldung beim Gegendwechsel. */
+type Gem = { n: string; k: string; r: number[][]; b: number[][] };
+let GEM: Gem[] | null = null, gemNow = '', gemCand = '', gemHold = 0, gemT = 0, gemLast = -1e9;
+fetch('data/gemeinden.json').then((r) => (r.ok ? r.json() : null)).then((j) => { if (!j) return;
+  GEM = (j.gem as Gem[]).map((g) => ({ ...g, b: g.r.map((r) => { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); z0 = Math.min(z0, r[i + 1]); z1 = Math.max(z1, r[i + 1]); } return [x0, z0, x1, z1]; }) }));
+}).catch(() => { /* ohne Gemeindegrenzen weiter */ });
+function gemeindeAt(x: number, z: number): string {
+  if (!GEM) return '';
+  for (const g of GEM) for (let k = 0; k < g.r.length; k++) { const b = g.b[k]; if (x < b[0] || x > b[2] || z < b[1] || z > b[3]) continue;
+    const r = g.r[k], n = r.length / 2; let c = false;
+    for (let i = 0, j = n - 1; i < n; j = i++) { const x1 = r[2 * i], z1 = r[2 * i + 1], x2 = r[2 * j], z2 = r[2 * j + 1]; if ((z1 > z) !== (z2 > z) && x < ((x2 - x1) * (z - z1)) / (z2 - z1) + x1) c = !c; }
+    if (c) return g.n; }
+  return '';
+}
+function gemTick(dt: number) {
+  gemT -= dt; if (gemT > 0 || !GEM) return; gemT = 1;
+  const g = gemeindeAt(car.x, car.z); if (!g) return;
+  if (!gemNow) { gemNow = g; return; } // Startort: keine Meldung
+  if (g === gemNow) { gemCand = ''; return; }
+  if (g !== gemCand) { gemCand = g; gemHold = 0; return; }
+  if (++gemHold < 2) return; // 2 s in der neuen Gemeinde → kein Flackern entlang der Grenze
+  gemNow = g; gemCand = ''; const now = performance.now();
+  if (now - gemLast > 12000 && phase !== 'offer' && !document.querySelector('.mg')) { gemLast = now; toast(`👋 Willkommen in ${g}!`, 3000); }
+}
+if (TEST) (window as any).__gem = (x: number, z: number) => gemeindeAt(x, z);
 function placeNear(x: number, z: number, s: Slot): string {
   let best = '', bd = 1e9;
   for (const sl of new Set([s, ...slots.values()])) for (const pl of ((sl.data as any).places || []) as [string, number, number, number][]) {
@@ -1811,7 +1838,8 @@ function activate(s: Slot) {
   if (underground) { underground = false; setUnderground(true); }
   save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
   stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;
-  toast(`👋 Willkommen in ${placeNear(car.x, car.z, s) || REGION_NAME[s.id] || s.id}!`, 3000); updateHud();
+  if (!GEM) toast(`👋 Willkommen in ${placeNear(car.x, car.z, s) || REGION_NAME[s.id] || s.id}!`, 3000); // mit Gemeindegrenzen meldet gemTick() den Ort
+  updateHud();
   if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
   console.log('[welt] aktiv', s.id, 'von', from);
 }
