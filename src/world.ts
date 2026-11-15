@@ -533,7 +533,7 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { railBridges?: number[][][]; osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
@@ -754,18 +754,102 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           asphIsl.pos.push(A[0], 0.35, A[1], B[0], 0.35, B[1], B[0], 0.53, B[1], A[0], 0.35, A[1], B[0], 0.53, B[1], A[0], 0.53, A[1]); for (let k = 0; k < 6; k++) asphIsl.col.push(curb.r, curb.g, curb.b); } } }
     // Brücken, die in OSM aus mehreren Wegstücken bestehen, als Kette behandeln: das Deck verläuft gerade zwischen den Kettenenden
     // (sonst sackt es an einer Stückgrenze mitten über dem Fluss auf Talhöhe ab)
-    const brs = d.roads.filter((r) => r.b || r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke');
+    // 16a (Simon 15.11.: «Überführung über Eisenbahn wird nicht erkannt», «allgemein Überführungen prüfen und besser machen»):
+    // Das Geländeraster verschluckt oft die Rampen – gemessen lag z. B. das Deck der Kantonsstrasse Horw nur 2 m über dem Gleis.
+    // Jetzt: wo eine Brücke Bahn oder Strasse kreuzt, mindestens 5.6 m bzw. 5.0 m lichte Höhe; die ganze Kette wird um Δ gehoben und
+    // die Anschlussstrassen werden auf 30–110 m zu Rampen (als Brückenstücke mit Stützmauern). Dazu ein sichtbarer Brückenkörper.
+    const holz = (r: any) => r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke';
     const bkey = (q: number[]) => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2), blen = (p: number[][]) => { let l = 0; for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return l; };
+    for (const r of d.roads) if (holz(r)) terrain.addBridge(r.p, Math.max(r.w, 4.6), r.c === 'footway' ? 0.4 : 0.6); // Holzbrücken wie bisher
+    const brs = d.roads.filter((r) => r.b && !holz(r) && r.p.length >= 2);
     const ends = new Map<string, [number, number][]>();
-    brs.forEach((r, i) => { if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') return; for (const e of [0, 1]) { const k = bkey(e ? r.p[r.p.length - 1] : r.p[0]); if (!ends.has(k)) ends.set(k, []); ends.get(k)!.push([i, e]); } });
+    brs.forEach((r, i) => { for (const e of [0, 1]) { const k = bkey(e ? r.p[r.p.length - 1] : r.p[0]); if (!ends.has(k)) ends.set(k, []); ends.get(k)!.push([i, e]); } });
     const walk = (i: number, e: number): [number, number[]] => { let len = 0, cur = i, ce = e; const seen = new Set([i]);
       for (;;) { const pt = ce ? brs[cur].p[brs[cur].p.length - 1] : brs[cur].p[0]; const nb = ends.get(bkey(pt))!.filter(([j]) => j !== cur);
         if (nb.length !== 1 || seen.has(nb[0][0])) return [len, pt]; const [j, je] = nb[0]; seen.add(j); len += blen(brs[j].p); cur = j; ce = 1 - je; } };
-    const holz = (r: any) => r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke';
-    brs.forEach((r, i) => { if (holz(r)) { terrain.addBridge(r.p, Math.max(r.w, 4.6), r.c === 'footway' ? 0.4 : 0.6); return; } // Holzbrücken wie bisher
-      const [lA, pA] = walk(i, 0), [lB, pB] = walk(i, 1), L = blen(r.p), tot = lA + L + lB || 1;
-      const HA = terrain.ground(pA[0], pA[1]), HB = terrain.ground(pB[0], pB[1]);
-      terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, HA + (HB - HA) * lA / tot, HA + (HB - HA) * (lA + L) / tot); });
+    // lineare Deckhöhe je Stück (e0 am Anfang, e1 am Ende) wie bisher
+    const lin = brs.map((r, i) => { const [lA, pA] = walk(i, 0), [lB, pB] = walk(i, 1), L = blen(r.p), tot = lA + L + lB || 1;
+      const HA = terrain.ground(pA[0], pA[1]), HB = terrain.ground(pB[0], pB[1]); return [HA + (HB - HA) * lA / tot, HA + (HB - HA) * (lA + L) / tot] as [number, number]; });
+    // Ketten (alles, was über Endpunkte zusammenhängt)
+    const comp = new Array(brs.length).fill(-1); let nComp = 0;
+    for (let i = 0; i < brs.length; i++) { if (comp[i] >= 0) continue; const st = [i]; comp[i] = nComp;
+      while (st.length) { const a = st.pop()!; for (const e of [0, 1]) for (const [j] of ends.get(bkey(e ? brs[a].p[brs[a].p.length - 1] : brs[a].p[0])) || []) if (comp[j] < 0) { comp[j] = nComp; st.push(j); } } nComp++; }
+    const DRV = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'service', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street']);
+    const lift = new Array(nComp).fill(0);
+    if (!/[?&]altbruecken/.test(location.search)) {
+      const under: [number[][], number][] = [...((d as any).railAll || d.rail || []).map((l: any) => [l.p || l, 5.6] as [number[][], number]), ...d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
+      const X = (a: number[], b: number[], c: number[], e: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); const o1 = o(a, b, c), o2 = o(a, b, e), o3 = o(c, e, a), o4 = o(c, e, b); if (!(o1 * o2 < 0 && o3 * o4 < 0)) return -1; return o3 / (o3 - o4); };
+      brs.forEach((r, i) => { if (!DRV.has(r.c)) return; const L = blen(r.p) || 1;
+        const bx0 = Math.min(...r.p.map((q) => q[0])), bx1 = Math.max(...r.p.map((q) => q[0])), bz0 = Math.min(...r.p.map((q) => q[1])), bz1 = Math.max(...r.p.map((q) => q[1]));
+        for (const [l, cl] of under) for (let k = 0; k + 1 < l.length; k++) { const c = l[k], e = l[k + 1]; if (Math.max(c[0], e[0]) < bx0 || Math.min(c[0], e[0]) > bx1 || Math.max(c[1], e[1]) < bz0 || Math.min(c[1], e[1]) > bz1) continue;
+          let acc = 0; for (let m = 0; m + 1 < r.p.length; m++) { const a = r.p[m], b = r.p[m + 1], sl = Math.hypot(b[0] - a[0], b[1] - a[1]), t = X(a, b, c, e);
+            if (t > 0.03 && t < 0.97) { const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t, deck = lin[i][0] + (lin[i][1] - lin[i][0]) * (acc + sl * t) / L, need = terrain.ground(x, z) + cl - deck; if (need > lift[comp[i]]) lift[comp[i]] = need; }
+            acc += sl; } } });
+      for (let c = 0; c < nComp; c++) lift[c] = lift[c] < 0.4 ? 0 : Math.min(lift[c], 7);
+    }
+    // Rampen: an den freien Enden gehobener Ketten die anschliessenden Strassen als geneigte Brückenstücke führen
+    const rampH = new Map<any, [number, number]>(); let nRamp = 0;
+    { const roads = d.roads.slice(); let changed = false;
+      const nodeLift = new Map<string, [number, number]>(); // Knoten → [Deckhöhe inkl. Δ, Δ]
+      brs.forEach((r, i) => { const dl = lift[comp[i]]; if (!dl) return; for (const e of [0, 1]) { const k = bkey(e ? r.p[r.p.length - 1] : r.p[0]); if (ends.get(k)!.length === 1) nodeLift.set(k, [lin[i][e] + dl, dl]); } });
+      if (nodeLift.size) for (let qi = 0; qi < roads.length; qi++) { const q = roads[qi]; if (q.b || holz(q) || q.p.length < 2 || (q as any).tu) continue;
+        for (const e of [0, 1]) { const node = e ? q.p[q.p.length - 1] : q.p[0], nl = nodeLift.get(bkey(node)); if (!nl) continue;
+          const P = e ? q.p.slice().reverse() : q.p.slice(), Lq = blen(P), Lr = Math.max(30, Math.min(110, nl[1] / 0.07));
+          let rampP = P, rest: number[][] | null = null;
+          if (Lq > Lr + 8) { let acc = 0; for (let m = 0; m + 1 < P.length; m++) { const sl = Math.hypot(P[m + 1][0] - P[m][0], P[m + 1][1] - P[m][1]); if (acc + sl >= Lr) { const t = (Lr - acc) / (sl || 1), cut = [P[m][0] + (P[m + 1][0] - P[m][0]) * t, P[m][1] + (P[m + 1][1] - P[m][1]) * t]; rampP = P.slice(0, m + 1).concat([cut]); rest = [cut].concat(P.slice(m + 1)); break; } acc += sl; } }
+          const far = rampP[rampP.length - 1], ramp: any = { ...q, p: rampP, b: 1, ramp: 1 };
+          rampH.set(ramp, [nl[0], terrain.ground(far[0], far[1])]); nRamp++;
+          roads[qi] = ramp; if (rest) roads.push({ ...q, p: e ? rest.slice().reverse() : rest }); changed = true; break; } }
+      if (changed) d = { ...d, roads }; }
+    const deckOf = (r: any): [number, number] | null => { const i = brs.indexOf(r); if (i >= 0) return [lin[i][0] + lift[comp[i]], lin[i][1] + lift[comp[i]]]; return rampH.get(r) || null; };
+    for (const r of d.roads) { const h = deckOf(r); if (h) terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, h[0], h[1]); }
+    console.log('[bau] Brücken', brs.length, 'Stücke in', nComp, 'Ketten, gehoben', lift.filter((v) => v > 0).length, 'Rampen', nRamp);
+    // Brückenkörper: Platte, Brüstung, Pfeiler; Rampen mit Stützmauern bis zum Boden
+    // 16a Unterführungen (Simon 15.11.: Zug fuhr auf Strassenhöhe durch die Ambulanz): Bahnbrücken aus OSM. Das Geländemodell kennt unter
+    // der Bahnbrücke nur die Strasse – das Gleis sackte dort ab. Jetzt läuft es gerade von Widerlager zu Widerlager, mindestens 5 m über der
+    // Strasse; fehlt Höhe, steigt das Gleis beidseits auf 120 m sanft an. Dazu eine Brückenplatte.
+    const railSlabs: [number, number, number, number, number, number][] = []; // x0, z0, y0, x1, z1, y1
+    if (opts.railBridges?.length && !/[?&]altbruecken/.test(location.search)) { const lines: number[][][] = ((d as any).railAll || d.rail || []).map((l: any) => l.p || l);
+      const roadsU = d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2);
+      const X2 = (a: number[], b: number[], c: number[], e: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); const o3 = o(c, e, a), o4 = o(c, e, b); return o(a, b, c) * o(a, b, e) < 0 && o3 * o4 < 0 ? o3 / (o3 - o4) : -1; };
+      let nRb = 0;
+      for (const B of opts.railBridges) { const mid = [(B[0][0] + B[B.length - 1][0]) / 2, (B[0][1] + B[B.length - 1][1]) / 2];
+        for (const l of lines) { // Lage der Brücke auf der Gleislinie: s-Werte der beiden Enden
+          const proj = (q: number[]) => { let best = 9, bs = -1, acc = 0; for (let k = 0; k + 1 < l.length; k++) { const a = l[k], b = l[k + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, sl = Math.sqrt(L2); if (L2 > 1e-4) { const t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dz) / L2)), dd = Math.hypot(a[0] + dx * t - q[0], a[1] + dz * t - q[1]); if (dd < best) { best = dd; bs = acc + sl * t; } } acc += sl; } return bs; };
+          if (proj(mid) < 0) continue; let sa = proj(B[0]), sb = proj(B[B.length - 1]); if (sa < 0 || sb < 0) continue; if (sa > sb) [sa, sb] = [sb, sa]; if (sb - sa < 3) continue;
+          const at = (sq: number) => { let acc = 0; for (let k = 0; k + 1 < l.length; k++) { const sl = Math.hypot(l[k + 1][0] - l[k][0], l[k + 1][1] - l[k][1]); if (acc + sl >= sq || k + 2 === l.length) { const t = Math.max(0, Math.min(1, (sq - acc) / (sl || 1))); return [l[k][0] + (l[k + 1][0] - l[k][0]) * t, l[k][1] + (l[k + 1][1] - l[k][1]) * t]; } acc += sl; } return l[l.length - 1]; };
+          let Ltot = 0; for (let k = 0; k + 1 < l.length; k++) Ltot += Math.hypot(l[k + 1][0] - l[k][0], l[k + 1][1] - l[k][1]);
+          const pa = at(sa), pb = at(sb), ga = terrain.ground(pa[0], pa[1]), gb = terrain.ground(pb[0], pb[1]);
+          let dl = 0; // fehlende Höhe über gekreuzten Strassen
+          for (const r of roadsU) for (let m = 0; m + 1 < r.p.length; m++) { const t = X2(pa, pb, r.p[m], r.p[m + 1]); if (t > 0.02 && t < 0.98) { const x = pa[0] + (pb[0] - pa[0]) * t, z = pa[1] + (pb[1] - pa[1]) * t; dl = Math.max(dl, terrain.ground(x, z) + 5.0 - (ga + (gb - ga) * t)); } }
+          dl = dl < 0.3 ? 0 : Math.min(dl, 6); const R = dl ? 120 : 0;
+          for (let sq = Math.max(0, sa - R); sq <= Math.min(Ltot, sb + R); sq += 2) { const q = at(sq);
+            const y = sq < sa ? terrain.ground(q[0], q[1]) + dl * (1 - (sa - sq) / R) : sq > sb ? terrain.ground(q[0], q[1]) + dl * (1 - (sq - sb) / R) : ga + (gb - ga) * (sq - sa) / (sb - sa) + dl;
+            terrain.setRail(q[0], q[1], y, 2.5); }
+          railSlabs.push([pa[0], pa[1], ga + dl, pb[0], pb[1], gb + dl]); nRb++; break; } }
+      console.log('[bau] Bahnbrücken', nRb, 'von', opts.railBridges.length); }
+    const railCell = new Set<string>(); for (const l0 of ((d as any).railAll || d.rail || [])) { const l: number[][] = (l0 as any).p || l0; for (let k = 0; k + 1 < l.length; k++) { const sl = Math.hypot(l[k + 1][0] - l[k][0], l[k + 1][1] - l[k][1]), n = Math.max(1, Math.ceil(sl / 2)); for (let j = 0; j <= n; j++) railCell.add(Math.round((l[k][0] + (l[k + 1][0] - l[k][0]) * j / n) / 4) + ',' + Math.round((l[k][1] + (l[k + 1][1] - l[k][1]) * j / n) / 4)); } }
+    const pierOk = (x: number, z: number) => { for (let dx = -4; dx <= 4; dx += 4) for (let dz = -4; dz <= 4; dz += 4) if (railCell.has(Math.round((x + dx) / 4) + ',' + Math.round((z + dz) / 4)) || mask.isRoad(x + dx * 0.8, z + dz * 0.8)) return false; return true; }; // kein Pfeiler auf Gleis oder Strasse darunter
+    { const geos: THREE.BufferGeometry[] = [], q4 = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ'), m4 = new THREE.Matrix4(), one = new THREE.Vector3(1, 1, 1), v3 = new THREE.Vector3();
+      const put = (g: THREE.BufferGeometry, x: number, y: number, z: number, yaw: number, pitch: number) => { eu.set(pitch, yaw, 0); q4.setFromEuler(eu); m4.compose(v3.set(x, y, z), q4, one); geos.push(g.applyMatrix4(m4)); };
+      for (const r of d.roads) { const h = deckOf(r); if (!h) continue; const L = blen(r.p) || 1, drv = DRV.has(r.c), lf = r.c === 'footway' && r.n.endsWith('brücke') ? 0.4 : 0.6, W = Math.max(r.w, drv ? 4.6 : 2) + (drv ? 1.0 : 0.4); let acc = 0, sinceP = 12;
+        for (let m = 0; m + 1 < r.p.length; m++) { const A = r.p[m], B = r.p[m + 1], sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 0.05) continue; const n = Math.max(1, Math.ceil(sl / 9)), yaw = Math.atan2(B[0] - A[0], B[1] - A[1]);
+          for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, x0 = A[0] + (B[0] - A[0]) * t0, z0 = A[1] + (B[1] - A[1]) * t0, x1 = A[0] + (B[0] - A[0]) * t1, z1 = A[1] + (B[1] - A[1]) * t1, len = sl / n;
+            const y0 = h[0] + (h[1] - h[0]) * (acc + sl * t0) / L + lf, y1 = h[0] + (h[1] - h[0]) * (acc + sl * t1) / L + lf, ym = (y0 + y1) / 2, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, gm = terrain.ground(xm, zm), hi = ym - gm;
+            if (hi < 0.9) { sinceP += len; continue; }                                       // liegt praktisch auf dem Boden: kein Körper nötig
+            const pitch = -Math.atan2(y1 - y0, len), nx = Math.cos(yaw), nz = -Math.sin(yaw);
+            put(new THREE.BoxGeometry(W, 0.7, len + 0.3), xm, ym - 0.2, zm, yaw, pitch);                                               // Platte
+            const frei = (sd: number) => isNaN(terrain.bridgeAt(xm + nx * sd * (W / 2 + 2.6), zm + nz * sd * (W / 2 + 2.6))); // daneben läuft kein weiteres Deck (z. B. Gegenfahrbahn der Seebrücke)
+            for (const sd of [-1, 1]) if (frei(sd)) put(new THREE.BoxGeometry(drv ? 0.25 : 0.08, drv ? 0.95 : 1.05, len + 0.3), xm + nx * sd * (W / 2 - 0.12), ym + 0.6, zm + nz * sd * (W / 2 - 0.12), yaw, pitch); // Brüstung / Geländer
+            if ((r as any).ramp) { for (const sd of [-1, 1]) if (frei(sd)) put(new THREE.BoxGeometry(0.4, hi + 0.6, len + 0.3), xm + nx * sd * (W / 2 - 0.2), gm + (hi - 0.6) / 2, zm + nz * sd * (W / 2 - 0.2), yaw, 0); } // Stützmauer
+            else { sinceP += len; if (hi > 4 && sinceP >= 22 && pierOk(xm, zm)) { sinceP = 0; put(new THREE.BoxGeometry(Math.max(1.6, W * 0.55), hi - 0.4, 1.1), xm, gm + (hi - 0.4) / 2 - 0.2, zm, yaw, 0); } } // Pfeiler
+          } acc += sl; } }
+      for (const [x0, z0, y0, x1, z1, y1] of railSlabs) { const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(x1 - x0, z1 - z0), ym = (y0 + y1) / 2, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, nx = Math.cos(yaw), nz = -Math.sin(yaw);
+        if (ym - terrain.ground(xm, zm) < 1.2) continue; const pitch = -Math.atan2(y1 - y0, len);
+        put(new THREE.BoxGeometry(5.2, 0.9, len + 1), xm, ym - 0.4, zm, yaw, pitch); for (const sd of [-1, 1]) put(new THREE.BoxGeometry(0.2, 0.7, len + 1), xm + nx * sd * 2.5, ym + 0.4, zm + nz * sd * 2.5, yaw, pitch);
+        for (const [ex, ez, ey] of [[x0, z0, y0], [x1, z1, y1]]) { const ge = terrain.ground(ex, ez); if (ey - ge > 0.5 || true) put(new THREE.BoxGeometry(5.6, Math.max(1, ey - Math.min(ge, terrain.ground(xm, zm)) + 0.5), 1.2), ex, (ey + Math.min(ge, terrain.ground(xm, zm))) / 2 - 0.5, ez, yaw, 0); } } // Widerlager
+      if (geos.length) { const bm = mergeGeometries(geos.map((g) => { const ng = g.index ? g.toNonIndexed() : g; ng.deleteAttribute('uv'); return ng; }), false);
+        if (bm) { const mesh = new THREE.Mesh(bm, toon('#B7B3AA')); mesh.name = 'bruecken-koerper'; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); } } }
     // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)
     const nodeCnt = new Map<string, number>(); const nk = (q: number[]) => Math.round(q[0]) + ',' + Math.round(q[1]);
     for (const r of d.roads) { if (['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c)) continue; for (const q of [r.p[0], r.p[r.p.length - 1]]) nodeCnt.set(nk(q), (nodeCnt.get(nk(q)) || 0) + 1);
@@ -845,7 +929,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       }
       if (r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke') continue; // eigene Holzbrücke
       const c = new THREE.Color(ROAD_COL[r.c] || '#999');
-      const y = (ROAD_LAYER[r.c] ?? 0.35) + (r.b ? 0.04 : 0);
+      const y = (ROAD_LAYER[r.c] ?? 0.35) + (r.b ? 100.04 : 0); // +100 = Kennzeichen «Brückenfahrbahn» für drape (terrain.ts): bleibt auf dem Deck, alles andere darunter am Boden
       // 14zc: Weg (path) direkt neben einer Kantonsstrasse = Rad-/Gehweg mit Asphalt (Fotos Surental, Willisau), nicht Kies/Pflaster
       const besideMain = r.c === 'path' && alongMain(r.p);
       if (besideMain) { c.set(ROAD_COL.cycleway); for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]); for (let q = 0; q <= L; q += 2) { const x = A[0] + (B[0] - A[0]) * q / Math.max(L, 1e-6), z = A[1] + (B[1] - A[1]) * q / Math.max(L, 1e-6), k = mk(x, z); if (!sidePath.has(k)) sidePath.set(k, []); sidePath.get(k)!.push([x, z, r.w / 2 + 0.6]); } } }
@@ -990,6 +1074,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const c = new THREE.Color('#8E847C');
     for (const r of d.rail) ribbon(pos, col, r, 2.6, 0.25, c, false);
     const drl = drape(pos, col, terrain, 12);
+    if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25; } // 16a: Gleis auf der Bahnbrücke
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
   }
 

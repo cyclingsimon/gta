@@ -108,11 +108,24 @@ export class Terrain {
   heightOwn(x: number, z: number, ref?: number) {
     const b = this.bridgeAt(x, z);
     const g = this.ground(x, z);
-    const s = isNaN(b) ? g : Math.max(b, g);
+    let s = isNaN(b) ? g : Math.max(b, g);
+    // 16a (Simon 15.11.: Über-/Unterführungen): wer deutlich unter einem hohen Brückendeck fährt, bleibt am Boden (vorher sprang alles aufs Deck)
+    if (ref !== undefined && !isNaN(b) && b - g > 3.2 && ref < b - 2.4) s = g;
     if (ref === undefined || !this.tun.size) return s;
     const t = this.tunnelAt(x, z);
     return !isNaN(t) && Math.abs(ref - t) < Math.abs(ref - s) ? t : s;
   }
+  /** 16a: Bahnbrücken (Gleis über Strasse = Unterführung): Gleishöhe je Zelle; Züge und Gleise nutzen railY, Strassenfahrzeuge bleiben am Boden */
+  railBr = new Map<number, number>();
+  setRail(x: number, z: number, y: number, r = 3) {
+    for (let dx = -r; dx <= r; dx += this.bridgeRes) for (let dz = -r; dz <= r; dz += this.bridgeRes) {
+      const ii = Math.round((x + dx - this.x0) / this.bridgeRes), jj = Math.round((z + dz - this.z0) / this.bridgeRes); if (ii < 0 || jj < 0 || ii >= this.bw || jj >= this.bh) continue;
+      const idx = jj * this.bw + ii, o = this.railBr.get(idx); if (o === undefined || o < y) this.railBr.set(idx, y);
+    }
+  }
+  railAtOwn(x: number, z: number) { const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes); if (i < 0 || j < 0 || i >= this.bw || j >= this.bh) return NaN; const v = this.railBr.get(j * this.bw + i); return v === undefined ? NaN : v; }
+  /** Gleishöhe: auf einer Bahnbrücke deren Höhe, sonst Gelände (nie ein Strassenbrückendeck) */
+  railY(x: number, z: number): number { const o = this.other(x, z), t = o || this, v = t.railAtOwn(x, z), g = t.groundOwn(x, z); return isNaN(v) ? g : Math.max(v, g); }
   /** 14zg: Tunnelfahrbahn (dünn besetzt, nur Zellen in Tunnels) */
   tun = new Map<number, number>();
   tunnelAt(x: number, z: number): number { const o = this.other(x, z); return o ? o.tunnelAtOwn(x, z) : this.tunnelAtOwn(x, z); }
@@ -202,8 +215,12 @@ export function drape(pos: number[], col: number[] | null, t: Terrain, maxEdge: 
     }
     for (let k = 0; k < 3; k++) {
       const [x, y, z] = P[k];
-      const base = useBridge ? t.height(x, z) : t.ground(x, z);
-      outP.push(x, base + y, z);
+      // 16a: y ≥ 50 = Kennzeichen «gehört zu einer Brückenfahrbahn» (world.ts zählt 100 dazu) → immer Deckhöhe. Alles andere liegt unter
+      // einem hohen Deck (Strasse/Markierung der unterführten Strasse) am Boden statt als Buckel auf dem Deck.
+      const tag = y >= 50, yy = tag ? y - 100 : y;
+      let base: number;
+      if (tag) base = t.height(x, z); else if (!useBridge) base = t.ground(x, z); else { const b = t.bridgeAt(x, z), g = t.ground(x, z); base = isNaN(b) || b - g > 3.2 ? g : Math.max(b, g); }
+      outP.push(x, base + yy, z);
       if (outC && C) outC.push(...C[k]);
     }
   }

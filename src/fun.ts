@@ -345,7 +345,7 @@ export class Trains {
         const a = this.at(t, sf), b = this.at(t, sf - t.dir * t.carL);
         const tail = t.dir > 0 ? sf - t.carL < 0 : sf + t.carL > t.L;
         const sc = sf - t.dir * t.carL / 2; const inTun = (t.line.tun || []).some(([a, b]) => sc > a && sc < b);
-        c.visible = !tail && !inTun; c.position.set((a[0] + b[0]) / 2, Math.max(this.terrain.height(a[0], a[1]), this.terrain.height(b[0], b[1])) + 0.25, (a[1] + b[1]) / 2);
+        c.visible = !tail && !inTun; c.position.set((a[0] + b[0]) / 2, Math.max(this.terrain.railY(a[0], a[1]), this.terrain.railY(b[0], b[1])) + 0.25 /* 16a: Gleishöhe (Bahnbrücke oder Boden) – nie das Deck einer Strassenbrücke darüber */, (a[1] + b[1]) / 2);
         c.rotation.y = Math.atan2(a[0] - b[0], a[1] - b[1]);
         sf -= t.dir * (t.carL + 1);
       }

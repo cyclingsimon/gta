@@ -7,7 +7,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
         pg = await b.new_page(viewport={'width': 800, 'height': 450}); pg.set_default_timeout(900000)
-        errs = []; pg.on('pageerror', lambda e: errs.append(str(e)[:200]))
+        errs = []; pg.on('console', lambda m: print('LOG', m.text[:120]) if '[bau] B' in m.text else None); pg.on('pageerror', lambda e: errs.append(str(e)[:200]))
         await pg.goto(f'http://localhost:8765/?test&noshadow&notraffic&q=leicht&region={R}'); await pg.wait_for_selector('#start-btn', state='visible')
         await pg.evaluate('localStorage.clear()'); await pg.click('#start-btn'); await pg.wait_for_function('window.__luksiReady', timeout=900000)
         L = await pg.evaluate('window.__bruecken()')

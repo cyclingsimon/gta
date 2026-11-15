@@ -1340,7 +1340,8 @@ async function boot() {
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
   fuelAll = (await pFuel)?.p ?? [];
   osmAll = await pOsm;
-  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, osm: osmFor(REGION), fuel: fuelFor(REGION), aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  railBrAll = (await pRailBr)?.p ?? [];
+  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, railBridges: railBrFor(REGION), osm: osmFor(REGION), fuel: fuelFor(REGION), aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
@@ -1435,6 +1436,10 @@ async function boot() {
 let fuelAll: [number, number, number?][] = [];
 const pFuel: Promise<any> = /[?&]nofuel/.test(location.search) ? Promise.resolve(null) : fetch('data/fuel.json').then((r) => r.ok ? r.json() : null).catch(() => null);
 function fuelFor(id: string): [number, number, number?][] { return fuelAll.filter(([x, z]) => regionAt(x, z)[0] === id); }
+/** 16a: Bahnbrücken (OSM) für Unterführungen – global geladen, je Gegend die Brücken, deren Anfang in der Gegend liegt */
+let railBrAll: number[][][] = [];
+const pRailBr: Promise<any> = fetch('data/railbridges.json').then((r) => r.ok ? r.json() : null).catch(() => null);
+function railBrFor(id: string): number[][][] { return railBrAll.filter((l) => regionAt(l[0][0], l[0][1])[0] === id); }
 /** 16a: OSM-Kleinobjekte – global geladen, je Gegend gefiltert (Punkte: erste zuständige Gegend; Leitungen: zusammenhängende Stücke in der Gegend) */
 let osmAll: any = null;
 const pOsm: Promise<any> = /[?&]noosm/.test(location.search) ? Promise.resolve(null) : fetch('data/osmprops.json').then((r) => r.ok ? r.json() : null).catch(() => null);
@@ -1477,7 +1482,7 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   let gpos: ArrayLike<number> = g16;
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, osm: osmFor(rid), fuel: fuelFor(rid), aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, railBridges: railBrFor(rid), osm: osmFor(rid), fuel: fuelFor(rid), aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
     forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
