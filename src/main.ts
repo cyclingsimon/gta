@@ -1412,9 +1412,9 @@ async function boot() {
 /** Stufe B (3D-Häuser, feiner Boden) bauen – für die Start-Gegend und (14zj) nachträglich für dazugeladene Gegenden */
 /** 1.25-m-Luftbildkacheln, die eine Gegend überlappen (jede Kachel = 1 Sampler im Bodenshader; die Texturen laden erst bei Bedarf) */
 /** 15b: Tankstellen (OSM) – global geladen, je Gegend die Punkte, deren erste zuständige Gegend sie ist (keine Doppel in Überlappungen) */
-let fuelAll: [number, number][] = [];
+let fuelAll: [number, number, number?][] = [];
 const pFuel: Promise<any> = /[?&]nofuel/.test(location.search) ? Promise.resolve(null) : fetch('data/fuel.json').then((r) => r.ok ? r.json() : null).catch(() => null);
-function fuelFor(id: string): [number, number][] { return fuelAll.filter(([x, z]) => regionAt(x, z)[0] === id); }
+function fuelFor(id: string): [number, number, number?][] { return fuelAll.filter(([x, z]) => regionAt(x, z)[0] === id); }
 function midPick(id: string) {
   const b = REG_BOUNDS[id]; if (!midDefs || !b) return [];
   return midDefs.map((l) => [Math.max(0, Math.min(b[2], l.x0 + 5120) - Math.max(b[0], l.x0)) * Math.max(0, Math.min(b[3], l.z0 + 5120) - Math.max(b[1], l.z0)), l] as const)

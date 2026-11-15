@@ -8,7 +8,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { sparParts, box, hash2, type SparPart } from './geo';
 import { realMaterial } from './spar';
 
-export type Fuel = [number, number, string?];
+/** [x, z, kompakt?] – kompakt = 1: Standort liegt laut OSM in einem Haus (Tankstelle im Erdgeschoss/Garage); dann nur Zapfinsel + Preistafel am Strassenrand, kein Dach */
+export type Fuel = [number, number, number?];
 const BAND = ['#D8322B', '#1F5FB4', '#2E9A4B', '#F08A1C', '#F2C81E', '#7A3FA0'];
 
 let signTex: THREE.CanvasTexture | null = null;
@@ -42,21 +43,26 @@ function roadDir(x: number, z: number, roads: { p: number[][] }[]) {
 export function buildFuelStations(list: Fuel[], roads: { p: number[][] }[], groundY: (x: number, z: number) => number) {
   const G = new THREE.Group(); G.name = 'real-tankstellen'; if (!list.length) return G;
   const geos: THREE.BufferGeometry[] = [], signs: THREE.BufferGeometry[] = [];
-  for (const [x, z] of list) {
+  for (const [x, z, kompakt] of list) {
+    if (kompakt === 2) continue; // kein freier Platz neben Haus und Strasse gefunden (tools/geo/fuel_place.py)
     const col = BAND[Math.floor(hash2(x, z) * BAND.length) % BAND.length], P: SparPart[] = [];
-    P.push([box(12, 0.3, 7, 0, 4.35, 0), '#F4F5F2', 'unten'], [box(12.3, 0.8, 7.3, 0, 4.6, 0), col]);                       // Dach (Unterseite leuchtet abends) + Blende
-    for (const sx of [-4.6, 4.6]) for (const sz of [-2.4, 2.4]) P.push([box(0.4, 4.2, 0.4, sx, 2.1, sz), '#D9DBD6']);          // Stützen
-    for (const sz of [-2.6, 2.6]) {
+    if (!kompakt) {
+      P.push([box(12, 0.3, 7, 0, 4.35, 0), '#F4F5F2', 'unten'], [box(12.3, 0.8, 7.3, 0, 4.6, 0), col]);                     // Dach (Unterseite leuchtet abends) + Blende
+      for (const sx of [-4.6, 4.6]) for (const sz of [-2.4, 2.4]) P.push([box(0.4, 4.2, 0.4, sx, 2.1, sz), '#D9DBD6']);      // Stützen
+    }
+    const tx = kompakt ? 5 : 9.2, tz = kompakt ? 0 : 4.6;                                                                   // Preistafel: kompakt in der Achse der Insel
+    for (const sz of kompakt ? [0] : [-2.6, 2.6]) {
       P.push([box(7, 0.22, 1.2, 0, 0.11, sz), '#B9B6AE']);                                                                   // Zapfinsel
       for (const sx of [-1.7, 1.7]) P.push([box(0.7, 1.55, 0.5, sx, 0.99, sz), '#2B3340'], [box(0.5, 0.45, 0.54, sx, 1.4, sz), '#F4F5F2', 1], [box(0.72, 0.18, 0.52, sx, 1.86, sz), col]);
     }
-    P.push([box(0.3, 7.0, 0.3, 9.2, 3.5, 4.6), '#8C9096'], [box(1.7, 0.6, 0.42, 9.2, 7.2, 4.6), col]);                       // Preistafel-Mast + Kopf
+    P.push([box(0.3, 7.0, 0.3, tx, 3.5, tz), '#8C9096'], [box(1.7, 0.6, 0.42, tx, 7.2, tz), col]);                       // Preistafel-Mast + Kopf
     const y = groundY(x, z), rot = roadDir(x, z, roads), M = new THREE.Matrix4().makeRotationY(rot).setPosition(x, y, z);
     geos.push(sparParts(P).applyMatrix4(M));
     for (const s of [1, -1]) {                                                                                                // Tafel beidseitig
-      const pl = new THREE.PlaneGeometry(1.6, 3.2); if (s < 0) pl.rotateY(Math.PI); pl.translate(9.2, 5.2, 4.6 + s * 0.22); signs.push(pl.applyMatrix4(M));
+      const pl = new THREE.PlaneGeometry(1.6, 3.2); if (s < 0) pl.rotateY(Math.PI); pl.translate(tx, 5.2, tz + s * 0.22); signs.push(pl.applyMatrix4(M));
     }
   }
+  if (!geos.length) return G;
   const m = new THREE.Mesh(mergeGeometries(geos, false)!, realMaterial()); m.castShadow = true; m.receiveShadow = true; G.add(m);
   const sm = new THREE.Mesh(mergeGeometries(signs, false)!, new THREE.MeshBasicMaterial({ map: fuelSignTexture() })); sm.name = 'real-tankstellen-schild'; G.add(sm);
   for (const g of geos) g.dispose(); for (const g of signs) g.dispose();
