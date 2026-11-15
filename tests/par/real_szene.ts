@@ -81,8 +81,8 @@ stats['strasse_dreiecke'] = street.reduce((a, o: any) => a + (o.isInstancedMesh 
 { const T: number[][] = []; for (let i = 0; i < 24; i++) T.push([60 + (i % 8) * 10, 90 + Math.floor(i / 8) * 12, 1.2]);
   const osm = [[60, 90, 1, 0], [70, 90, 0, 2], [80, 90, 0, 3]];
   const g = buildRealTrees(T, osm, mask, flat); scene.add(g);
-  let n = 0; g.traverse((o: any) => { if (o.isInstancedMesh) n += tris(o.geometry) * o.count; }); stats['baeume24_min_dreiecke'] = n; stats['hochrechnung_3500_min'] = Math.round(n / 24 * 3500);
-  const ga = buildRealTrees(T, osm, mask, flat, 'alt'); let na = 0; ga.traverse((o: any) => { if (o.isInstancedMesh) na += tris(o.geometry) * o.count; }); stats['hochrechnung_3500_alt'] = Math.round(na / 24 * 3500); }
+  let n = 0; g.traverse((o: any) => { if (o.isMesh) n += tris(o.geometry) * (o.isInstancedMesh ? o.count : 1); }); stats['baeume24_min_dreiecke'] = n; stats['hochrechnung_3500_min'] = Math.round(n / 24 * 3500);
+  const ga = buildRealTrees(T, osm, mask, flat, 'alt'); let na = 0; ga.traverse((o: any) => { if (o.isMesh) na += tris(o.geometry) * (o.isInstancedMesh ? o.count : 1); }); stats['hochrechnung_3500_alt'] = Math.round(na / 24 * 3500); }
 // Verkehrsauto-Proxy wie in traffic.ts (36 Autos), 8 Stück sichtbar gesetzt
 { const old = new THREE.BoxGeometry(1.8, 0.85, 4.1), oc = new THREE.BoxGeometry(1.58, 0.68, 2.0); const { body, cabin } = realCarMeshes(36, old, oc);
   const m = new THREE.Matrix4(), zero = new THREE.Matrix4().makeScale(0, 0, 0);

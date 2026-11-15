@@ -6,5 +6,5 @@ export default defineConfig({
   root: resolve(import.meta.dirname),
   base: './',
   publicDir: false,
-  build: { outDir: resolve(import.meta.dirname, '../../dist_pa_szene'), emptyOutDir: true, rollupOptions: { input: resolve(import.meta.dirname, 'real_szene.html') }, chunkSizeWarningLimit: 4000 },
+  build: { outDir: resolve(import.meta.dirname, '../../dist_pa_szene'), emptyOutDir: true, rollupOptions: { input: { szene: resolve(import.meta.dirname, 'real_szene.html'), baeume: resolve(import.meta.dirname, 'real_baeume.html') } }, chunkSizeWarningLimit: 4000 },
 });

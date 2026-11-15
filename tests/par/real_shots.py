@@ -20,6 +20,7 @@ async def main():
                        'spar_auto_kombi': 180, 'spar_auto_kleinwagen': 180, 'spar_auto_suv': 180, 'spar_auto_lieferwagen': 180,
                        'hochrechnung_3500_min': 180000, 'klein_kuebel': 32, 'klein_robidog': 32, 'klein_briefkasten': 32, 'klein_hydrant': 32, 'klein_deckel_25000': 25000, 'klein_deckel_5000': 5000, 'stadt_delta_dreiecke': 30000, 'stadt_delta_netze': 25}
                 bad = {k: (st.get(k), v) for k, v in LIM.items() if st.get(k) is None or st[k] > v}
+                if not st.get('hochrechnung_3500_min'): bad['hochrechnung_3500_min'] = (st.get('hochrechnung_3500_min'), '> 0 erwartet')
                 print('BUDGET je Baustein:', 'OK' if not bad else 'FEHLER ' + str(bad))
                 print('Stadt alt/neu Dreiecke', st.get('stadt_alt_dreiecke'), st.get('stadt_neu_dreiecke'), 'Netze', st.get('stadt_alt_netze'), st.get('stadt_neu_netze'))
                 print('Stadt-Netze neu:', await pg.evaluate('window.__stadt.neu.join(" ")'))

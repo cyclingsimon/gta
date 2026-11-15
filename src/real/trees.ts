@@ -114,6 +114,10 @@ export function treeTint(x: number, z: number, out = new THREE.Color()) {
 /** Lage/Tags eines Baums. kind wie props.json trees[i][3]: 0/undefined Einzelbaum, 2 Obstgarten (landuse=orchard), 3 Baumreihe (natural=tree_row) */
 export interface TreeCtx {
   x: number; z: number; needle?: boolean; kind?: number; forest?: boolean;
+  /** Spielhöhe y (m über Seespiegel 433.6 m); Nadelbäume ohne OSM-Kennung erst ab y > 270 (≈ 700 m ü. M.) */
+  y?: number;
+  /** gepflasterte Fläche ringsum (Platz): Strassen-/Platzzellen in ≥ 6 von 8 Richtungen */
+  plaza?: boolean;
   /** Seeufer/Reuss in der Nähe (z. B. Mask.at === 1 im Umkreis 15 m) */
   nearWater?: boolean;
   /** Strasse in der Nähe (Mask.isRoad im Umkreis 6 m) */
@@ -133,21 +137,27 @@ const GENUS: Record<string, TreeSpecies> = {
 export function pickSpecies(c: TreeCtx): TreeSpecies {
   const g = (c.osm?.genus || c.osm?.species || '').toLowerCase().split(/[\s;]/)[0];
   if (g && GENUS[g]) return GENUS[g];
-  const r = hash2(c.x * 0.37 + 11, c.z * 0.53 - 7);
+  const r = hash2(c.x * 0.37 + 11, c.z * 0.53 - 7), hoch = (c.y ?? 0) > 270;
+  // Lauf 6: Obstbäume nur bei props-Kennung Obstgarten (2); Baumreihen (3) sind Alleebäume
   if (c.kind === 2) return 'obstbaum';
   const needle = c.needle || c.osm?.leaf_type === 'needleleaved';
   if (needle) return r < 0.72 ? 'fichte' : 'tanne';
-  if (c.forest) return weighted<TreeSpecies>([['buche', 45], ['fichte', 38], ['tanne', 12], ['linde', 5]], r);
-  if (c.nearWater) return weighted<TreeSpecies>([['platane', 50], ['rosskastanie', 30], ['linde', 20]], r);
-  if (c.kind === 3 || c.nearRoad) return weighted<TreeSpecies>([['linde', 45], ['rosskastanie', 25], ['platane', 25], ['buche', 5]], r);
-  return weighted<TreeSpecies>([['linde', 28], ['rosskastanie', 22], ['buche', 22], ['platane', 8], ['fichte', 12], ['tanne', 4], ['obstbaum', 4]], r);
+  if (c.forest) return hoch ? weighted<TreeSpecies>([['fichte', 45], ['tanne', 20], ['buche', 35]], r) : weighted<TreeSpecies>([['buche', 70], ['linde', 10], ['fichte', 15], ['tanne', 5]], r);
+  // Quais/Ufer (Belege: Nationalquai «zwei Reihen Kastanienbäume», Inseli «grosse Platanen», Schweizerhofquai Linden – s. Doku)
+  if (c.nearWater && (c.kind === 3 || c.nearRoad)) return weighted<TreeSpecies>([['rosskastanie', 45], ['linde', 30], ['platane', 25]], r);
+  if (c.nearWater) return weighted<TreeSpecies>([['platane', 45], ['rosskastanie', 30], ['linde', 25]], r);
+  if (c.plaza) return weighted<TreeSpecies>([['rosskastanie', 60], ['linde', 25], ['platane', 15]], r);   // Plätze [Annahme]
+  if (c.kind === 3 || c.nearRoad) return weighted<TreeSpecies>([['linde', 50], ['platane', 25], ['rosskastanie', 20], ['buche', 5]], r); // Alleen [Annahme]
+  if (hoch) return weighted<TreeSpecies>([['fichte', 35], ['tanne', 15], ['buche', 35], ['linde', 15]], r);
+  return weighted<TreeSpecies>([['linde', 32], ['rosskastanie', 26], ['buche', 30], ['platane', 12]], r); // Parks/Gärten unten: nur Laubbäume [Annahme]
 }
 /** Kontext aus der Spielmaske ableiten (Wasser im Umkreis 15 m, Strasse im Umkreis 6 m) */
 export function ctxFromMask(mask: Pick<Mask, 'at' | 'isRoad'>, x: number, z: number, t?: number[]): TreeCtx {
   let nearWater = false, nearRoad = false;
   for (let k = 0; k < 8 && !nearWater; k++) { const a = k * Math.PI / 4; if (mask.at(x + Math.cos(a) * 15, z + Math.sin(a) * 15) === 1 || mask.at(x + Math.cos(a) * 8, z + Math.sin(a) * 8) === 1) nearWater = true; }
-  for (let k = 0; k < 8 && !nearRoad; k++) { const a = k * Math.PI / 4; if (mask.isRoad(x + Math.cos(a) * 6, z + Math.sin(a) * 6)) nearRoad = true; }
-  return { x, z, needle: t ? t[2] === 1 : false, kind: t ? t[3] : undefined, nearWater, nearRoad };
+  let nr = 0; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; if (mask.isRoad(x + Math.cos(a) * 6, z + Math.sin(a) * 6)) nr++; }
+  nearRoad = nr > 0;
+  return { x, z, needle: t ? t[2] === 1 : false, kind: t ? t[3] : undefined, nearWater, nearRoad, plaza: nr >= 6 };
 }
 
 /** Fertige Instanzen: Liste [x, z, Skalierung, Art] → Gruppe mit einem InstancedMesh je Art.
@@ -188,11 +198,49 @@ export function buildRealTrees(trees: number[][], osm: number[][] | undefined, m
     });
     grp.add(trunkI, crownI); return grp;
   }
+  const list = realTreeList(trees, osm, mask, groundY);
+  // Lauf 6: 'min' fest in 500-m-Zellen gebacken (1 Netz je Zelle, eigene Bounding-Sphere → Frustum-Culling); 'lite'/'full' wie bisher instanziert
+  if (mode === 'min') return buildTreeCells(list, (x, z) => groundY(x, z) - 0.05);
+  return buildTreeInstances(list, (x, z) => groundY(x, z) + 0.15 - 0.2, toon('#ffffff', { vertexColors: true }), mode);
+}
+
+/** Liste [x, z, Skalierung, Art] aus den Spiel-Bäumen (Art nach Lage/Tags/Höhe) */
+export function realTreeList(trees: number[][], osm: number[][] | undefined, mask: Pick<Mask, 'at' | 'isRoad'>, groundY: (x: number, z: number) => number) {
   const info = new Map<string, number[]>(); for (const t of osm || []) info.set(t[0] + ',' + t[1], t);
-  const list = trees.map(([x, z, s]) => {
-    const t = info.get(x + ',' + z), c = ctxFromMask(mask, x, z, t);
+  return trees.map(([x, z, s]) => {
+    const t = info.get(x + ',' + z), c = ctxFromMask(mask, x, z, t); c.y = groundY(x, z);
     const sp = pickSpecies(c);
     return [x, z, sp === 'obstbaum' ? 0.85 + hash2(x, z) * 0.3 : s * 0.75, sp] as [number, number, number, TreeSpecies];
   });
-  return buildTreeInstances(list, (x, z) => groundY(x, z) + 0.15 - 0.2, toon('#ffffff', { vertexColors: true }), mode);
+}
+
+/** Bäume fest in Zellen backen: je Zelle EIN Mesh (alle Arten), Farbe je Baum (treeTint) eingebacken.
+ *  Speicher sparsam: Position Float32, Normale Int8 (normiert), Farbe Uint8 (normiert) ≈ 18 Byte je Ecke.
+ *  Rückgabe: EINE Gruppe (Name «baeume-zellen»), Kinder = Zellen-Meshes. */
+export function buildTreeCells(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, cell = 500, q: TreeQuality = 'min') {
+  const grp = new THREE.Group(); grp.name = 'baeume-zellen';
+  const by = new Map<string, [number, number, number, TreeSpecies][]>();
+  for (const t of list) { const k = Math.floor(t[0] / cell) + ',' + Math.floor(t[1] / cell); const a = by.get(k) || []; a.push(t); by.set(k, a); }
+  const mat = toon('#ffffff', { vertexColors: true });
+  const m = new THREE.Matrix4(), nm = new THREE.Matrix3(), qq = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
+  for (const L of by.values()) {
+    let n = 0; for (const t of L) n += treeGeometry(t[3], q).getAttribute('position').count;
+    const P = new Float32Array(n * 3), N = new Int8Array(n * 3), C = new Uint8Array(n * 3); let o = 0;
+    for (const [x, z, s, sp] of L) {
+      const g = treeGeometry(sp, q), gp = g.getAttribute('position'), gn = g.getAttribute('normal'), gc = g.getAttribute('color');
+      const r = hash2(x, z); e.set(0, r * 6.283, sp === 'obstbaum' ? (hash2(z, x) - 0.5) * 0.12 : 0); qq.setFromEuler(e);
+      sc.set(s, s * (0.92 + hash2(z, x) * 0.16), s); m.compose(v.set(x, groundY(x, z), z), qq, sc); nm.getNormalMatrix(m);
+      treeTint(x, z, col);
+      for (let i = 0; i < gp.count; i++, o++) {
+        v.fromBufferAttribute(gp, i).applyMatrix4(m); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z;
+        v.fromBufferAttribute(gn, i).applyMatrix3(nm).normalize(); N[o * 3] = Math.round(v.x * 127); N[o * 3 + 1] = Math.round(v.y * 127); N[o * 3 + 2] = Math.round(v.z * 127);
+        C[o * 3] = Math.min(255, Math.round(gc.getX(i) * col.r * 255)); C[o * 3 + 1] = Math.min(255, Math.round(gc.getY(i) * col.g * 255)); C[o * 3 + 2] = Math.min(255, Math.round(gc.getZ(i) * col.b * 255));
+      }
+    }
+    const bg = new THREE.BufferGeometry();
+    bg.setAttribute('position', new THREE.BufferAttribute(P, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(N, 3, true)); bg.setAttribute('color', new THREE.BufferAttribute(C, 3, true));
+    bg.computeBoundingSphere(); bg.computeBoundingBox();
+    const mesh = new THREE.Mesh(bg, mat); mesh.name = 'baum-zelle'; (mesh as any).userData.baeume = L.length; grp.add(mesh);
+  }
+  return grp;
 }

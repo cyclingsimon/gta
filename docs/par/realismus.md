@@ -4,6 +4,34 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 09:55 – Lauf 6
+
+### Gemacht
+1. **Bäume in Zellen** (`src/real/trees.ts`): `buildRealTrees` backt die Sparform 'min' jetzt mit `buildTreeCells` in **500-m-Zellen fest zusammen – EIN Mesh je Zelle (alle Arten)** mit eigener Bounding-Sphere → Frustum-Culling greift; leere Zellen entstehen nicht. Farbe je Baum (treeTint) eingebacken; Speicher sparsam (Position Float32, Normale Int8, Farbe Uint8 ≈ 18 Byte je Ecke). Rückgabe weiterhin EINE Gruppe («baeume-zellen»), Einbauzeile E1 unverändert. 'alt'/'lite'/'full' unverändert. Neue Hilfsfunktion `realTreeList` (Arten-Zuordnung, auch für Tests).
+   Bewusst **ein Mesh je Zelle statt je Zelle und Art**: mit 7 Arten × sichtbare Zellen wären es in einer Stadtansicht 50+ Aufrufe geworden (Budget +20).
+2. **Nahform (volle Baumform < 120 m) – weggelassen.** Begründung: Ohne Änderung an world.ts/main.ts ginge es nur über `onBeforeRender` eines Pool-Netzes. Das (a) läuft auch im Schattendurchgang und bei geteiltem Bildschirm mit wechselnden Kameras (Pool würde zwischen Spielern hin- und herspringen), (b) wirkt erst ein Bild später, (c) zeichnet die nahen Bäume doppelt, weil die gebackene Sparform einzelne Bäume nicht ausblenden kann – die eckigere Sparform sticht dabei durch die volle Form (4-eckiger Stamm in 6-eckigem). Sauber wäre ein Kamera-Hook in main.ts (Hauptsitzung) – nicht gebaut.
+3. **Arten nach Lage geschärft** (`pickSpecies`, `ctxFromMask`):
+   - Nadelbäume ohne OSM-Kennung nur noch oberhalb y > 270 (≈ 700 m ü. M.) oder im Wald; unten in Parks/Gärten nur Laubbäume.
+   - Obstbäume nur noch bei props-Kennung Obstgarten (trees[i][3] = 2); Baumreihen (3) werden Alleebäume (Linde 50 %, Platane 25 %, Rosskastanie 20 %, Buche 5 %).
+   - Quais (Wasser in ≤ 15 m UND Strasse/Baumreihe): Rosskastanie 45 %, Linde 30 %, Platane 25 %; Ufer ohne Strasse: Platane 45 %, Rosskastanie 30 %, Linde 25 %.
+   - Plätze (Strassen-/Platzzellen in ≥ 6 von 8 Richtungen): Rosskastanie 60 %, Linde 25 %, Platane 15 % [Annahme].
+   - Belege: Nationalquai «zwei Reihen Kastanienbäume» (https://www.alpen-guide.de/reisefuehrer/poi/nationalquai-luzern, Vertrauen mittel – Reiseführer); Inseli «im Schatten der grossen Platanen», Helvetiagärtli «mit seinen Kastanienbäumen» (Stadt Luzern, https://www.stadtluzern.ch/_doc/4878700); Linde am Schweizerhofquai (Titel «Sanierungskonzept Linde Schweizerhofquai», https://www.stadtluzern.ch/_docn/3030089/Sanierungskonzept_Linde_Schweizerhofquai_210110.pdf – nur Titel gesehen). Ein öffentlicher Baumkataster der Stadt Luzern wurde nicht gefunden → Gewichte bleiben Annahme, die Stichproben stützen sie.
+4. **Tests**: neue Seite `tests/par/real_baeume.html/.ts` + `tests/par/real_baeume.py` (3500 Bäume auf 4 × 4 km, Strassen- und Hochansicht, Vergleich alt / instanziert (Stand Lauf 3–5) / Zellen); `real_shots.py` zählt gebackene Bäume jetzt mit (vorher wären 0 Dreiecke gezählt worden) und prüft > 0.
+
+### Zahlen (Testseite, Software-Rendering, nach Frustum-Culling, inkl. 1 Aufruf Boden)
+| Ansicht | alt (Kugelbäume) | instanziert 'min' (Lauf 3–5) | **Zellen (Lauf 6)** |
+|---|---|---|---|
+| Strasse (Kamera 3 m hoch) | 154 002 Dr. / 3 Aufrufe | 159 166 / 7 | **44 310 / 24** |
+| Hochansicht (120 m) | 154 002 / 3 | 159 166 / 7 | **55 596 / 26** |
+Gegenüber Lauf 3–5: **−115 000 bzw. −104 000 Dreiecke, +17 bzw. +19 Aufrufe** (Budget +20). Gesamtzahl aller Bäume (3500) 154 875 (Artenmix verschoben). Bauzeit 3500 Bäume: 134–148 ms statt 30–58 ms (einmalig beim Laden).
+`real_baeume.py` → «BAEUME ZELLEN OK», `real_shots.py` → «BUDGET je Baustein: OK».
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei (nach Merge 011f00f); Build `OUT=dist_pa` läuft durch; beide Testskripte ohne JS-Fehler; Sichtvergleich Zellen vs. instanziert: gleiches Bild.
+Ungeprüft: echtes Spiel (P1-Wirkung, Speicher, Ladezeit mit 4793 Luzern-Bäumen), Schatten der gebackenen Zellen.
+
+---
+
 ## 15.11.2026 01:40 – Lauf 5
 
 Rettungswagen-Feinschliff nach den 3 Fotos von Simon (Abweichungsliste aus Lauf 4), nur `src/vehicle.ts` (`buildLuksRtw`):
