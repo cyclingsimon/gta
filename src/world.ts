@@ -771,9 +771,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const lin = brs.map((r, i) => { const [lA, pA] = walk(i, 0), [lB, pB] = walk(i, 1), L = blen(r.p), tot = lA + L + lB || 1;
       const HA = terrain.ground(pA[0], pA[1]), HB = terrain.ground(pB[0], pB[1]); return [HA + (HB - HA) * lA / tot, HA + (HB - HA) * (lA + L) / tot] as [number, number]; });
     // Ketten (alles, was über Endpunkte zusammenhängt)
+    // 16a-2: auch Einmündungen mitten auf einem Deck (Kreisel auf der Brücke, T-Stück) gehören zur Kette – sonst 5-m-Stufe am Schlund-Kreisel
+    const vmap = new Map<string, number[]>(); brs.forEach((r, i) => { for (const q of r.p) { const k = bkey(q); if (!vmap.has(k)) vmap.set(k, []); const l = vmap.get(k)!; if (l[l.length - 1] !== i) l.push(i); } });
+    const adj: number[][] = brs.map(() => []); brs.forEach((r, i) => { for (const e of [0, 1]) for (const j of vmap.get(bkey(e ? r.p[r.p.length - 1] : r.p[0])) || []) if (j !== i) { adj[i].push(j); adj[j].push(i); } });
     const comp = new Array(brs.length).fill(-1); let nComp = 0;
     for (let i = 0; i < brs.length; i++) { if (comp[i] >= 0) continue; const st = [i]; comp[i] = nComp;
-      while (st.length) { const a = st.pop()!; for (const e of [0, 1]) for (const [j] of ends.get(bkey(e ? brs[a].p[brs[a].p.length - 1] : brs[a].p[0])) || []) if (comp[j] < 0) { comp[j] = nComp; st.push(j); } } nComp++; }
+      while (st.length) { const a = st.pop()!; for (const j of adj[a]) if (comp[j] < 0) { comp[j] = nComp; st.push(j); } } nComp++; }
     const DRV = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'service', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street']);
     const lift = new Array(nComp).fill(0);
     if (!/[?&]altbruecken/.test(location.search)) {
@@ -791,7 +794,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const rampH = new Map<any, [number, number]>(); let nRamp = 0;
     { const roads = d.roads.slice(); let changed = false;
       const nodeLift = new Map<string, [number, number]>(); // Knoten → [Deckhöhe inkl. Δ, Δ]
-      brs.forEach((r, i) => { const dl = lift[comp[i]]; if (!dl) return; for (const e of [0, 1]) { const k = bkey(e ? r.p[r.p.length - 1] : r.p[0]); if (ends.get(k)!.length === 1) nodeLift.set(k, [lin[i][e] + dl, dl]); } });
+      brs.forEach((r, i) => { const dl = lift[comp[i]]; if (!dl) return; const L = blen(r.p) || 1; let acc = 0; for (let m = 0; m < r.p.length; m++) { if (m) acc += Math.hypot(r.p[m][0] - r.p[m - 1][0], r.p[m][1] - r.p[m - 1][1]); const k = bkey(r.p[m]); if (!nodeLift.has(k)) nodeLift.set(k, [lin[i][0] + (lin[i][1] - lin[i][0]) * acc / L + dl, dl]); } });
       if (nodeLift.size) for (let qi = 0; qi < roads.length; qi++) { const q = roads[qi]; if (q.b || holz(q) || q.p.length < 2 || (q as any).tu) continue;
         for (const e of [0, 1]) { const node = e ? q.p[q.p.length - 1] : q.p[0], nl = nodeLift.get(bkey(node)); if (!nl) continue;
           const P = e ? q.p.slice().reverse() : q.p.slice(), Lq = blen(P), Lr = Math.max(30, Math.min(110, nl[1] / 0.07));

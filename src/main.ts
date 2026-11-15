@@ -1671,6 +1671,7 @@ if (location.search.includes('test')) {
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     car: () => ({ x: car.x, z: car.z, heading: car.heading, speed: car.speed }),
+    hg: (x: number, z: number) => [Math.round(terrain.height(x, z) * 10) / 10, Math.round(terrain.ground(x, z) * 10) / 10],
     speed: (v: number) => { car.speed = v; },
     head: (h: number) => { car.heading = h; }, warp: (x: number, z: number, h: number) => { car.x = x; car.z = z; car.heading = h; car.speed = 0; car.y = terrain.height(x, z); updateCamera(0, true); }, under: () => underground, // 14zg Tests
     pick: (nx: number, ny: number) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
