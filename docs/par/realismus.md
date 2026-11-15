@@ -4,6 +4,44 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 13:40 – Lauf 8
+
+### Gemacht
+Neue Datei `src/real/landmarks.ts` – Wahrzeichen als Sparform-Bausteine, je Funktion EINE `THREE.Group` (1 Netz mit `realMaterial()` = «realSpar», Nachtlicht über `aGlow`; optional 1 Konturnetz). Lage/Drehung/Masse immer als Parameter (`Place = { x, z, y0?, rot? }`), keine Koordinaten geraten; Helfer `placeFromPolygon(p, groundY)` und `bushofDachAusUmriss(p, groundY, height)` leiten Lage aus vorhandenen OSM-Umrissen ab.
+| Baustein | Funktion | Dreiecke |
+|---|---|---|
+| Torbogen (Sandstein, Pilaster, Gesims, Attika, Figurengruppe «Zeitgeist» angedeutet) | `torbogenSpar(place, W = 20.5, D = 5.2)` | 288 |
+| KKL-Dach (dünne Platte mit Messerkante, leicht geneigt, Randleisten) | `kklDachSpar(place, length = 113, width = 107, height = 21, thickMid = 1.6, thickEdge = 0.35)` | 44 |
+| Wasserturm (Achteck, Kranz, Zeltdach, Spitze, Scharten) | `wasserturmSpar(place, height = 34.5, side = 4.7, roofH = 9)` | 88 |
+| Kapellbrücke-Aufsatz (Giebeldach-Profil + Blumenband rot/grün beidseitig) | `kapellbrueckeAufsatz(pts, deckY, width = 4.6, ridge = 4.6, eave = 3.0)` | 68 je Segment (Test: 4 Segmente 272) |
+| Bushof-Dach (Platte auf 2 Stützenreihen, Unterseite leuchtet abends) | `bushofDachSpar(place, length = 40, width = 6, height = 4, spacing = 8)` | 12 + 24 je Stützenpaar (40 m: 168) |
+Testszene (alle zusammen, 2 Bushof-Dächer): **1004 Dreiecke** (Budget < 6000).
+
+### Quellen / Annahmen
+- KKL: «Das Dach erreicht in der Diagonalen eine freie Auskragung von 45 Metern», «(113 x 107 Meter)», «12000 m2 und ist 21 Meter hoch» – https://www.luzern.com/de/highlights/die-stadt/kkl-luzern/ ; Kupferdach, kragt «twenty meters from the main façade» frei aus – https://www.espazium.ch/fr/node/9473 ; Architekt Jean Nouvel, Eröffnung 1998/2000 – https://de.wikipedia.org/wiki/Kultur-_und_Kongresszentrum_Luzern . **Annahme:** Dicke Mitte/Rand 1.6/0.35 m, Neigung 1°, Farbe Unterseite dunkelgrau (#5E6670), kein Nachtlicht.
+- Wasserturm: «Höhe 34,5 Meter», Umfang 39 m, «Ein Achteck von 4,4 - 5 Metern Seitenlänge» – https://www.luzern.com/de/highlights/die-stadt/kapellbruecke/ ; achteckig – https://de.wikipedia.org/wiki/Kapellbrücke . **Annahme:** Dachhöhe 9 m, Mauerfarbe bräunlich, Ziegeldach rotbraun, Lage der Scharten.
+- Kapellbrücke: «202,90 Metern (inklusive Vordächer 204,70 Metern)» – Wikipedia (s. oben); Blumenschmuck nur aus Bildbeschreibung luzern.com. **Annahme:** Breite 4.6 m, Traufe/First 3.0/4.6 m über Deck, Farben.
+- Torbogen: Portal von 1896, Kupferfigur «Zeitgeist» von Richard Kissling (ab 1907) – https://de.wikipedia.org/wiki/Bahnhof_Luzern . **Annahme:** Sandstein, Höhen nach Foto (Bogen 7 m breit, Scheitel 11 m, Gesims 13 m, Attika 16.9 m), Grundriss 20.5 × 5.2 m aus OSM (wie bisheriger Code in world.ts).
+- Bushof: «grossen Busbahnhof», «rund 20 Bushaltekanten … West- und Ostseite des Platzes» – https://de.wikipedia.org/wiki/Bahnhof_Luzern . **Annahme:** Dachhöhe 4 m, Platte 0.3 m, Stützen alle ~8 m, Farbe; Lage/Grösse kommt aus den OSM-Umrissen `city.json shelters`.
+
+### Einbau-Hinweise (world.ts, Rückfall: Zeile nicht ändern)
+Wichtig: In Luzern liegt swissBUILDINGS3D (`b3d`) vor – dann überspringt world.ts Torbogen, KKL und Wasserturm (Z. 1182–1183 `continue`), weil die 3D-Gebäude sie schon zeigen. E11–E13a greifen also nur in Gegenden/Fällen **ohne b3d**; zusätzlich über b3d gelegt würden sie doppelt erscheinen (nicht empfohlen).
+- **E11 Torbogen** – Z. 1182: `if (!b3d) group.add(torbogen(s.b.p, terrain));` → `if (!b3d) group.add(torbogenSpar(placeFromPolygon(s.b.p, (x, z) => terrain.ground(x, z))));` (288 statt ~1500 Dreiecke, 2 statt ~25 Netze).
+- **E12 KKL-Dach** – Block `if (s.kind === 'kkl')` (Z. ~1203–1208, `G` steht bereits auf Bodenhöhe): die Zeilen `const roof = …`, `roof.position.set(…)`, `G.add(roof, outline(roof));` ersetzen durch
+  `G.add(kklDachSpar({ x: (minx + maxx) / 2 + 10, z: (minz + maxz) / 2, y0: 0, rot: 0 }, maxx - minx + 30, maxz - minz + 16, Math.max(s.b.h, 24) + 0.9));` (gleicher Grundriss wie heute, 44 statt 12 Dreiecke, aber mit Messerkante).
+- **E13a Wasserturm** – Block `if (s.kind === 'wasserturm')` (Z. 1185 ff.): Turm/Kopf/Dach durch `G.add(wasserturmSpar({ x: cx, z: cz, y0: 0 }));` ersetzen (G steht auf Bodenhöhe).
+- **E13b Kapellbrücke** (wirkt auch mit b3d) – Z. ~1259 in der Schleife `for (const p of parts)`: für `name === 'Kapellbrücke'` zusätzlich `group.add(kapellbrueckeAufsatz(p, (x, z) => terrain.height(x, z) - 0.3));` und in `coveredBridge(...)` das 4. Argument (`flowers`) auf `false` setzen. Damit sich die Dächer nicht überlagern, in `coveredBridge` den Block `// Dachfläche` (Z. ~1956–1960, 4 Zeilen) für die Kapellbrücke überspringen, z. B. `if (!flowers) { … }` → dann zeigt nur die Spreuerbrücke das alte Dach. Dreiecke: 68 je Segment statt bisher Dach 24 + Blumen ~(12 + 12 + 20·len/0.9) je Segment.
+- **E14 Bushof-Dächer** – in `bahnhofExtras` die Schleife `for (const sh of d.shelters || []) { … }` und die Zeile `if (roofs.length) { … }` ersetzen durch
+  `for (const sh of d.shelters || []) G.add(bushofDachAusUmriss(sh.p, (x, z) => terrain.height(x, z), Math.min(Math.max(sh.h, 3.2), 8)));` (Rechteck-Einpassung je Umriss; das bisherige Dach war ein durchscheinendes Glasdach in OSM-Form – das neue ist eine undurchsichtige, hellblau-graue Platte; **gebogene Umrisse werden zum Rechteck**, deshalb nur einsetzen, wenn das im Spiel gefällt).
+Imports: `import { torbogenSpar, kklDachSpar, wasserturmSpar, kapellbrueckeAufsatz, bushofDachAusUmriss, placeFromPolygon } from './real/landmarks';`
+
+### Geprüft / ungeprüft
+Geprüft: `git merge` von `claude/13i-gebiet-a` (fa785c4); `tsc --noEmit` fehlerfrei; Build `OUT=dist_pa` läuft durch; Testszene `tests/par/pa_landmarks.html/.ts` (eigene Vite-Konfiguration `tests/par/pa_vite.config.mjs` → `dist_pa_lm/`), Skript `tests/par/pa_landmarks.py` → «LANDMARKS OK 1004», keine JS-Fehler; Screenshots Übersicht, Torbogen, KKL (Tag/Nacht), Turm + Brücke, Bushof (Tag/Nacht) selbst angeschaut: Formen erkennbar, Torbogen mit Bogen/Pilastern/Figur, Turm achteckig mit Zeltdach, Brücke mit rotem Dach und Blumenband.
+Ungeprüft: echtes Spiel; Zusammenspiel mit b3d-Gebäuden; das Nachtleuchten der Bushof-Unterseite war aus der Testkamera (von oben) nicht zu sehen; die Einbau-Zeilen E11–E14 wurden in einer temporären Datei mit den echten Typen (Terrain, THREE.Group) kompiliert (fehlerfrei, Datei gelöscht), aber nicht in world.ts ausgeführt.
+Bewusst geändert: KKL-Dach ohne Nachtlicht (mit dem gemeinsamen Leuchtton wurde die ganze Unterseite grell gelb).
+
+---
+
 ## 15.11.2026 10:55 – Lauf 7
 
 ### Gemacht
