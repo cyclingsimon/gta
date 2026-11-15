@@ -545,12 +545,12 @@ body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Hand
 @media (max-width: 520px) { #diff-wahl { align-items: center !important; width: 100%; } #diff-wahl > div { justify-content: center !important; } }
 
 /* Funkspruch hält die Welt an: ruhig zeigen «das Spiel wartet» – kein Countdown, kein Zeitdruck */
-#radio.show::after { content: '⏸ Das Spiel wartet auf dich'; position: absolute; right: 10px; top: -11px; padding: 2px 10px 1px; border-radius: 999px;
+#radio.show::after { content: '\23F8\FE0F  Das Spiel wartet auf dich'; position: absolute; right: 10px; top: -11px; padding: 2px 10px 1px; border-radius: 999px;
   background: #fff; color: #000; border: 2px solid #000; font: 700 12px var(--font); letter-spacing: .02em; box-shadow: 0 2px 0 #000; transform: rotate(2deg); white-space: nowrap; }
 #radio.show #acc { animation: pb-warten 2.4s ease-in-out infinite; }
 @keyframes pb-warten { 0%, 100% { box-shadow: 0 4px 0 #000, 0 0 0 0 rgba(255,79,163,0); } 50% { box-shadow: 0 4px 0 #000, 0 0 0 7px rgba(255,79,163,.35); } }
 @media (prefers-reduced-motion: reduce) { #radio.show #acc { animation: none; } }
-@media (max-width: 520px), (max-height: 420px) { #radio.show::after { content: '⏸ Spiel wartet'; font-size: 11px; } }
+@media (max-width: 520px), (max-height: 420px) { #radio.show::after { content: '\23F8\FE0F  Spiel wartet'; font-size: 11px; } }
 
 /* Lange Willkommens-Meldungen («Willkommen in Küssnacht am Rigi!»): umbrechen statt überlaufen */
 .toast { overflow-wrap: anywhere; box-sizing: border-box; }

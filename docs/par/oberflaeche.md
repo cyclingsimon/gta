@@ -1,5 +1,51 @@
 # P-B «Atmosphäre, Ton, Oberfläche» – Laufprotokoll
 
+## 15.11.2026 13:50 – Lauf 4
+
+`claude/13i-gebiet-a` (fa785c4) hineingemergt, Fast-Forward. Cloud-Lauf 3 (horn.ts, Sirene, Credits «Töne») nicht doppelt gebaut.
+
+### Gemacht
+- **Geräuschkulisse +6 dB**: `AMB_GAIN` 0,7 → 1,4 (`src/ambience/index.ts`).
+  - Der Pegeltest `tests/par/amb.ts` misst als lautesten Fall jetzt zusätzlich Kirchenglocke und Bahnhof-Gong mit, gleichzeitig mit Motor, Sirene, Hupe und Sterne-Ton.
+- **Funk-Pause-Schild**: Das ⏸ erhält das Emoji-Zeichen (`\23F8\FE0F`), weil es auf dem Testrechner als leeres Kästchen erschien.
+  - Lesbarkeit am Abend geprüft: schwarz auf weiss, auf dunklem Panel.
+- **Schwierigkeitswahl**: keine CSS-Änderung nötig, der Stand aus Lauf 3 genügt.
+- **Ladebild** (`src/ui/loadSteps.ts`): gegen den Ablauf von fa785c4 geprüft, keine Änderung nötig.
+  - Die Luftbildkacheln (15b) laden erst bei Bedarf über `TextureLoader` und setzen keine Statusmeldungen, also keinen eigenen Schritt.
+  - «Materialien», «Konturen» und «Stege» werden nur ausgegeben, wenn der jeweilige Teil gebaut wird. Fehlen sie, springt der Zähler vorwärts, nie rückwärts.
+  - «Häuser werden gebaut … 250» und folgende Zwischenstände zählen als derselbe Schritt.
+
+### Geprüft
+- **Pegel** (`tests/par/amb_offline.py`, OfflineAudioContext):
+  - Kulisse gemessen +6,0 dB, z. B. Stadt RMS −61,4 → −55,4 dBFS, See −53,3 → −47,3, Land mit Glocke Spitze −31 → −25.
+  - Lautester Fall mit Kulisse: Spitze **−11,5 dBFS**, Grenze −9 eingehalten.
+  - Klicks 0, kein Übersteuern. Die Positivkontrolle wird weiterhin erkannt.
+  - Sirene 586,5/440 Hz.
+  - Lautheit über der Sirene: «Stadt mit Sirene» hat RMS −27,8 dBFS, die Kulisse liegt also weiterhin rund 20–28 dB darunter.
+- **Ladeschritte** (`tests/par/ui_steps_sim.py`, nachgestellte Statusfolgen): Echt Luzern, Echt A-Gegend, Leicht und Desktop-Standard alle monoton, vor dem Knopf höchstens 95,2 % bzw. 91,7 %, danach 100 %.
+- **`tests/par/ui_pb4.py`** (2 Seitenaufrufe, Leicht):
+  - Schwierigkeitswahl bei 1280×720 (ohne Touch), 800×380 und 390×844 (Touch): alle Knöpfe im Bild, 78–140 px breit und 54–73 px hoch.
+  - Der Tastaturfokus (Pfeiltasten) zeigt einen gelben 4-px-Rahmen.
+  - Funk-Schild am Abend bei 800×380, 390×844 und 960×540 sichtbar, Screenshots angesehen.
+  - Keine Seitenfehler.
+- **Nicht geprüft**:
+  - Darstellung des geänderten ⏸-Zeichens: Die Änderung kam nach dem letzten Seitenaufruf.
+  - Steuerung der Schwierigkeitswahl mit Controller.
+  - Hörprobe auf einem echten Gerät.
+
+### Hinweis für main.ts (Hauptsitzung)
+- Schwierigkeitswahl mit Controller: `startPoll` (main.ts, nach `diffWahl`) ruft bei jedem gedrückten Knopf sofort `startOrPick()` auf. Mit dem Steuerkreuz lässt sich deshalb nicht zwischen den drei Knöpfen wählen, es gilt immer der fokussierte, also «Mittel». Vorschlag:
+  ```ts
+  // in startPoll, vor startOrPick():
+  const w = document.getElementById('diff-wahl');
+  if (w && p && (p.buttons[14]?.pressed || p.buttons[15]?.pressed || Math.abs(p.axes[0]) > 0.6)) {
+    const bs = [...w.querySelectorAll('button')] as HTMLElement[]; const i = Math.max(0, bs.indexOf(document.activeElement as HTMLElement));
+    bs[(i + ((p.buttons[15]?.pressed || p.axes[0] > 0.6) ? 1 : bs.length - 1)) % bs.length].focus(); return; // Entprellen nötig (z. B. 250 ms)
+  }
+  // nur A (buttons[0]) oder Start (buttons[9]) wählen aus
+  ```
+  Nicht getestet, nur als Skizze; Entprellen und das Ende des Intervalls (`clearInterval`) muss die Hauptsitzung anpassen.
+
 ## 14.11.2026 22:55 – Lauf P-B (Lauf 3)
 
 Vorab `claude/13i-gebiet-a` hineingemergt (Fast-Forward bis 1f16b7d, enthält P-B Lauf 2 und `bindAmbience` in main.ts schon eingebaut).

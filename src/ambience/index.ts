@@ -9,7 +9,7 @@ import { noiseBed, lfo, carPass, gull, bird, cowbell, churchBell, stationGong, t
 import { HOFKIRCHE, STATIONS, townWeight, shoreWeight } from './zones';
 
 /** EIN Regler für die ganze Geräuschkulisse (0 = aus, 1 = Stand Lauf 2). Lieber zu leise als Lärm: im Zweifel senken. */
-export const AMB_GAIN = 0.7;
+export const AMB_GAIN = 1.4; // Lauf 4: +6 dB (0,7 → 1,4) nach Pegeltest amb_offline.py – Kulisse lag 20–30 dB unter Motor/Sirene
 
 /** Abfragen aus der Spielwelt (alle optional). mask: 0 frei, 1 Wasser, 2 Gebäude, 3 ausserhalb (wie World.mask.at) */
 export interface AmbienceProbe {
