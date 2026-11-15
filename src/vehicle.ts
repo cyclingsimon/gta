@@ -28,8 +28,11 @@ export { textSprite };
 /** Rettungswagen im Kastenaufbau-Stil (Fahrerkabine + Wechselkoffer), ohne Logos.
  *  14zi (Simon: «Skins komplett anders, darf ein ganz anderes Fahrzeug sein»): kind = standard | feuerwehr | glace | monster */
 export function buildAmbulance(kind = 'standard') {
-  const FW = kind === 'feuerwehr', GL = kind === 'glace', MO = kind === 'monster';
-  if (!FW && !GL && !MO) return buildLuksRtw(); // P-A Lauf 1: Standard = Rettungswagen nach Vorbild Rettungsdienst LUKS
+  // 16a (Simon 15.11.: «Es sollten immer Ambulanzen sein. Lass dir was Lustiges einfallen»): die Plätze «feuerwehr» und «glace»
+  // (Namen bleiben wegen alter Spielstände) sind jetzt der echte Rettungswagen mit Dachgast: Teddy bzw. Gummi-Ente.
+  if (kind === 'feuerwehr' || kind === 'glace') { const r = buildLuksRtw(); r.body.add(kind === 'feuerwehr' ? dachTeddy() : dachEnte()); return r; }
+  const FW = false as boolean, GL = false as boolean, MO = kind === 'monster';
+  if (!MO) return buildLuksRtw(); // P-A Lauf 1: Standard = Rettungswagen nach Vorbild Rettungsdienst LUKS
   const root = new THREE.Group();
   const body = new THREE.Group(); // wird für Wackeln/Neigen bewegt
   root.add(body);
@@ -162,6 +165,28 @@ export function buildAmbulance(kind = 'standard') {
  *  «Ambulance», blaue «144», Star of Life, rote Haube mit Spiegelschrift). Bewusst weggelassen: Teddybär-Grafik, «BABY», LUKS-Logo,
  *  Mercedes-Stern. Doppelbereifung hinten [Annahme, auf den Fotos nicht eindeutig].
  *  Front zeigt nach +z, Radaufstand y = 0 (wie bisher). Physik/Hitbox liegen in Vehicle und bleiben unverändert. */
+/** Riesen-Teddy auf dem Kofferdach (Dach bei y = 3.05) – wie die «Baby Ambulance» des LUKS mit Teddy, nur grösser */
+function dachTeddy() {
+  const g = new THREE.Group(), fell = toon('#B9783F'), hell = toon('#E8C9A0'), dunkel = toon('#2E2420'), rot = toon('#D8343A');
+  const k = (r: number, m: THREE.Material, x: number, y: number, z: number, sy = 1) => { const o = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m); o.position.set(x, y, z); o.scale.y = sy; g.add(o); return o; };
+  g.add(outline(k(0.75, fell, 0, 3.75, -1.2, 1.1))); g.add(outline(k(0.55, fell, 0, 4.85, -1.2)));      // Bauch, Kopf
+  k(0.45, hell, 0, 3.7, -0.72, 1.0); k(0.24, hell, 0, 4.75, -0.75);                                      // heller Bauch, Schnauze
+  for (const sx of [-1, 1]) { k(0.2, fell, sx * 0.42, 5.3, -1.2); k(0.28, fell, sx * 0.85, 3.95, -1.0); k(0.3, fell, sx * 0.5, 3.2, -0.55); k(0.07, dunkel, sx * 0.2, 4.98, -0.72); } // Ohren, Arme, Füsse, Augen
+  k(0.08, dunkel, 0, 4.82, -0.52);                                                                        // Nase
+  const kreuz = new THREE.Group(); for (const [w, h] of [[0.34, 0.11], [0.11, 0.34]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.03), rot); b.position.set(0, 3.75, -0.28); kreuz.add(b); } g.add(kreuz); // rotes Kreuz-Pflaster auf dem Bauch
+  return g;
+}
+/** Riesen-Gummi-Ente mit Blaulicht-Hütchen auf dem Kofferdach */
+function dachEnte() {
+  const g = new THREE.Group(), gelb = toon('#FFD21F'), orange = toon('#F28A1C'), dunkel = toon('#20242A'), blau = toon('#2F7FE0');
+  const k = (r: number, m: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9), m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
+  g.add(outline(k(0.85, gelb, 0, 3.75, -1.3, 1, 0.8, 1.35))); g.add(outline(k(0.55, gelb, 0, 4.75, -0.75))); // Körper, Kopf
+  const schw = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.7, 8), gelb); schw.rotation.x = -2.2; schw.position.set(0, 4.15, -2.35); g.add(schw); // Schwänzchen
+  const schn = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.14, 0.45), orange); schn.position.set(0, 4.65, -0.2); g.add(schn, outline(schn));       // Schnabel
+  for (const sx of [-1, 1]) { k(0.08, dunkel, sx * 0.24, 4.92, -0.3); k(0.4, gelb, sx * 0.8, 3.8, -1.35, 0.35, 0.6, 1.1); }                        // Augen, Flügel
+  const hut = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.26, 10), blau); hut.position.set(0, 5.38, -0.78); g.add(hut);                 // Blaulicht-Hütchen
+  return g;
+}
 function buildLuksRtw() {
   const root = new THREE.Group();
   const body = new THREE.Group(); root.add(body);

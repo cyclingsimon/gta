@@ -15,6 +15,15 @@ function towardRoad(mask: M, x: number, z: number, d = [2, 4, 6]) {
   return best;
 }
 
+/** 16a (Rückmeldung Simon 15.11.: «Bushaltestellen stehen auf der Fahrbahn»): OSM-Haltepunkte liegen oft auf der Strassenachse.
+ *  Nächster Punkt, an dem im Umkreis `frei` keine Fahrbahn liegt (Suche bis 12 m); findet sich keiner: null (dann wird nichts hingestellt). */
+function offRoad(mask: M, x: number, z: number, frei: number): [number, number] | null {
+  const klar = (px: number, pz: number) => { if (mask.isRoad(px, pz)) return false; for (let k = 0; k < 8; k++) if (mask.isRoad(px + Math.sin(k * Math.PI / 4) * frei, pz + Math.cos(k * Math.PI / 4) * frei)) return false; return true; };
+  if (klar(x, z)) return [x, z];
+  for (let r = 1; r <= 12; r += 1) for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r; if (klar(px, pz)) return [px, pz]; }
+  return null;
+}
+
 /** Mittelpunkte der bereits modellierten Wartehallen (city.json «shelters», Luzern-Kern, berechnet 14.11.2026) */
 export const SHELTERS_CITY = [[150, 115], [104, 103], [203, 387], [187, 388], [173, 423], [326, 371], [303, 385], [238, 101], [-73, 390], [185, 42]];
 
@@ -24,12 +33,16 @@ export const SHELTERS_CITY = [[150, 115], [104, 103], [203, 387], [187, 388], [1
  *    if (P.stops.length) G.add(...buildStops(P.stops, mask, (x, z) => terrain.height(x, z)));
  *  REAL.shelters = false → nur das bisherige Schild (identisch zu vorher). Rückgabe: InstancedMeshes (chunkInstanced-tauglich). */
 export function buildStops(stops: any[][], mask: M, groundY: HY, avoid: number[][] = SHELTERS_CITY, on = REAL.shelters, share = 0.5): THREE.InstancedMesh[] {
-  const hall: number[][] = [], sign: number[][] = [];
+  const hall: number[][] = [], sign: number[][] = [], bench: number[][] = [];
   for (const s of stops) {
     const [x, z] = s, far = avoid.every(([ax, az]) => Math.hypot(ax - x, az - z) > 30);
-    if (on && far && hash2(x * 1.7, z * 0.3) < share) hall.push([x, z, towardRoad(mask, x, z, [3, 5])]); else sign.push(s);
+    if (on && far && hash2(x * 1.7, z * 0.3) < share) { // Wartehalle nur, wo rundum 2.6 m frei sind; sonst nur eine Sitzbank (Simon 15.11.), sonst nichts
+      const h = offRoad(mask, x, z, 2.6), b = h ? null : offRoad(mask, x, z, 1.1);
+      if (h) hall.push([h[0], h[1], towardRoad(mask, h[0], h[1], [3, 5])]); else if (b) bench.push([b[0], b[1], towardRoad(mask, b[0], b[1], [2, 3])]);
+    } else { const q = offRoad(mask, x, z, 0.9); if (q) sign.push([q[0], q[1]]); }
   }
   const out: THREE.InstancedMesh[] = [];
+  if (bench.length) out.push(sparInstances('bank', bench, groundY, 'stops-bank'));
   if (sign.length) { // bisheriges Schild, unverändert
     const poleG = new THREE.CylinderGeometry(0.05, 0.05, 2.6, 4); poleG.translate(0, 1.3, 0);
     const signG = new THREE.BoxGeometry(0.6, 0.45, 0.05); signG.translate(0, 2.55, 0);

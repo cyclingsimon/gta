@@ -135,26 +135,33 @@ export function radioKick() { if (radio && radio.paused) radio.play().catch(() =
 // Eigene Dateien (audio/), laufen in Schleife, nur in der Nähe hörbar; gedämpft wie «durch die Wand».
 type Venue = { x: number; z: number; r: number; url: string; el?: HTMLAudioElement; g?: GainNode; lp?: BiquadFilterNode; near: number };
 const venues: Venue[] = [];
-export function setVenues(v: { x: number; z: number; r: number; url: string }[]) { venues.length = 0; for (const a of v) venues.push({ ...a, near: 0 }); (window as any).__venues = venues; }
+export function setVenues(v: { x: number; z: number; r: number; url: string }[]) { venues.length = 0; for (const a of v) venues.push({ ...a, near: 0 }); (window as any).__venues = venues;
+  // 16a (Simon 15.11.: «bei Schüür und KKL keine Musik gehört»): Handy-Browser lassen Musik nur nach einem Fingertipp starten. setVenues läuft im
+  // Start-Tipp – darum die Stücke hier stumm anspielen und gleich anhalten; später dürfen sie dann von selbst loslaufen.
+  if (ctx) for (const a of venues) venueEl(a, true);
+}
+function venueEl(v: Venue, unlock = false) {
+  if (v.el || !ctx) return;
+  const el = new Audio(v.url); el.loop = true; el.preload = unlock ? 'none' : 'auto';
+  const src = ctx.createMediaElementSource(el);
+  v.lp = ctx.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.frequency.value = 900;
+  v.g = ctx.createGain(); v.g.gain.value = 0;
+  src.connect(v.lp); v.lp.connect(v.g); v.g.connect(sfx);
+  v.el = el;
+  if (unlock) el.play().then(() => { if (v.near === 0) el.pause(); }).catch(() => { /* kein Tipp – nächster Versuch in updateVenues */ }); else el.play().catch(() => {});
+}
 /** 0..1, wie stark gerade eine Konzertmusik zu hören ist (Spielmusik/Radio werden dann leiser) */
 export function updateVenues(x: number, z: number) {
   if (!ctx) return;
   let top = 0;
   for (const v of venues) {
     const d = Math.hypot(x - v.x, z - v.z);
-    const k = d > v.r ? 0 : Math.min(1, ((v.r - d) / (v.r - 25)) ** 1.6); // ab 25 m voll, am Rand 0
+    const k = d > v.r ? 0 : Math.min(1, ((v.r - d) / (v.r - 45)) ** 1.1); // ab 45 m voll, am Rand 0 (16a: früher hörbar)
     v.near = k; top = Math.max(top, k);
-    if (k > 0 && !v.el) {
-      const el = new Audio(v.url); el.loop = true; el.preload = 'auto';
-      const src = ctx.createMediaElementSource(el);
-      v.lp = ctx.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.frequency.value = 700;
-      v.g = ctx.createGain(); v.g.gain.value = 0;
-      src.connect(v.lp); v.lp.connect(v.g); v.g.connect(sfx);
-      v.el = el; el.play().catch(() => {});
-    }
+    if (k > 0 && !v.el) venueEl(v);
     if (v.el && v.g && v.lp) {
-      v.g.gain.setTargetAtTime(muted || hidden ? 0 : k * 0.9, ctx.currentTime, 0.15);
-      v.lp.frequency.setTargetAtTime(500 + 2500 * k * k, ctx.currentTime, 0.2); // näher = heller
+      v.g.gain.setTargetAtTime(muted || hidden ? 0 : k * 1.8, ctx.currentTime, 0.15); // 16a: doppelt so laut
+      v.lp.frequency.setTargetAtTime(900 + 7000 * k * k, ctx.currentTime, 0.2); // näher = heller (16a: weniger dumpf)
       if (k > 0 && v.el.paused && !hidden) v.el.play().catch(() => {});
       if (k === 0 && !v.el.paused && d > v.r + 80) v.el.pause();
     }

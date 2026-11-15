@@ -18,6 +18,6 @@ async def main():
             for _ in range(max(0,int(cam))): await pg.keyboard.press('KeyC')
             await pg.wait_for_timeout(4000)
             await pg.screenshot(path=f'shots/{PRE}_{i}.png')
-            for _ in range((3 - max(0,int(cam))) % 3): await pg.keyboard.press('KeyC')
+            for _ in range((4 - max(0,int(cam))) % 4): await pg.keyboard.press('KeyC')
         print('Fehler', errs); await b.close()
 asyncio.run(main())

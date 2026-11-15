@@ -1,4 +1,7 @@
 import { buildFuelStations } from './real/fuel';
+import { buildPowerLines, buildPitches, buildPlaygrounds, buildLevelCrossings, buildMasts, type Pitch } from './real/osmprops';
+/** 16a: Kleinobjekte aus OpenStreetMap je Gegend (Spielkoordinaten): Spielplätze, Sportplätze, Hochspannungsmasten/-leitungen, Bahnübergänge, Funkmasten/Kamine */
+export type OsmProps = { spiel: number[][]; platz: Pitch[]; mast: number[][]; leitung: number[][][]; bue: number[][]; turm: [number, number, 'chimney' | 'mast', number?][] };
 import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
@@ -530,7 +533,7 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
@@ -1516,6 +1519,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         acc -= L; } }
     console.log('[bau] Laternen ergänzt', add);
     await onProgress('Stege und Laternen …'); group.add(buildProps(props, terrain, mask)); }
+  if (opts.osm) { const o = opts.osm, gy = (x: number, z: number) => terrain.height(x, z); // 16a: OSM-Kleinobjekte (P-A Lauf 10), ohne Kollision
+    if (o.mast.length || o.leitung.length) group.add(buildPowerLines(o.mast, o.leitung, gy));
+    if (o.platz.length) group.add(buildPitches(o.platz, gy));
+    if (o.spiel.length) group.add(buildPlaygrounds(o.spiel, gy));
+    if (o.bue.length) group.add(buildLevelCrossings(o.bue, gy));
+    if (o.turm.length) group.add(buildMasts(o.turm, gy)); }
   if (opts.fuel?.length) group.add(buildFuelStations(opts.fuel, d.roads, (x, z) => terrain.height(x, z))); // 15b: Tankstellen (Rückmeldung Simon)
 
   // ---- Berge am Horizont (Pilatus im SW, Rigi im O) ----
@@ -2961,7 +2970,7 @@ function kantonsPaket(d: CityData, props: Props | undefined, terrain: Terrain, g
 // ---------------- 14zg: Strassentunnels ----------------
 const tkey = (q: number[]) => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2);
 const plen = (p: number[][]) => { let l = 0; for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return l; };
-/** Tunnelstücke (r.tu), deren zusammenhängendes Netz mindestens 25 m lang ist */
+/** Tunnelstücke (r.tu), deren zusammenhängendes Netz mindestens 90 m lang ist */
 function tunnelPieces(d: CityData) {
   const tu = d.roads.filter((r) => r.tu && r.p.length >= 2); if (!tu.length) return [];
   const at = new Map<string, number[]>(); tu.forEach((r, i) => { for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = tkey(q); if (!at.has(k)) at.set(k, []); at.get(k)!.push(i); } });
@@ -2969,7 +2978,7 @@ function tunnelPieces(d: CityData) {
   for (let i = 0; i < tu.length; i++) { if (comp[i] >= 0) continue; const st = [i]; comp[i] = nc; let L = 0;
     while (st.length) { const a = st.pop()!; L += plen(tu[a].p); for (const q of [tu[a].p[0], tu[a].p[tu[a].p.length - 1]]) for (const b of at.get(tkey(q)) || []) if (comp[b] < 0) { comp[b] = nc; st.push(b); } }
     clen.push(L); nc++; }
-  return tu.filter((_, i) => clen[comp[i]] >= 25);
+  return tu.filter((_, i) => clen[comp[i]] >= 90); // 16a (Simon 15.11., Kriens: «Da gibt es keinen Tunnel»): kürzere Stücke sind Unterführungen unter Autobahn/Bahn → normale Strasse, kein Portal
 }
 /** Fahrbahnhöhe: an den Portalen (Anschluss an normale Strasse) = Gelände, dazwischen geglättet; Röhre, Lampen, Portale zeichnen */
 function buildTunnels(tr: CityData['roads'], others: CityData['roads'], terrain: Terrain, out: THREE.Group): CityData['roads'] {

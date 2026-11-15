@@ -6,7 +6,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -110,7 +110,21 @@ function toast(text: string, ms = 2200) {
 }
 
 // ---------------- Three ----------------
-const renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance' });
+/** 16a (Rückmeldung Simon 15.11., Android «Echt»: Bild weiss, danach Hänger im Ladebild): Verliert der Browser die 3D-Ansicht
+ *  (Grafikspeicher voll) oder gibt er keine mehr her, stellt das Spiel auf «Leicht» und sagt, was zu tun ist – statt weiss/hängen. */
+function grafikNot(text: string, neuLaden: boolean) {
+  try { save.quality = 'leicht'; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat */ }
+  let n = 0; try { n = +(sessionStorage.getItem('luksi.gfx') || 0); sessionStorage.setItem('luksi.gfx', String(n + 1)); } catch { /* egal */ }
+  const d = document.createElement('div'); d.id = 'gfx-not';
+  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:#2a1b5c;color:#fff;font:700 20px/1.35 system-ui,sans-serif;text-align:center';
+  d.textContent = neuLaden && n < 2 ? text + ' Das Spiel startet gleich neu in der Grafik «Leicht».' : text + ' Bitte diesen Tab schliessen und das Spiel neu öffnen (Grafik «Leicht» ist eingestellt).';
+  document.body.appendChild(d);
+  if (neuLaden && n < 2) setTimeout(() => location.reload(), 2500);
+}
+let renderer: THREE.WebGLRenderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance' }); }
+catch (e) { grafikNot('Die 3D-Grafik lässt sich nicht starten.', false); throw e; }
+renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); grafikNot('Die Grafik hat keinen Speicher mehr.', true); });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, MOBILE ? 1 : 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -861,7 +875,7 @@ function autopilot(dt: number) {
 }
 
 // ---------------- Kamera ----------------
-const CAMS = ['Hinter dem Auto', 'Von oben', 'Nah dran'];
+const CAMS = ['Hinter dem Auto', 'Von oben', 'Weiter weg', 'Fahrersicht']; // 16a (Simon 15.11.): von oben, von hinten weiter weg, Sicht aus der Ambulanz (ohne Innenraum)
 function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
   const car = p.car, camPos = p.camPos, camLook = p.camLook, mode = p.idx === 0 ? save.cam : p.camMode;
   const fx = car.fx, fz = car.fz;
@@ -870,7 +884,8 @@ function updateCamera(dt: number, snapNow = false, p: Player = players[0]) {
   let want: THREE.Vector3;
   const back = Math.min(1, Math.abs(car.speed) / 20);
   if (mode === 1) want = new THREE.Vector3(car.x - fx * 20, cy + 75, car.z - fz * 20 + 0.01);
-  else if (mode === 2) want = new THREE.Vector3(car.x - fx * 8, cy + 3.6, car.z - fz * 8);
+  else if (mode === 2) want = new THREE.Vector3(car.x - fx * (26 + back * 4), cy + 12 + back, car.z - fz * (26 + back * 4));
+  else if (mode === 3) { want = new THREE.Vector3(car.x + fx * 3.9, cy + 2.35, car.z + fz * 3.9); look.set(car.x + fx * 40, cy + 1.6, car.z + fz * 40); snapNow = true; } // vor der Kabine: kein Fahrzeug im Bild
   else want = new THREE.Vector3(car.x - fx * (13 + back * 3), cy + 6 + back, car.z - fz * (13 + back * 3));
   if (mode === 1) look.set(car.x + fx * 10, cy, car.z + fz * 10);
   // 14zg: im Tunnel tief und nah hinter dem Auto (unter der Decke, 5.6 m), egal welche Kamera gewählt ist
@@ -909,7 +924,7 @@ function showLoadUmfang() {
 const chZahl = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2019'); // Schweizer Tausendertrenner
 let menuFocus = 0;
 const DIFF_LABEL: Record<Difficulty, string> = { entdecken: 'Einfach (Navi-Linie, bis 90 km/h)', rettung: 'Mittel (bis 150 km/h)', profi: 'Schnell (bis 269 km/h)' };
-const SKIN_LABEL: Record<string, string> = { standard: '🚑 Ambulanz', feuerwehr: '🚒 Feuerwehr', glace: '🍦 Glace-Wagen', monster: '🦖 Monster-Ambulanz' }; // 14zi: ganze Fahrzeuge statt Lackierungen
+const SKIN_LABEL: Record<string, string> = { standard: '🚑 Ambulanz', feuerwehr: '🧸 Teddy-Ambulanz', glace: '🦆 Enten-Ambulanz', monster: '🦖 Monster-Ambulanz' }; // 14zi: ganze Fahrzeuge statt Lackierungen
 const SKIN_NEED: [string, number][] = [['standard', 0], ['feuerwehr', 5], ['glace', 15], ['monster', 30]];
 function unlockedSkins() { const n = fun ? fun.heartCount : 0; return SKIN_NEED.filter(([, k]) => n >= k).map(([s]) => s); }
 function nextSkinHint() { const n = fun ? fun.heartCount : 0; const nx = SKIN_NEED.find(([, k]) => n < k); return nx ? `${SKIN_LABEL[nx[0]]} ab ${nx[1]} ♥` : ''; }
@@ -926,9 +941,12 @@ function menuRows(): MenuRow[] {
       ...(current && (phase === 'toScene' || phase === 'toHospital') ? [{ t: '✋ Einsatz abgeben', f: () => { abortMission(); setPause(false); } }] : [])] },
     { kind: 'opt', label: 'Fahren', note: { entdecken: 'Für Kinder bis 6: Navi-Linie, mit Blaulicht bis 90 km/h (ohne 70)', rettung: 'Bis etwa 12 Jahre: mit Blaulicht bis 150 km/h (ohne 120)', profi: 'Für Grössere: mit Blaulicht bis 269 km/h (ohne 200)' }[save.diff],
       btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Einfach', rettung: '🚑 Mittel', profi: '⚡ Schnell' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
-    { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '👀 Nah dran'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
+    { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '🔭 Weiter weg', '👀 Fahrersicht'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
     { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
     { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
+    ...(document.documentElement.requestFullscreen ? [{ kind: 'opt' as const, label: 'Vollbild', btns: [ // 16a (Simon): Vollbild wie bei Videos
+      { t: '⛶ An', on: !!document.fullscreenElement, f: () => { document.documentElement.requestFullscreen({ navigationUI: 'hide' } as any).then(() => (screen.orientation as any)?.lock?.('landscape')).catch(() => { /* nicht erlaubt */ }); } },
+      { t: 'Aus', on: !document.fullscreenElement, f: () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* egal */ }); } }] }] : []),
     { kind: 'opt', label: 'Musik', note: getMusicSrc() === 'radio' ? 'Live aus dem Luzerner Kantonsspital (braucht Internet).' : undefined, btns: ([['spiel', '🎵 Spielmusik'], ['radio', '📻 Spitalradio LuZ'], ['aus', '🔕 Keine']] as [MusicSrc, string][]).map(([m, t]) => ({ t, on: getMusicSrc() === m, f: () => { save.music = m; setMusicSrc(m); writeSave(); } })) },
     { kind: 'opt', label: 'Fahrzeug', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Fahrzeuge gibt es mit Luksi-Herzen.' : undefined,
       btns: SKIN_NEED.map(([sk, need]) => ({ t: skinN >= need ? SKIN_LABEL[sk] : `🔒 ${need} ♥`, on: (car?.skin || 'standard') === sk, off: skinN < need, f: () => { if (skinN >= need) setSkin(sk); else toast(`${SKIN_LABEL[sk]} gibt es ab ${need} Luksi-Herzen.`, 2500); } })) },
@@ -1172,7 +1190,7 @@ function frame(now: number) {
       if (playing) {
         if (hitP(p.idx, 'siren')) p.car.siren = !p.car.siren;
         if (hitP(p.idx, 'horn')) { sfxPlay.horn(); traffic?.honk(p.car.x, p.car.z); if (animals && animals.honk(p.car.x, p.car.z)) moo(p.car.x, p.car.z); }
-        if (hitP(p.idx, 'camera')) { p.camMode = (p.camMode + 1) % 3; }
+        if (hitP(p.idx, 'camera')) { p.camMode = (p.camMode + 1) % 4; }
         if (hitP(p.idx, 'reset')) { placeCar(p.car.x, p.car.z, undefined, p.car); sfxPlay.reset(); }
       }
       p.car.update(dt, ci, save.diff, (water) => { if (water) { stats.tot.splashes++; sfxPlay.splash(); fun?.splash(p.car.x + p.car.fx * 3.5, p.car.z + p.car.fz * 3.5); comic(p.car.x, p.car.z, 4); } else sfxPlay.bump(); });
@@ -1191,7 +1209,7 @@ function frame(now: number) {
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
       if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
-      if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 3; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
+      if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 4; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
       if (hit('mute')) { save.muted = !isMuted(); setMuted(save.muted); toast(save.muted ? 'Ton aus' : 'Ton an', 1000); }
       if (hitP(0, 'reset')) { placeCar(car.x, car.z); sfxPlay.reset(); toast('Luksi hupt – Auto hüpft zurück auf die Strasse!', 1600); }
       if (hit('map')) { const bm = $('#bigmap-wrap'); bm.classList.toggle('show'); if (bm.classList.contains('show')) drawBigMap(); }
@@ -1288,8 +1306,8 @@ let fullReady = false;
 async function boot() {
   const status = $('#load-status');
   if (!/[?&]noaerial/.test(location.search)) { aerialTex = new THREE.TextureLoader().load(QUALITY === 'echt' ? DIR + 'aerial.jpg' : DIR + 'aerial_s.jpg'); aerialTex.colorSpace = THREE.SRGBColorSpace; aerialTex.anisotropy = 8; }
-  if (aerialTex && QUALITY === 'echt' && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
-  if (aerialTex && QUALITY === 'echt' && !/[?&]nomid/.test(location.search)) { // auch beim Start in einer Nachbargegend // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
+  if (aerialTex && QUALITY === 'echt' && !MOBILE && REGION === 'luzern' && !/[?&]nohr/.test(location.search)) { /* 16a: auf Handys keine grossen Zusatz-Luftbilder (je ~85 MB Grafikspeicher) */ aerialHrTex = new THREE.TextureLoader().load(DIR + 'aerial_hr.jpg'); aerialHrTex.colorSpace = THREE.SRGBColorSpace; aerialHrTex.anisotropy = 8; }
+  if (aerialTex && QUALITY === 'echt' && !MOBILE && !/[?&]nomid/.test(location.search)) { // auch beim Start in einer Nachbargegend // 15b: 1.25 m rund um die Kernzone (Nord: Stadt/Kriens, Süd: Horw)
     const ld = (f: string) => f; // Datei wird erst geladen, wenn eine Gegend die Kachel braucht (midsFor)
     midDefs = [{ tex: ld('aerial_mid.jpg'), box: AERIAL_MID, x0: -2700, z0: -1500 }, { tex: ld('aerial_mid2.jpg'), box: AERIAL_MID2, x0: -2700, z0: 3600 }, { tex: ld('aerial_mid3.jpg'), box: AERIAL_MID3, x0: -2700, z0: -6620 },
       { tex: ld('aerial_mid4.jpg'), box: { E0: 2658280, E1: 2663400, N0: 1208000, N1: 1213120 }, x0: -7820, z0: -1500 }, // West: Littau, Reussbühl, Sonnenberg
@@ -1321,7 +1339,8 @@ async function boot() {
   cityData = data; propsData = props ? JSON.parse(JSON.stringify(props)) : null;
   // Stufe A: schnelle Stadt aus OpenStreetMap-Grundrissen → sofort spielbar
   fuelAll = (await pFuel)?.p ?? [];
-  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, fuel: fuelFor(REGION), aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
+  osmAll = await pOsm;
+  world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, osm: osmFor(REGION), fuel: fuelFor(REGION), aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
   if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
@@ -1356,6 +1375,7 @@ async function boot() {
   beacon.add(col, ring, star); beacon.visible = false;
   scene.add(beacon, routeMesh);
   // Navi-Pfeil über dem Auto
+  arrow.scale.setScalar(0.55); // 16a (Simon 15.11.: «Pfeil verdeckt Sicht»): kleiner
   const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 2.2), toon('#F39204')); shaft.position.z = -0.2;
   const head = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.6, 3), toon('#F39204')); head.rotation.x = Math.PI / 2; head.position.z = 1.6;
   arrow.add(shaft, head, outline(shaft), outline(head)); arrow.visible = false;
@@ -1415,6 +1435,19 @@ async function boot() {
 let fuelAll: [number, number, number?][] = [];
 const pFuel: Promise<any> = /[?&]nofuel/.test(location.search) ? Promise.resolve(null) : fetch('data/fuel.json').then((r) => r.ok ? r.json() : null).catch(() => null);
 function fuelFor(id: string): [number, number, number?][] { return fuelAll.filter(([x, z]) => regionAt(x, z)[0] === id); }
+/** 16a: OSM-Kleinobjekte – global geladen, je Gegend gefiltert (Punkte: erste zuständige Gegend; Leitungen: zusammenhängende Stücke in der Gegend) */
+let osmAll: any = null;
+const pOsm: Promise<any> = /[?&]noosm/.test(location.search) ? Promise.resolve(null) : fetch('data/osmprops.json').then((r) => r.ok ? r.json() : null).catch(() => null);
+function osmFor(id: string): OsmProps | undefined {
+  if (!osmAll) return undefined;
+  const inR = (x: number, z: number) => regionAt(x, z)[0] === id, pts = (L: number[][]) => (L || []).filter((p) => inR(p[0], p[1]));
+  const leitung: number[][][] = [];
+  for (const L of osmAll.leitung || []) { let run: number[][] = [];
+    for (let i = 0; i < L.length; i++) { if (inR(L[i][0], L[i][1])) { if (!run.length && i > 0) run.push(L[i - 1]); run.push(L[i]); } else if (run.length) { run.push(L[i]); leitung.push(run); run = []; } }
+    if (run.length > 1) leitung.push(run); }
+  return { spiel: pts(osmAll.spiel), mast: pts(osmAll.mast), bue: pts(osmAll.bue), turm: pts(osmAll.turm) as any, leitung,
+    platz: (osmAll.platz || []).filter((q: any) => inR(q[1][0][0], q[1][0][1])).map((q: any) => ({ sport: q[0], p: q[1] })) };
+}
 function midPick(id: string) {
   const b = REG_BOUNDS[id]; if (!midDefs || !b) return [];
   return midDefs.map((l) => [Math.max(0, Math.min(b[2], l.x0 + 5120) - Math.max(b[0], l.x0)) * Math.max(0, Math.min(b[3], l.z0 + 5120) - Math.max(b[1], l.z0)), l] as const)
@@ -1444,7 +1477,7 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   let gpos: ArrayLike<number> = g16;
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
-  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, fuel: fuelFor(rid), aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
+  return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, osm: osmFor(rid), fuel: fuelFor(rid), aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
     forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
@@ -1474,7 +1507,7 @@ let started = false;
 function start() {
   if (started) return; started = true; // P-C N3: zweimal Enter startete doppelt
   goFullscreen();
-  initAudio(); if (REGION === 'luzern') setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500));
+  initAudio(); setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500));
   for (const ev of ['keydown', 'pointerdown']) addEventListener(ev, radioKick);
   $('#start').classList.add('hide');
   setTimeout(() => $('#start').remove(), 600);
@@ -1923,5 +1956,15 @@ function streamTrim(keep: number) {
     if (far.length && far[0][0] > 1500) unloadSlot(far[0][1]); else break;
   }
 }
-if (TEST) { (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot, vcap: players[0].car.vcap, drin: regionAt(players[0].car.x, players[0].car.z).some((k) => slots.has(k)) });
+if (TEST) { (window as any).__bruecken = () => { // 16a: Überführungen messen – lichte Höhe des Decks über Bahn/Strasse darunter
+    const S = slots.get(REGION); const T: any = (S as any)?.terrain ?? terrain, D: any = (S as any)?.data ?? (window as any).__data; if (!T || !D) return null;
+    const DR = ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'service', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street'];
+    const X = (a: number[], b: number[], c: number[], d: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); if (!(o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0)) return null; const t = o(c, d, a) / (o(c, d, a) - o(c, d, b)); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; };
+    const out: any[] = [], under: [string, number[][]][] = [...(D.railAll || D.rail || []).map((l: any) => ['bahn', l.p || l] as [string, number[][]]), ...D.roads.filter((r: any) => !r.b && DR.includes(r.c)).map((r: any) => ['strasse', r.p] as [string, number[][]])];
+    for (const r of D.roads) { if (!r.b || !DR.includes(r.c)) continue;
+      for (const [art, l] of under) { let hit: number[] | null = null; const bx0 = Math.min(...r.p.map((q: number[]) => q[0])) - 1, bx1 = Math.max(...r.p.map((q: number[]) => q[0])) + 1, bz0 = Math.min(...r.p.map((q: number[]) => q[1])) - 1, bz1 = Math.max(...r.p.map((q: number[]) => q[1])) + 1;
+        for (let i = 0; i + 1 < l.length && !hit; i++) { if (Math.max(l[i][0], l[i + 1][0]) < bx0 || Math.min(l[i][0], l[i + 1][0]) > bx1 || Math.max(l[i][1], l[i + 1][1]) < bz0 || Math.min(l[i][1], l[i + 1][1]) > bz1) continue; for (let k = 0; k + 1 < r.p.length && !hit; k++) hit = X(r.p[k], r.p[k + 1], l[i], l[i + 1]); }
+        if (hit) { const deck = T.height(hit[0], hit[1]), boden = T.ground(hit[0], hit[1]), a = r.p[0], b = r.p[r.p.length - 1]; out.push([r.n || r.c, art, Math.round(hit[0]), Math.round(hit[1]), +(deck - boden).toFixed(1), +(T.ground(a[0], a[1]) - boden).toFixed(1), +(T.ground(b[0], b[1]) - boden).toFixed(1)]); break; } } }
+    return out; };
+  (window as any).__welt = () => ({ aktiv: REGION, geladen: [...slots.keys()], laedt: loadingSlot, vcap: players[0].car.vcap, drin: regionAt(players[0].car.x, players[0].car.z).some((k) => slots.has(k)) });
   (window as any).__weltLoad = (id: string) => loadSlot(id).then((sl) => { slots.set(sl.id, sl); scene.add(sl.world.group); scene.add(sl.world.tunnels); linkSlots(); return renderer.info.memory; }); }

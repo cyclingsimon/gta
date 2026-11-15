@@ -554,3 +554,7 @@ body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Hand
 
 /* Lange Willkommens-Meldungen («Willkommen in Küssnacht am Rigi!»): umbrechen statt überlaufen */
 .toast { overflow-wrap: anywhere; box-sizing: border-box; }
+
+/* 16a (Simon 15.11.): Distanz zum Ziel war auf dem Handy hinter dem Gas-Knopf – jetzt oben neben dem Tempo */
+body.touch #navbox { top: 14px !important; left: calc(50% + 74px) !important; right: auto !important; }
+body.touch #dist { font-size: 20px !important; white-space: nowrap; }

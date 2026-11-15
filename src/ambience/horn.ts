@@ -4,7 +4,7 @@
 /** Schweizer Wechselklanghorn (VTS Anhang 11 Ziff. 3, SR 741.41): zwei Töne im Verhältnis 3:4, Grundfrequenzen 360–630 Hz,
  *  Zyklus 2 hohe + 2 tiefe Töne in 2,5–3,5 s, Neubeginn mit dem hohen Ton bei jeder Betätigung.
  *  Hier 586,7 Hz (d'') / 440 Hz (a'), je 0,7 s → 2,8 s. Die konkreten Töne sind eine Annahme innerhalb der Vorschrift. */
-export const SIREN_HI = 586.7, SIREN_LO = 440, SIREN_TONE = 0.7, SIREN_VOL = 0.11;
+export const SIREN_HI = 586.7, SIREN_LO = 440, SIREN_TONE = 0.7, SIREN_VOL = 0.055; // 16a (Simon 15.11.: «Sirene zu laut im Vergleich zum Spiel-Audio»): −6 dB
 
 let sqWave: PeriodicWave | null = null, sqCtx: BaseAudioContext | null = null;
 /** Rechteck ±1 als Fourier-Reihe (4/π · Σ sin(nωt)/n, ungerade n bis 31), ohne Normierung */
@@ -38,7 +38,8 @@ export function buildSiren(ctx: BaseAudioContext, out: AudioNode) {
   return {
     set(v: boolean) {
       if (v && !on) restart();
-      on = v; gain.gain.setTargetAtTime(v ? SIREN_VOL : 0, ctx.currentTime, 0.15);
+      on = v; const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setTargetAtTime(v ? SIREN_VOL : 0, t, 0.15);
+      if (v) gain.gain.setTargetAtTime(SIREN_VOL * 0.3, t + 6, 1.5); // 16a (Simon 15.11.: «geht beim längeren Fahren auf den Sack»): nach 6 s in den Hintergrund (−10 dB)
     },
     get on() { return on; },
   };
