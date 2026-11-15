@@ -1783,7 +1783,7 @@ function gemTick(dt: number) {
   if (now - gemLast > 12000 && phase !== 'offer' && !document.querySelector('.mg')) { gemLast = now; toast(`👋 Willkommen in ${g}!`, 3000); }
 }
 if (TEST) (window as any).__gem = (x: number, z: number) => gemeindeAt(x, z);
-if (TEST) (window as any).__fahrzeuge = () => ({ schiffe: ((ships as any)?.ships || []).slice(0, 3).map((q: any) => q.obj.position.toArray().map(Math.round)), zuege: ((trains as any)?.group.children || []).slice(0, 12).map((o: any) => o.position.toArray().map(Math.round)) });
+if (TEST) (window as any).__fahrzeuge = () => ({ schiffe: ((ships as any)?.ships || []).slice(0, 3).map((q: any) => q.obj.position.toArray().map(Math.round)), zuege: ((trains as any)?.group.children || []).filter((o: any) => o.visible).map((o: any) => o.position.toArray().map(Math.round)) });
 function placeNear(x: number, z: number, s: Slot): string {
   let best = '', bd = 1e9;
   for (const sl of new Set([s, ...slots.values()])) for (const pl of ((sl.data as any).places || []) as [string, number, number, number][]) {
