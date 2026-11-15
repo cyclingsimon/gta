@@ -14,7 +14,8 @@ import { Terrain } from './terrain';
 import { Vehicle, textSprite, type Difficulty } from './vehicle';
 import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepadName } from './input';
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
-import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, type MusicSrc } from './audio';
+import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
+import { Konzerte } from './konzert';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
 export const VERSION = '2026-11-15c';
@@ -130,6 +131,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('#app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
+// 16a: sichtbares Zeichen, woher die Konzertmusik kommt (Reihenfolge = setVenues)
+const konzerte = new Konzerte([{ x: 270, z: 785, h: 12, titel: 'Rock in der Schüür', farbe: '#FF5DA2', meldung: '🎸 Konzert in der Schüür – die Musik kommt aus dem Haus!' }, { x: 327, z: 128, h: 31, titel: 'Musical im KKL', farbe: '#6EC6FF', meldung: '🎶 Konzert im KKL – die Musik kommt aus dem Saal!' }]);
+scene.add(konzerte.group);
 scene.background = new THREE.Color('#A9DDF3');
 scene.fog = new THREE.Fog('#CFE9F5', 260, 1500);
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 1800); // Nebel endet bei 1500 m: dahinter zeichnet die Fernsicht (farScene)
@@ -1235,6 +1239,7 @@ function frame(now: number) {
     updateComics(dt);
     updateEngine(car.speed, c.throttle);
     updateVenues(car.x, car.z);
+    konzerte.update(dt, car.x, car.z, (x, z) => terrain.height(x, z), venueNear, (t) => toast(t, 4200));
     phaseTime += dt;
     playTime += dt; if (playTime > 90) $('#keys').classList.add('hide');
 

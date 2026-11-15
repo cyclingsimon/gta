@@ -150,6 +150,7 @@ function venueEl(v: Venue, unlock = false) {
   v.el = el;
   if (unlock) el.play().then(() => { if (v.near === 0) el.pause(); }).catch(() => { /* kein Tipp – nächster Versuch in updateVenues */ }); else el.play().catch(() => {});
 }
+export function venueNear(i: number) { return venues[i] ? venues[i].near : 0; }
 /** 0..1, wie stark gerade eine Konzertmusik zu hören ist (Spielmusik/Radio werden dann leiser) */
 export function updateVenues(x: number, z: number) {
   if (!ctx) return;
