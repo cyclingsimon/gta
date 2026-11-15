@@ -1,5 +1,104 @@
 # P-C Unabhängige Prüfung & Fehlerjagd
 
+## 16.11.2026 00:15 – Prüflauf (vorgezogen, nur Code-Lesung)
+
+Prüfgegenstand: `640e268..62b6bee` (8 Commits 16a: Brückenumbau, Bahnbrücken, Einmündungen auf Decks, Fussbrücken, Konzert-Zeichen,
+Schiffe am KKL, KKL als Hindernis, Velo-Piktogramm, OSM-Strassenmöbel). Worktree `/home/claude/wt-pc`, `claude/13i-gebiet-a` per Fast-Forward
+hineingemergt. Zeilen beziehen sich auf `62b6bee`.
+
+**Ausgeführt:** `npx tsc --noEmit -p .` → ok. Zwei Python-Skripte, die nur Daten aus `/home/claude/gta/public/data` lesen: Aufwand der Brücken-Schleifen
+und Kreuzungen von Brücken mit Tunnelstrassen. **Nicht ausgeführt** (Auftrag): kein Build, kein Browser, kein Playwright. Alle Befunde
+sind daher **Code-Lesung**, keiner ist durch einen Test belegt.
+
+Hinweis: In diesem Bereich hat sich `main.ts` nur bei Konzert, Bahnbrücken und `hg` geändert. Kameras, Vollbild, `grafikNot`, `midPick` und `osmFor`
+(Leitungen) sowie `src/real/fuel.ts` liegen vor `640e268` und wurden nicht neu geprüft. `audio.ts` hat sich nur bei `venueNear` geändert.
+
+### Befunde Schwere 1–3
+
+| # | Schwere | Befund | Szenario → falsches Ergebnis | Vertrauen | Beleg |
+|---|---|---|---|---|---|
+| D1 | 1 (bestehend, nicht neu) | `CanvasRenderingContext2D.roundRect` ohne Rückfall | Altes iPad (iOS/Safari < 16, z. B. iPad Air 2, iPad mini 4 – bleiben auf iOS 15): Mit `konzert.ts` wirft schon die **oberste Ebene von main.ts** (`new Konzerte`) einen TypeError → Spiel startet gar nicht, Ladebild bleibt stehen. Vorher scheiterte es etwas später an `textSprite` (`vehicle.ts:18`) – das Ergebnis ist dasselbe, aber jetzt sogar vor `boot()` und ohne C1-Ausweichen | hoch (API-Verfügbarkeit), unbekannt, ob solche Geräte im Einsatz sind | `src/konzert.ts:7`, `src/main.ts:135`, `src/vehicle.ts:18`, `src/world.ts:958`, `src/bus.ts:179` (bus.ts:94 prüft es bereits) |
+| D2 | 3 | Hintergrund-Gegenden ohne Bahnbrücken, OSM-Möbel und Tankstellen | Leicht/Handy (dort kein Upgrade): Jede **nachgeladene** Nachbargegend baut `buildWorld` ohne `railBridges`/`osm`/`fuel`. → In Nachbargegenden fährt der Zug unter Bahnbrücken weiter auf Strassenhöhe durch die Ambulanz (genau der Fehler, den Simon am 15.11. gemeldet hat). Im Echt-Modus erst nach dem Upgrade richtig | hoch | `src/main.ts:1799` (Optionen nur `trees, forestStep, forestMask, aerial, coarse, freeCPU`), vgl. `1351`, `1492` |
+
+Weitere Befunde mit Schwere 1–3 habe ich nicht gefunden. Insbesondere gibt es **keine Falle** (Stelle ohne Weiterkommen): Pfeiler, Stützmauern und
+Brückenkörper haben keine Kollision, und `placeCar` setzt immer auf einen Navi-Knoten. NaN-Quellen sind abgesichert: `X()` nur bei echtem Schnitt,
+`proj` mit `L2 > 1e-4`, `sl || 1`, `L || 1`, `sb - sa ≥ 3`, `Math.max(1, …)` bei den Widerlagern.
+
+Speicher beim Entladen geprüft: `bruecken-koerper` (eigenes Toon-Material), `real-strassenmoebel` (gemeinsames `realSpar`, wird von `freeGroup`
+bewusst geschont) und die Kursschiffe am Steg (in `ships.group`, Freigabe in `activate`, `main.ts:1906`) liegen alle in Gruppen, die `freeGroup`
+erreicht. `konzerte` ist global, einmalig vorhanden und klein (2 × 512×192 + 6 × 64² Texturen). `terrain.railBr` gehört zum Terrain der Gegend
+und geht mit ihm. **Kein neues Leck gefunden.**
+
+Grundsätze: Neue Netzaufrufe gibt es nur zum eigenen Server (`data/railbridges.json`, `data/osmprops.json`). Briefkasten ohne Posthorn,
+keine Logos. Die Konzert-Meldung ist kindgerecht. Kein Scheitern, keine Strafe.
+
+Aufwand Brückenbau (Skript, Luzern): 276 Brückenstücke × 35 000 Strassen-/Gleissegmente ≈ 9.7 Mio. Rechteck-Tests. `deckOf` mit `brs.indexOf`
+ergibt 2 × 18 625 × 276 ≈ 10 Mio. Vergleiche. Am Handy schätzungsweise 0.1–0.5 s mehr Ladezeit je Gegend (nicht gemessen) – **unter Schwere 3**.
+
+### Schwere 4–5 (zur Kenntnis, kurz)
+
+| # | Schwere | Befund | Beleg |
+|---|---|---|---|
+| D3 | 4 | Hebung auch über **Tunnelstrassen** (`under` filtert `tu` nicht): Steinhof- und Berglistrasse sowie 2 Fusswege über dem Sonnenbergtunnel, Fussweg über dem Schlund/Ruopigen-Tunnel (Skript: 6 Kreuzungen). Liegt der Tunnel tief, wird die Brücke unnötig bis 5 m gehoben → Buckel mit Rampen. Dasselbe gilt für Bahntunnels (`railAll` hat keine Tunnel-Kennung) | `src/world.ts:783` |
+| D4 | 4 | Strasse mit **beiden** Enden an gehobenen Ketten: Wegen `break` wird nur ein Ende Rampe, am anderen Ende entsteht eine Stufe bis 7 m. Mit der neuen Regel `ref < b − 2.4` (`terrain.ts:113`) fährt die Ambulanz dann **unter** dem Deck am Boden weiter (über Gleis/Flussbett), statt es zu befahren. Kein Hänger, Reset hilft | `src/world.ts:798-805` |
+| D5 | 4 | Reset/Startposition in einer Unterführung: `placeCar` ohne `ref` → `max(Deck, Boden)` → Ambulanz steht **auf** dem Deck quer zur Brücke und fällt beim Losfahren herunter. Verkehr (`hy`, erstes Bild ohne `ty`) und Fussgänger (`traffic.ts:278`, ohne `ref`) laufen in Unterführungen oben auf dem Deck | `src/main.ts:1031`, `src/traffic.ts:261`, `278` |
+| D6 | 4 | OSM-Möbel: `frei = mask.at !== 2` schliesst nur Häuser aus. Hydrant, Radarkasten und 6 m breite Sammelstelle können **mitten auf der Fahrbahn oder im See** stehen (der Kommentar verspricht «nicht auf der Fahrbahn»). Die Ambulanz fährt hindurch | `src/world.ts:1616`, `src/real/osmprops.ts:245` |
+| D7 | 5 | Seitenstrassen, die mitten auf einem Rampenstück einmünden (OSM teilt Wege nicht an Einmündungen), bleiben am Boden → Stufe bis Δ oder Durchfahrt unter der Rampe. Rampen verlieren Markierung und Trottoir (`r.b` → else-Zweig) | `src/world.ts:798-806`, `891` |
+| D8 | 5 | `(ey - ge > 0.5 \|\| true)` – Bedingung ohne Wirkung (immer Widerlager). G8-Ausnahme `(r as any).ramp` wirkt nicht, weil `cityData.roads` keine Rampen enthält (die gibt es nur in der lokalen Kopie `d`) | `src/world.ts:853`, `src/main.ts:1628` |
+
+### Patch-Vorschläge
+
+D1 – ein Rückfall ganz oben in `main.ts`, vor `new Konzerte` (hilft auch `vehicle.ts`, `world.ts` und `bus.ts`):
+```diff
++// Safari < 16 kennt roundRect nicht → einfaches Rechteck statt Absturz beim Start
++if (typeof CanvasRenderingContext2D !== 'undefined' && !(CanvasRenderingContext2D.prototype as any).roundRect)
++  (CanvasRenderingContext2D.prototype as any).roundRect = function (x: number, y: number, w: number, h: number) { this.rect(x, y, w, h); };
+ const konzerte = new Konzerte([
+```
+
+D2 – Hintergrund-Gegenden mit denselben Daten bauen:
+```diff
+-  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true }); }
++  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true,
++    railBridges: railBrFor(id), osm: osmFor(id), fuel: fuelFor(id) }); }
+```
+(Falls `aerialMid: midsFor(id)` dort absichtlich fehlt – Speicher am Handy –, so lassen.)
+
+D3 – Tunnelstrassen nicht als «darunter» zählen:
+```diff
+-      ...d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
++      ...d.roads.filter((r) => !r.b && !(r as any).tu && DRV.has(r.c) && r.p.length >= 2).map((r) => [r.p, 5.0] as [number[][], number])];
+```
+(Für Bahntunnels müsste die Kennung `tun` aus trains.json herangezogen werden – erst prüfen, ob es Bahntunnels unter Brücken gibt.)
+
+D4 – beide Enden in eine Rampe (Deck zu Deck) statt `break`:
+```diff
+-        for (const e of [0, 1]) { const node = e ? q.p[q.p.length - 1] : q.p[0], nl = nodeLift.get(bkey(node)); if (!nl) continue;
++        const nl0 = nodeLift.get(bkey(q.p[0])), nl1 = nodeLift.get(bkey(q.p[q.p.length - 1]));
++        if (nl0 && nl1) { const ramp: any = { ...q, b: 1, ramp: 1 }; rampH.set(ramp, [nl0[0], nl1[0]]); roads[qi] = ramp; nRamp++; changed = true; continue; }
++        for (const e of [0, 1]) { const node = e ? q.p[q.p.length - 1] : q.p[0], nl = nodeLift.get(bkey(node)); if (!nl) continue;
+```
+
+D6 – nur auf freier Fläche neben der Fahrbahn:
+```diff
+-    { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) !== 2);
++    { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z));
+```
+
+D5 – Ebene beim Platzieren wählen (minimal: bei hohem Deck am Boden bleiben, wenn das Deck nicht in Fahrtrichtung weiterläuft):
+```diff
+-  { const t = terrain.tunnelAt(car.x, car.z); car.y = terrain.height(car.x, car.z, !isNaN(t) && terrain.ground(car.x, car.z) > t + 3 ? -1e6 : undefined); }
++  { const t = terrain.tunnelAt(car.x, car.z), g = terrain.ground(car.x, car.z), b = terrain.bridgeAt(car.x, car.z);
++    const unten = !isNaN(b) && b - g > 3.2 && isNaN(terrain.bridgeAt(car.x + Math.sin(car.heading) * 8, car.z + Math.cos(car.heading) * 8)); // Unterführung: Deck läuft quer
++    car.y = terrain.height(car.x, car.z, !isNaN(t) && g > t + 3 ? -1e6 : unten ? g : undefined); }
+```
+(Annahme: `heading` 0 = +z, wie in `placeCar`/`atan2(dx, dz)`. Für eine breite Brücke reicht die 8-m-Probe nicht immer – Heuristik, Vertrauen mittel.)
+
+### Status der früheren Befunde (nur Hinweis)
+
+Im Code sieht man inzwischen `freeGroup` (`main.ts:1877`) mit Schonung von `realSpar`/`realGlow` und die Freigabe beim Wechsel (`main.ts:1906`)
+→ N6/C5 ist **weitgehend erledigt**. Die übrigen N-/C-Befunde vom 15.11. habe ich in diesem Lauf nicht neu geprüft.
+
 ## 15.11.2026 01:40 – Prüflauf
 
 Prüfgegenstand: Branch `claude/13i-gebiet-a` @ `050fce1` (Commits der letzten 24 h: 15a Fassaden-Atlas, Umland-Ausschnitt, Funkhalt,
