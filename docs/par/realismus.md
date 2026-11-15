@@ -4,6 +4,43 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 16:30 – Lauf 9 (Annahmen gegen Quellen geprüft)
+
+Nur bei Beleg geändert; Dreieckszahlen unverändert (Budgetprüfung OK: PostAuto-Solobus 104, Doppelstock 88/114). Keine Logos/Wortmarken nachgezeichnet (Posthorn bewusst weggelassen).
+
+### Geändert (belegt)
+| Fahrzeug | Vorher | Nachher | Quelle | Vertrauen |
+|---|---|---|---|---|
+| PostAuto-Bus | gelb, gelbes Dach | gelber Rumpf, **rote umlaufende Linie an der Fensterunterkante, weisses Dach** («gelbem Fahrzeugrumpf, roter, umlaufender Linie an der Fensterunterkante, weissem Dach und einem grossen, stilisierten Posthorn») | https://de.wikipedia.org/wiki/PostAuto | hoch (aktuelles Design laut Text) |
+| SBB-Doppelstock (IR Luzern–Zürich, IC2000) | weiss, rot unten, graue Türen, rote Zierlinie | **grauweiss mit Anthrazit oben/unten, korallenrote Türstreifen, rote Front** («Streifen in Anthrazit oben und unten und ein zweiteiliges Mittelband in Grauweiss», «korallenrote Vertikalstreifen an den Türen», «roten Frontpartie»; erste IC2000-Strecke 1997 «InterRegio-Strecke Luzern–Zürich») | https://de.wikipedia.org/wiki/IC2000 | hoch für Farben; mittel für die Zuordnung (auf der Strecke fahren auch andere Doppelstöcke) |
+
+### Bestätigt (keine Änderung)
+| Fahrzeug | Modell | Quelle | Vertrauen |
+|---|---|---|---|
+| VBL-Busse und -Trolleybusse | weiss mit blauem Unterteil | «mainly white, with blue finish» – https://en.wikipedia.org/wiki/Verkehrsbetriebe_Luzern | hoch für «weiss + blau»; Aufteilung/Blauton/Dach Annahme |
+| ZVB | weiss mit blauem Unterteil | «Linienbusse in Blau-Weiss» – https://de.wikipedia.org/wiki/Zugerland_Verkehrsbetriebe | hoch für Farben; Aufteilung Annahme |
+| Auto AG Schwyz | weiss mit rotem Unterteil | «red and white» – https://en.wikipedia.org/wiki/Auto_AG_Schwyz | hoch für Farben; Aufteilung Annahme |
+| SOB Traverso | kupfer, rot unten/Front, schwarze Fensterrahmen, graue Türen | «copper and red livery (with black window frames and grey doors)» – https://en.wikipedia.org/wiki/Voralpen_Express ; «kupferfarbenen Fernverkehrszüge» – https://de.wikipedia.org/wiki/SBB_RABe_523 | hoch |
+| SGV-Raddampfer | Formen/Proportionen | «Stadt Luzern» (1928): Breite über Radkästen 15.2 m, längstes/breitestes Schiff des Sees, «Bugzier ist das Luzerner Blau-Weiss» – https://de.wikipedia.org/wiki/Stadt_Luzern_(Schiff,_1928) | mittel (Farben von Rumpf/Kamin/Radkasten im Text nicht genannt) |
+| SBB FLIRT auf der S-Bahn Luzern | Einsatz | «drei für die S8 der S-Bahn Luzern» – https://de.wikipedia.org/wiki/SBB_RABe_523 | hoch für den Einsatz; Farben nicht belegt |
+
+### Weiterhin Annahme (nicht geändert)
+- Auto AG Rothenburg (AAGR) und Rottal Auto (ARAG): Wikipedia DE/EN ohne Farbangaben (https://de.wikipedia.org/wiki/Auto_AG_Rothenburg , https://de.wikipedia.org/wiki/Rottal_Auto) → neutral weiss/grau bleibt.
+- PostAuto: dunkler Schweller und roter Schriftzug.
+- SBB FLIRT: Farbaufteilung (weiss, rote Türen/Front/Zierlinie) – weder sbb.ch noch Wikipedia beschreiben die SBB-Lackierung.
+- Zentralbahn (SPATZ/ADLER/FINK): Wikipedia nennt nur «Corporate Design der Zentralbahn», keine Farben (https://de.wikipedia.org/wiki/Zentralbahn); zentralbahn.ch-Fahrzeugseite ohne Farben → weiss-rot bleibt.
+- SGV-Raddampfer: Rumpf-, Kamin- und Radkastenfarben, Zierlinie; Motorschiff: Farben (nur Masse belegt, shiptec.ch).
+- VBL: Dachfarbe.
+
+### Nicht geprüft
+- Bilder selbst (nur Textquellen ausgewertet; Fotos auf Commons wurden nicht angesehen).
+- Aktuelle Neulackierungen nach Erscheinen der Quellen (Wikipedia-Stand unbekannt).
+
+### Geprüft
+`git merge` 07f1b6f; `tsc --noEmit` grün; Build `OUT=dist_pa` läuft durch; Testszene ohne JS-Fehler, `real_shots.py` «BUDGET je Baustein: OK». Vorher/Nachher-Screenshots (lokal, nicht im Repo): `shots/pa_l9_vorher_*.png` / `shots/pa_l9_nachher_*.png` für `bus2` (PostAuto jetzt mit weissem Dach und roter Linie), `zug2` (Doppelstock grauweiss/anthrazit mit korallenroten Türen), `schiff` (unverändert). Bekannte Kleinigkeit: am unteren Fensterband des Doppelstocks flimmert die Kante leicht (Vierecke liegen nahe an der Fläche) – auch vorher vorhanden.
+
+---
+
 ## 15.11.2026 13:40 – Lauf 8
 
 ### Gemacht
