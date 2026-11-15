@@ -8,6 +8,8 @@ import { tris, hash2 } from '../../src/real/geo';
 import { TREE_SPECIES, treeGeometry, treeTris, buildRealTrees, type TreeSpecies } from '../../src/real/trees';
 import { FURNITURE, furnitureAll, buildFurniture, type FurnitureKind } from '../../src/real/furniture';
 import { buildStops, buildLamps, realBenchGeometry } from '../../src/real/props';
+import { trainTris, realTrainCar } from '../../src/real/rail';
+import { shipTris, realKursschiff, realSteamship, realBoat } from '../../src/real/ships';
 import { streetTris, streetGeometry, buildStreetFurniture } from '../../src/real/street';
 import { sparTris, sparGeometry, sparCarGeometry, type SparKind } from '../../src/real/spar';
 import { CAR_TYPES, carGeometry, carColor, veloGeometry, veloRiderGeometry, realCarMeshes, buildParkedCars, buildParkedVelos, type CarType } from '../../src/real/cars';
@@ -52,7 +54,7 @@ CAR_TYPES.forEach((c: CarType, i: number) => { const { body, fixed } = carGeomet
 const VIEWS: Record<string, number[]> = { // Kamera x,y,z → Ziel x,y,z
   amb: [-7.5, 3.2, 9, -12, 1.6, 0], amb2: [-17.5, 4.2, -8, -12, 1.6, -1], amb3: [-4, 6, 14, -1, 1.5, 0], ambL: [-22, 2.2, 3, -12, 1.6, -0.5], ambR: [-6.4, 3.4, -0.3, -12, 1.6, -0.3], ambFR: [-8.2, 2.0, 6.5, -12, 1.4, 0.5], ambHL: [-16.2, 2.2, -7.5, -12, 1.5, -1], cam8: [-12, 3.6, -8.5, -12, 1.8, 2], cam12: [-12, 4.4, -12.5, -12, 1.8, 2], ambF: [-12, 2.4, 9, -12, 1.6, 0],
   bus: [-42, 5, 50, -26, 2, 28], bus2: [-5, 7, 52, -10, 1.5, 25], bus3: [-36, 9, 0, -30, 2, 24],
-  baum: [-15, 12, -8, -15, 8, -45], moebel: [-6, 4.5, -10, -4, 1, -20], moebel2: [-16, 3, -13, -16, 1, -20], autos: [-2, 4.5, 20, -4, 0.8, 10], total: [-20, 45, 60, -5, 0, 0], spar: [86, 6, 152, 86, 1.5, 140], klein: [63, 1.6, 150, 63, 0.6, 146], strasse: [70, 14, 30, 100, 0, 62], strasse2: [92, 4, 48, 80, 1.5, 57], baum2: [70, 14, 120, 90, 4, 92], halle: [86, 3, 68, 82, 1.5, 55], kand: [92, 3.5, 47, 95, 3, 40],
+  baum: [-15, 12, -8, -15, 8, -45], moebel: [-6, 4.5, -10, -4, 1, -20], moebel2: [-16, 3, -13, -16, 1, -20], autos: [-2, 4.5, 20, -4, 0.8, 10], total: [-20, 45, 60, -5, 0, 0], zug: [-30, 6, -60, -75, 2, -92], zug2: [-20, 4, -95, -45, 2, -88], schiff: [190, 14, -110, 235, 3, -50], boote: [207, 3.5, 4, 207, 0.5, -5], spar: [86, 6, 152, 86, 1.5, 140], klein: [63, 1.6, 150, 63, 0.6, 146], strasse: [70, 14, 30, 100, 0, 62], strasse2: [92, 4, 48, 80, 1.5, 57], baum2: [70, 14, 120, 90, 4, 92], halle: [86, 3, 68, 82, 1.5, 55], kand: [92, 3.5, 47, 95, 3, 40],
 };
 const v = new URLSearchParams(location.search).get('v') || 'amb';
 const cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 2000); const V = VIEWS[v] || VIEWS.amb;
@@ -130,6 +132,16 @@ function stadt(on: boolean) {
   const rd = [{ p: [[0, 60], [200000, 60]], c: 'residential', w: 8 }, { p: [[0, 70], [160000, 70]], c: 'path', w: 2 }];
   const sum = (L: THREE.InstancedMesh[]) => L.reduce((a, im) => a + tris(im.geometry) * im.count, 0);
   stats['klein_deckel_25000'] = sum(buildStreetFurniture(P, rd, mk, flat)); stats['klein_deckel_5000'] = sum(buildStreetFurniture(P, rd, mk, flat, 5000)); }
+// --- Lauf 7: Züge (z = -80, längs x) und Schiffe/Boote (Wasserfläche bei x 200)
+{ const lines: [string, string, number, number][] = [['sbb', 'S-Bahn Littau', 24, 4], ['sbb', 'IR Richtung Zürich', 24, 4], ['zb', 'Zentralbahn Luzern–Horw', 19, 3], ['sbb', 'S-Bahn Küssnacht', 24, 4]];
+  lines.forEach(([kind, name, carL, n], li) => { for (let k = 0; k < n; k++) { const m = realTrainCar(kind, name, carL, k, n)!; m.position.set(-60 + k * (carL + 1) * 0 + li * 0, 0.25, 0); m.rotation.y = Math.PI / 2; m.position.set(-40 - k * (carL + 1), 0.25, -80 - li * 8); scene.add(m); } });
+  Object.entries(trainTris()).forEach(([k, n]) => (stats['zug_' + k] = n));
+  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(220, 160).rotateX(-Math.PI / 2).translate(260, 0.03, -40), toon('#5BB4E5')));
+  const d = realKursschiff(0, [[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]])!; d.position.set(230, 0, -70); scene.add(d);
+  const mo = realKursschiff(1, [[-31.75, -6.65], [31.75, -6.65], [31.75, 6.65], [-31.75, 6.65]])!; mo.position.set(230, 0, -30); scene.add(mo);
+  const ds = realSteamship([[290, 0], [352, 0], [352, 13], [290, 13]])!; scene.add(ds); // angedockt (Umriss-Polygon wie OSM)
+  ['#F7C531', '#E94B3C', '#3FA9F5', '#7ED957'].forEach((c, i) => { const b = realBoat(i, c)!; b.position.set(200 + i * 5, 0, -5); scene.add(b); });
+  Object.entries(shipTris()).forEach(([k, n]) => (stats['schiff_' + k] = n)); }
 if (new URLSearchParams(location.search).get('nacht')) NIGHT.value = 1;
 (window as any).__stats = stats; (window as any).__ready = true;
 if (NIGHT.value) { renderer.setClearColor('#2B3060', 1); scene.children.forEach((c: any) => { if (c.isHemisphereLight) c.intensity = 0.5; if (c.isDirectionalLight) c.intensity = 0.4; }); renderer.render(scene, cam); }

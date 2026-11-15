@@ -17,12 +17,16 @@ export const REAL = {
   parked: true,
   /** Kleinmöbel: Abfallkübel, Robidog, Briefkasten, Hydrant (src/real/street.ts) */
   street: true,
+  /** Triebzüge nach Vorbild (src/real/rail.ts) */
+  trains: true,
+  /** Schiffe und Boote nach Vorbild (src/real/ships.ts) */
+  ships: true,
   /** Nachtlicht für Kandelaber/Wartehalle (über NIGHT.value) */
   night: true,
 };
 try {
   const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('real') : null;
-  if (q === '0') { REAL.trees = 'alt'; REAL.shelters = REAL.lamps = REAL.bench = REAL.cars = REAL.parked = REAL.night = REAL.street = false; }
+  if (q === '0') { REAL.trees = 'alt'; REAL.shelters = REAL.lamps = REAL.bench = REAL.cars = REAL.parked = REAL.night = REAL.street = REAL.trains = REAL.ships = false; }
   else if (q) for (const kv of q.split(',')) {
     const [k, v] = kv.split(':'); const R = REAL as any;
     if (!(k in R)) continue;

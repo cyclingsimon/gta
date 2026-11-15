@@ -4,6 +4,46 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 10:55 – Lauf 7
+
+### Gemacht
+**Züge** – `src/real/rail.ts`: Wagenkästen mit gleicher Konvention wie `trainCarGeo()` in fun.ts (Mitte im Ursprung, Längsachse z, Fahrtrichtung +z, Unterkante y = 0.5, Länge `carL` 24 m SBB / 19 m zb). Mittelwagen und Endwagen mit Führerstand (schräge Front, dunkle Scheibe, Scheinwerfer leuchten nachts über `aGlow`), Fensterband, Zierlinie, Doppeltüren, Dachaufbau. Ein Material (`realMaterial`) für alle Züge.
+| Typ | Strecke (`trainTypeFor`) | Mittelwagen | Endwagen | Farben |
+|---|---|---|---|---|
+| FLIRT (SBB) | S-Bahn Littau, S-Bahn Emmenbrücke | 72 | 98 | weiss, rote Zierlinie/Türen/Front [Annahme] |
+| Doppelstock (SBB) | IR Richtung Zürich | 88 | 114 | weiss, 2 Fensterbänder, rot unten [Annahme] |
+| Zentralbahn | Zentralbahn Luzern–Horw (kind `zb`) | 72 | 98 | weiss-rot, schmaler 2.65 m [Annahme] |
+| Traverso (SOB) | S-Bahn Küssnacht (Voralpen-Express Luzern–Arth-Goldau) | 72 | 98 | **kupfer/rot, schwarze Fensterrahmen, graue Türen (belegt)** |
+Budget ≤ 120 je Wagen eingehalten. Die Traverso-Zuordnung zur Küssnachter Strecke ist eine Annahme (Vertrauen hoch, dass der VAE dort fährt; im Spiel fährt auf der Linie nur ein Zug).
+
+**Schiffe/Boote** – `src/real/ships.ts`, gleiche Konvention wie `steamship()` in world.ts (Umriss → Rechteck-Einpassung, innere Gruppe mit lokaler x-Achse = Längsachse, Bug +x, y = 0 Wasserlinie) bzw. wie die Boote in fun.ts (Längsachse z):
+| Baustein | Dreiecke | Budget |
+|---|---|---|
+| Raddampfer (weisser Rumpf, dunkle Wasserlinie, goldene Zierlinie, Radkästen, 2 Salondecks, Sonnendeck mit Reling, schräger Schornstein, Masten) | 304 | ≤ 400 |
+| Motorschiff (Vorbild MS Diamant: kantige Decks mit grossen Glasbändern, Steuerhaus) | 152 | ≤ 300 |
+| Ruderboot / Segelboot (Mast ohne Segel) / Pedalo | 44 / 52 / 48 | ≤ 60 |
+Je Schiff 1 Netz + 1 Konturnetz (wie die bisherigen Outlines). Keine Namen/Logos.
+
+### Belege
+- FLIRT als S-Bahn u. a. im Kanton Luzern, Länge 75–105 m: https://www.sbb.ch/de/reiseinformationen/services-im-zug/unsere-zuege/flirt.html (Farben dort nicht beschrieben → Annahme).
+- Voralpen-Express = Traverso RABe 526, «copper and red livery (with black window frames and grey doors)»: https://en.wikipedia.org/wiki/Voralpen_Express ; «Die neuen achtteiligen Züge sind kupferfarben»: https://www.sob.ch/fileadmin/images/medienmitteilungen/2018/06.06.2018_Roll-out_Voralpen-Express.pdf
+- Zentralbahn-Flotte (ADLER, FINK, SPATZ; keine Farbangaben): https://www.zentralbahn.ch/en/get-to-know-us/friends-of-zentralbahn/rolling-stock
+- SGV: fünf historische Raddampfer (Uri 1901, Unterwalden 1902, Schiller 1906, Gallia 1913, Stadt Luzern 1928) und 16 Motorschiffe: https://en.wikipedia.org/wiki/Lake_Lucerne_Navigation_Company
+- MS Diamant: 63.5 m × 13.3 m, fünf Decks, 2017: https://www.shiptec.ch/en/references/ms-diamant
+- Unbelegt (Annahme): Farbaufteilung FLIRT/Doppelstock/Zentralbahn, Schornsteinfarbe (gelblich mit schwarzem Kopf, wie bisher), Wasserlinie, Bootsformen.
+
+### Einbau-Hinweise (je eine Zeile, Rückfall `REAL.trains` / `REAL.ships` bzw. `?real=0`)
+- **E9** – src/fun.ts, Klasse `Trains`, Konstruktor, Z. 305 `for (let k = 0; k < n; k++) { const b = new THREE.Mesh(geo, m[0]); … }`: `new THREE.Mesh(geo, m[0])` → `(realTrainCar(line.kind, line.name, carL, k, n) ?? new THREE.Mesh(geo, m[0]))`; Import `import { realTrainCar } from './real/rail';`. Wagen 0 = Spitze (+z ist dort die Fahrtrichtung, wie `update()` dreht), letzter Wagen Führerstand hinten. Dreiecke je Zug: SBB 4 Wagen 340–404, zb 3 Wagen 268 (vorher 12 je Wagen); Material: 1 für alle Züge (vorher je Art 1).
+- **E10a** – src/world.ts, Block `if (s.kind === 'ship')`, Z. 1199: `G.add(steamship(s.b.p));` → `G.add(realSteamship(s.b.p) ?? steamship(s.b.p));`; Import `import { realSteamship } from './real/ships';`.
+- **E10b** – src/fun.ts, Klasse `Ships`, Z. 210: `const obj = steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]);` → `const obj = realKursschiff(i, [[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]) ?? steamship([[-31, -6.5], [31, -6.5], [31, 6.5], [-31, 6.5]]);` (gerade Route Raddampfer, ungerade Motorschiff); Import `import { realKursschiff, realBoat } from './real/ships';`.
+- **E10c** – src/fun.ts, Klasse `Boats`, Z. 250: `const o = new THREE.Mesh(mergeGeometries(parts, false)!, boatMat);` → `const o = realBoat(i, c) ?? new THREE.Mesh(mergeGeometries(parts, false)!, boatMat);` (Pedalo/Ruderboot/Pedalo/Segelboot im Wechsel, Rumpf in Farbe `c`). **Hinweis:** die bisherigen Boote haben zwei Köpfe als Insassen; die neuen Boote sind leer (Dreiecksbudget ≤ 60).
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei (nach Merge 900aa72); Build `OUT=dist_pa` läuft durch; Testszene ohne JS-Fehler; `real_shots.py` «BUDGET je Baustein: OK» (neu: je Zugtyp Mittel-/Endwagen ≤ 120, Dampfer ≤ 400, Motorschiff ≤ 300, Boote ≤ 60). Screenshots `zug`, `zug2`, `schiff`, `boote` selbst angeschaut: Führerstände mit Scheibe und Lichtern, Traverso kupfer, Doppelstock mit zwei Fensterbändern; Dampfer mit Bug vorne, rundem Heck, nach hinten geneigtem Schornstein, Radkästen; Motorschiff kantig mit Glasbändern; Boote erkennbar.
+Ungeprüft: echtes Spiel (Fahrt, Tunnel, Anlegen), Anblick aus der Spielkamera; die Bugspitze des Ruderboots wirkt in der Nahansicht etwas schief (4-eckiger Kegel).
+
+---
+
 ## 15.11.2026 09:55 – Lauf 6
 
 ### Gemacht
