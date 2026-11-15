@@ -18,7 +18,7 @@ import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendA
 import { Konzerte } from './konzert';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-15c';
+export const VERSION = '2026-11-16a';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 

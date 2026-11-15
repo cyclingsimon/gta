@@ -1,5 +1,15 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-16a  Über- und Unterführungen, Konzert-Tafeln
+- Brücken über Bahn und Strasse liegen jetzt hoch genug (mindestens 5 m frei), mit Rampen, Stützmauern, Brüstung und Pfeilern
+- Wo der Zug über die Strasse fährt, fährt er wirklich oben durch – nicht mehr durch die Ambulanz
+- Kreisel und Einmündungen auf Brücken ohne Stufe (Schlund-Kreisel Kriens), Fussgängerbrücken ebenfalls hoch genug
+- KKL kann nicht mehr durchfahren werden; zwei Schiffe liegen am Steg
+- Velo-Zeichen auf Radstreifen als Velo von der Seite, wie auf Schweizer Strassen
+- Über der Schüür und dem KKL schwebt eine Leuchttafel «KONZERT», Noten steigen aus dem Dach, und eine Meldung sagt, woher die Musik kommt
+- Hydranten, gelbe Briefkästen, Sammelstellen und Radarkästen an echten Standorten (OpenStreetMap)
+- Noch offen: graue Wand in Kriens nicht gefunden; Android-Grafik, Ton, Vollbild und Controller nicht auf Geräten getestet
+
 2026-11-15a  Mehr echtes Luzern
 - Häuser wiederholen sich nicht mehr Fenster für Fenster: Läden auf und zu, Storen, Vorhänge, Geranien; moderne Bauten in vier Arten (Fensterband, Einzelfenster, Glas, Beton)
 - Ambulanz sieht aus wie der echte Rettungswagen (weiss mit rot-blauem Band, «144»); Busse in den Farben ihrer Betriebe
