@@ -1508,7 +1508,7 @@ const startPoll = setInterval(() => {
     const dir = (g.buttons[15]?.pressed || g.axes[0] > 0.6 ? 1 : 0) - (g.buttons[14]?.pressed || g.axes[0] < -0.6 ? 1 : 0);
     if (dir) { const bs = [...w.querySelectorAll('button')] as HTMLElement[]; const i = Math.max(0, bs.indexOf(document.activeElement as HTMLElement)); bs[Math.max(0, Math.min(bs.length - 1, i + dir))].focus(); return; }
   }
-  const p = pads.find((x) => x.buttons.some((b, i) => b.pressed && !(w && (i === 14 || i === 15))));
+  const p = pads.find((x) => x.buttons.some((b, i) => b.pressed && (!w || i === 0 || i === 9))); // mit offener Wahl wählen nur A und Start (P-B Lauf 4)
   if (p && document.getElementById('start') && ($('#start-btn').style.display !== 'none' || w)) { startOrPick(); clearInterval(startPoll); }
   if (!document.getElementById('start')) clearInterval(startPoll);
 }, 200);
