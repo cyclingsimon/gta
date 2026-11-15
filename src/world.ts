@@ -1,7 +1,7 @@
 import { buildFuelStations } from './real/fuel';
-import { buildPowerLines, buildPitches, buildPlaygrounds, buildLevelCrossings, buildMasts, type Pitch } from './real/osmprops';
+import { buildPowerLines, buildPitches, buildPlaygrounds, buildLevelCrossings, buildMasts, buildOsmMoebel, type Pitch } from './real/osmprops';
 /** 16a: Kleinobjekte aus OpenStreetMap je Gegend (Spielkoordinaten): Spielplätze, Sportplätze, Hochspannungsmasten/-leitungen, Bahnübergänge, Funkmasten/Kamine */
-export type OsmProps = { spiel: number[][]; platz: Pitch[]; mast: number[][]; leitung: number[][][]; bue: number[][]; turm: [number, number, 'chimney' | 'mast', number?][] };
+export type OsmProps = { spiel: number[][]; platz: Pitch[]; mast: number[][]; leitung: number[][][]; bue: number[][]; turm: [number, number, 'chimney' | 'mast', number?][]; hydrant?: number[][]; post?: number[][]; recycling?: number[][]; blitzer?: number[][] };
 import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
@@ -1612,7 +1612,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (o.platz.length) group.add(buildPitches(o.platz, gy));
     if (o.spiel.length) group.add(buildPlaygrounds(o.spiel, gy));
     if (o.bue.length) group.add(buildLevelCrossings(o.bue, gy));
-    if (o.turm.length) group.add(buildMasts(o.turm, gy)); }
+    if (o.turm.length) group.add(buildMasts(o.turm, gy));
+    { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) !== 2); console.log('[bau] Strassenmöbel', (o.hydrant?.length || 0) + (o.post?.length || 0) + (o.recycling?.length || 0) + (o.blitzer?.length || 0), 'Dreiecke', m.userData.dreiecke || 0); group.add(m); } }
   if (opts.fuel?.length) group.add(buildFuelStations(opts.fuel, d.roads, (x, z) => terrain.height(x, z))); // 15b: Tankstellen (Rückmeldung Simon)
 
   // ---- Berge am Horizont (Pilatus im SW, Rigi im O) ----

@@ -1457,7 +1457,7 @@ function osmFor(id: string): OsmProps | undefined {
   for (const L of osmAll.leitung || []) { let run: number[][] = [];
     for (let i = 0; i < L.length; i++) { if (inR(L[i][0], L[i][1])) { if (!run.length && i > 0) run.push(L[i - 1]); run.push(L[i]); } else if (run.length) { run.push(L[i]); leitung.push(run); run = []; } }
     if (run.length > 1) leitung.push(run); }
-  return { spiel: pts(osmAll.spiel), mast: pts(osmAll.mast), bue: pts(osmAll.bue), turm: pts(osmAll.turm) as any, leitung,
+  return { hydrant: pts(osmAll.hydrant), post: pts(osmAll.post), recycling: pts(osmAll.recycling), blitzer: pts(osmAll.blitzer), spiel: pts(osmAll.spiel), mast: pts(osmAll.mast), bue: pts(osmAll.bue), turm: pts(osmAll.turm) as any, leitung,
     platz: (osmAll.platz || []).filter((q: any) => inR(q[1][0][0], q[1][0][1])).map((q: any) => ({ sport: q[0], p: q[1] })) };
 }
 function midPick(id: string) {

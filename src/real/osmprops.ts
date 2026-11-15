@@ -220,3 +220,31 @@ export function buildMasts(list: [number, number, MastKind, number?][], groundY:
   const geos = list.map(([x, z, k, h]) => mastGeometry(k, h && h > 3 ? h : 30).applyMatrix4(new THREE.Matrix4().makeRotationY(hash2(x, z) * 6.283).setPosition(x, groundY(x, z), z)));
   return finish(geos, 'real-masten-kamine');
 }
+
+// ------------------------------------------------------------------------------------------------------------------
+// 6) 16a (Hauptstrang): Strassenmöbel aus OSM – Hydrant, Briefkasten, Sammelstelle, Radarkasten. Keine Logos, keine Kollision.
+/** Überflurhydrant, 0.95 m, rot mit silberner Kappe [Annahme: Farbe je Gemeinde verschieden] – 28 Dreiecke */
+export function hydrantGeometry(): THREE.BufferGeometry {
+  const R = '#C8322B', S = '#C9CDD1';
+  return sparParts([[new THREE.CylinderGeometry(0.11, 0.14, 0.75, 6, 1, true).translate(0, 0.375, 0), R], [new THREE.CylinderGeometry(0.02, 0.13, 0.2, 6, 1, true).translate(0, 0.85, 0), S], [box(0.5, 0.12, 0.12, 0, 0.55, 0), S]]);
+}
+/** gelber Briefkasten auf Pfosten (ohne Posthorn/Schrift) – 24 Dreiecke */
+export function briefkastenGeometry(): THREE.BufferGeometry {
+  return sparParts([[box(0.1, 0.9, 0.1, 0, 0.45, 0), '#6B7075'], [box(0.5, 0.6, 0.32, 0, 1.2, 0), '#F2C418'], [box(0.3, 0.03, 0.02, 0, 1.36, 0.165), '#2B2F33']]);
+}
+/** Sammelstelle: drei Container (weiss/grün/braun für Glas, dazu blau) – 48 Dreiecke */
+export function sammelstelleGeometry(): THREE.BufferGeometry {
+  const P: SparPart[] = []; ['#E9ECEE', '#3E8E4E', '#8A5A2B', '#2F6FB5'].forEach((c, i) => { const x = (i - 1.5) * 1.5; P.push([box(1.3, 1.5, 1.3, x, 0.75, 0), c], [box(0.5, 0.08, 0.5, x, 1.54, 0), '#3A3F45']); });
+  return sparParts(P);
+}
+/** Radarkasten: grauer Kasten auf Säule, dunkles Fenster – 24 Dreiecke */
+export function blitzerGeometry(): THREE.BufferGeometry {
+  return sparParts([[box(0.16, 2.2, 0.16, 0, 1.1, 0), '#8B9096'], [box(0.5, 0.8, 0.45, 0, 2.6, 0), '#A7ACB1'], [box(0.34, 0.3, 0.02, 0, 2.7, 0.23), '#1E2226']]);
+}
+/** EIN Aufruf je Gegend. frei(x, z) = true, wenn der Punkt NICHT auf der Fahrbahn liegt (sonst wird das Objekt weggelassen). */
+export function buildOsmMoebel(o: { hydrant?: number[][]; post?: number[][]; recycling?: number[][]; blitzer?: number[][] }, groundY: GY, frei: (x: number, z: number) => boolean) {
+  const geos: THREE.BufferGeometry[] = [];
+  const put = (list: number[][] | undefined, g0: THREE.BufferGeometry) => { for (const [x, z] of list || []) if (frei(x, z)) geos.push(g0.clone().applyMatrix4(new THREE.Matrix4().makeRotationY(hash2(x, z) * Math.PI * 2).setPosition(x, groundY(x, z), z))); g0.dispose(); };
+  put(o.hydrant, hydrantGeometry()); put(o.post, briefkastenGeometry()); put(o.recycling, sammelstelleGeometry()); put(o.blitzer, blitzerGeometry());
+  return finish(geos, 'real-strassenmoebel');
+}
