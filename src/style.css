@@ -525,3 +525,32 @@ body.touch .mg.tr .tr-msg { margin: 4px 0 0; min-height: 1.2em; font-size: 13px;
   body.touch #lazy-ind { left: 12px; top: 262px; bottom: auto; transform: none; max-width: 62vw; font-size: 11px; padding: 3px 8px; }
 }
 body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Handy */
+
+/* ---- P-B Lauf 3 ---- */
+/* Fehler (Simon): bei 800–1279 px ohne Touch lag «0 km/h» (unten, left 270 px) über dem Auftragstext (unten Mitte).
+   Lösung: Tempo über die Minimap; Auftrag mittig im freien Streifen rechts der Minimap (bis 999 px ohne Tastenhilfe, sonst bis zur Tastenhilfe). */
+@media (max-width: 1279px) {
+  body:not(.touch) #speed { left: 18px; bottom: 268px; }
+  body:not(.touch) #mission { left: calc((266px + 100vw - 14px - min(380px, 30vw)) / 2); max-width: calc(70vw - 14px - 266px - 12px); }
+}
+@media (max-width: 999px) {
+  body:not(.touch) #mission { left: calc((266px + 100vw - 14px) / 2); max-width: calc(100vw - 14px - 266px - 12px); }
+}
+@media (max-height: 420px) { body:not(.touch) #speed { bottom: 18px; left: auto; right: 14px; } } /* sehr niedrig: Tempo unten rechts statt über der Minimap */
+
+/* Schwierigkeitswahl beim ersten Start (#diff-wahl, Knöpfe aus main.ts mit Inline-Stil): Fokusrahmen auch bei Programm-Fokus sichtbar */
+#diff-wahl button.big:focus { outline: 4px solid var(--sun); outline-offset: 3px; box-shadow: 0 6px 0 #000, 0 0 0 9px rgba(51,224,196,.55); background: #FF6DB4; }
+#diff-wahl button.big { min-height: 52px; min-width: 48px; }
+#diff-wahl > div { max-width: 100%; flex-wrap: wrap !important; }
+@media (max-width: 520px) { #diff-wahl { align-items: center !important; width: 100%; } #diff-wahl > div { justify-content: center !important; } }
+
+/* Funkspruch hält die Welt an: ruhig zeigen «das Spiel wartet» – kein Countdown, kein Zeitdruck */
+#radio.show::after { content: '⏸ Das Spiel wartet auf dich'; position: absolute; right: 10px; top: -11px; padding: 2px 10px 1px; border-radius: 999px;
+  background: #fff; color: #000; border: 2px solid #000; font: 700 12px var(--font); letter-spacing: .02em; box-shadow: 0 2px 0 #000; transform: rotate(2deg); white-space: nowrap; }
+#radio.show #acc { animation: pb-warten 2.4s ease-in-out infinite; }
+@keyframes pb-warten { 0%, 100% { box-shadow: 0 4px 0 #000, 0 0 0 0 rgba(255,79,163,0); } 50% { box-shadow: 0 4px 0 #000, 0 0 0 7px rgba(255,79,163,.35); } }
+@media (prefers-reduced-motion: reduce) { #radio.show #acc { animation: none; } }
+@media (max-width: 520px), (max-height: 420px) { #radio.show::after { content: '⏸ Spiel wartet'; font-size: 11px; } }
+
+/* Lange Willkommens-Meldungen («Willkommen in Küssnacht am Rigi!»): umbrechen statt überlaufen */
+.toast { overflow-wrap: anywhere; box-sizing: border-box; }
