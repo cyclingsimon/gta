@@ -436,3 +436,5 @@ Luksi Rescue Luzern – Änderungen
 - Luftbild 1.25 m jetzt auch im Norden (Emmenbrücke, Flugplatz Emmen, Reuss), Westen (Littau) und Osten (Meggen); Kacheln laden erst bei Bedarf
 - Sirene exakt 586,7/440 Hz, weichere Toneinsätze, Trolleybus- und Schiffshorn-Klang
 - Beim Gegendwechsel wird Grafikspeicher von Verkehr, Zügen, Schiffen freigegeben
+- «Freie Fahrt in …» entfernt (Rückmeldung Simon)
+- Luftbild 1.25 m auch im Süden (Stans); Kacheln werden beim Gegendwechsel wieder freigegeben

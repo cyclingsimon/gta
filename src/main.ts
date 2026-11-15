@@ -691,7 +691,7 @@ function handover() {
 function updateHud() {
   $('#stars').textContent = `★ ${totalStars()}`;
   const m = $('#mission');
-  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : (RA ? `Freie Fahrt in ${RA.name}` : REGION === 'ost' ? 'Freie Fahrt durch Meggen' : REGION === 'west' ? 'Freie Fahrt im Westen' : REGION === 'sued' ? 'Freie Fahrt in Nidwalden' : REGION === 'nord' ? 'Freie Fahrt im Norden' : 'Freie Fahrt durch Nice City');
+  if (!current || phase === 'free' || phase === 'offer') m.textContent = phase === 'offer' ? 'Neuer Funkspruch!' : ''; // 15b (Simon): «Freie Fahrt in …» entfernt – ohne Auftrag bleibt die Zeile leer
   else if (phase === 'toScene') m.textContent = `${current.title} – Ziel: ${current.place}`; // 15a: ohne Artikel («zum Kapellbrücke» war falsch)
   else if (phase === 'onsite') m.textContent = `${current.title}: Hilfe vor Ort`;
   else if (phase === 'toHospital') m.textContent = `${current.title}: ${TO_H}`;
@@ -1409,11 +1409,20 @@ async function boot() {
 /** Stufe B: echte 3D-Häuser (swisstopo) und feiner Boden im Hintergrund bauen, dann austauschen */
 /** Stufe B (3D-Häuser, feiner Boden) bauen – für die Start-Gegend und (14zj) nachträglich für dazugeladene Gegenden */
 /** 1.25-m-Luftbildkacheln, die eine Gegend überlappen (jede Kachel = 1 Sampler im Bodenshader; die Texturen laden erst bei Bedarf) */
+function midPick(id: string) {
+  const b = REG_BOUNDS[id]; if (!midDefs || !b) return [];
+  return midDefs.map((l) => [Math.max(0, Math.min(b[2], l.x0 + 5120) - Math.max(b[0], l.x0)) * Math.max(0, Math.min(b[3], l.z0 + 5120) - Math.max(b[1], l.z0)), l] as const)
+    .filter((q) => q[0] > 1.5e6).sort((p, q) => q[0] - p[0]).slice(0, 3).map((q) => q[1]); // höchstens 3 Kacheln je Gegend (Speicher), die mit der grössten Überdeckung
+}
 function midsFor(id: string): MidLayer[] | undefined {
-  const b = REG_BOUNDS[id]; if (!midDefs || !b) return undefined;
-  const ov = midDefs.map((l) => [Math.max(0, Math.min(b[2], l.x0 + 5120) - Math.max(b[0], l.x0)) * Math.max(0, Math.min(b[3], l.z0 + 5120) - Math.max(b[1], l.z0)), l] as const)
-    .filter((q) => q[0] > 1.5e6).sort((p, q) => q[0] - p[0]).slice(0, 3); // höchstens 3 Kacheln je Gegend (Speicher), die mit der grössten Überdeckung
-  return ov.map(([, l]) => { if (!l.t) { l.t = new THREE.TextureLoader().load('data/' + l.tex); /* liegt immer im Hauptordner, auch beim Start in einer Nachbargegend */ l.t.colorSpace = THREE.SRGBColorSpace; l.t.anisotropy = 8; } return { tex: l.t, box: l.box, x0: l.x0, z0: l.z0 }; });
+  if (!midDefs) return undefined;
+  return midPick(id).map((l) => { if (!l.t) { l.t = new THREE.TextureLoader().load('data/' + l.tex); /* liegt immer im Hauptordner, auch beim Start in einer Nachbargegend */ l.t.colorSpace = THREE.SRGBColorSpace; l.t.anisotropy = 8; } return { tex: l.t, box: l.box, x0: l.x0, z0: l.z0 }; });
+}
+/** Kacheln freigeben, die keine geladene (oder gerade ladende) Gegend mehr braucht – sonst sammelten sich auf langen Fahrten bis zu 7 × ~85 MB Grafikspeicher an */
+function midSweep() {
+  if (!midDefs) return;
+  const keep = new Set<unknown>(); for (const id of [REGION, loadingSlot, ...slots.keys()]) if (id) for (const l of midPick(id)) keep.add(l);
+  for (const l of midDefs) if (l.t && !keep.has(l)) { l.t.dispose(); l.t = undefined; console.log('[welt] Luftbildkachel frei', l.tex); }
 }
 async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: THREE.Texture | undefined, fm: ForestMask | undefined, onT: (t: string) => void, globals: boolean, rid = REGION): Promise<World> {
   const [bm, bb, roof, gm, gb] = r;
@@ -1820,7 +1829,7 @@ function freeGroup(g: THREE.Object3D | null | undefined) {
 function unloadSlot(s: Slot) {
   scene.remove(s.world.group); scene.remove(s.world.tunnels);
   for (const g of [s.world.group, s.world.tunnels]) freeGroup(g);
-  slots.delete(s.id); linkSlots();
+  slots.delete(s.id); linkSlots(); midSweep();
   console.log('[welt] entladen', s.id);
 }
 function regionAt(x: number, z: number, pad = 0): string[] {
