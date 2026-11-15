@@ -151,19 +151,20 @@ export function buildPitches(list: Pitch[], groundY: GY) {
 // 1) Spielplätze
 /** Spielplatz ≈ 9 × 7 m (lokal, Mitte am Boden): Schaukel (A-Gestell, 2 Sitze), Rutsche mit Leiter, Sandkasten, Wippe. Bunt [Annahme]. */
 export function playgroundGeometry(): THREE.BufferGeometry {
-  const P: SparPart[] = [], R = '#E8432E', B = '#2F7FD0', Y = '#F4C531', G = '#4CAF50', WOOD = '#B9875A';
-  // Schaukel bei x −2.5: zwei A-Gestelle (je 2 Stäbe), Querbalken, 2 Sitze, Ketten als dünne Stäbe
+  const P: SparPart[] = [], R = '#E8432E', B = '#2F7FD0', Y = '#F4C531', G = '#4CAF50', WOOD = '#B9875A', CH = '#7A7F84';
+  const up = (a: number[], b: number[], c: number[], d: number[], col: string) => P.push([quad(a, b, c, d, [0, 1, 0]), col]);
+  // Schaukel bei x −2.5: zwei A-Gestelle (4 Stäbe), Querbalken, 2 Sitze (Flächen), 2 Ketten (Flächen) – 38 Dreiecke
   for (const z of [-1.6, 1.6]) P.push([rod([-3.3, 0, z], [-2.5, 2.4, z], 0.07), R], [rod([-1.7, 0, z], [-2.5, 2.4, z], 0.07), R]);
   P.push([rod([-2.5, 2.4, -1.7], [-2.5, 2.4, 1.7], 0.08), B]);
-  for (const z of [-0.7, 0.7]) P.push([box(0.25, 0.04, 0.45, -2.5, 0.45, z), Y], [rod([-2.5, 0.47, z], [-2.5, 2.4, z], 0.02), '#7A7F84']);
-  // Rutsche bei x +2.5, z +1.5: Plattform, Leiter, schräge Rutschfläche
-  P.push([box(1.0, 0.1, 1.0, 2.0, 1.5, 1.5), WOOD], [rod([1.6, 0, 1.1], [1.6, 1.5, 1.1], 0.05), WOOD], [rod([2.4, 0, 1.9], [2.4, 1.5, 1.9], 0.05), WOOD]);
-  P.push([box(0.08, 1.6, 0.6, 1.45, 0.8, 1.5), B]);                                                  // Leiter (als Fläche)
+  for (const z of [-0.7, 0.7]) { up([-2.65, 0.45, z - 0.22], [-2.35, 0.45, z - 0.22], [-2.35, 0.45, z + 0.22], [-2.65, 0.45, z + 0.22], Y);
+    P.push([quad([-2.5, 0.45, z - 0.2], [-2.5, 0.45, z + 0.2], [-2.5, 2.4, z + 0.2], [-2.5, 2.4, z - 0.2], [1, 0, 0]), CH]); }
+  // Rutsche bei x +2.5, z +1.5: Plattform, Leiter, Rutschfläche – 36
+  P.push([box(1.0, 0.1, 1.0, 2.0, 1.5, 1.5), WOOD], [box(0.08, 1.5, 0.6, 1.45, 0.75, 1.5), B]);
   { const g = new THREE.BoxGeometry(2.4, 0.06, 0.6); g.rotateZ(-0.56); g.translate(3.5, 0.8, 1.5); P.push([g, Y]); }
-  // Sandkasten bei x +2.5, z −1.8: flacher Rahmen + Sand
-  P.push([box(2.4, 0.12, 2.0, 2.5, 0.06, -1.8), '#E8D7A8'], [box(2.6, 0.25, 0.12, 2.5, 0.12, -2.8), WOOD], [box(2.6, 0.25, 0.12, 2.5, 0.12, -0.8), WOOD]);
-  // Wippe bei x 0, z 2.6
-  P.push([box(0.3, 0.45, 0.3, 0, 0.22, 2.6), R], [box(3.0, 0.08, 0.3, 0, 0.5, 2.6), G]);
+  // Sandkasten bei x +2.5, z −1.8: Holzrahmen als flacher Kasten + Sandfläche – 14
+  P.push([box(2.6, 0.22, 2.2, 2.5, 0.11, -1.8), WOOD]); up([1.35, 0.23, -2.75], [3.65, 0.23, -2.75], [3.65, 0.23, -0.85], [1.35, 0.23, -0.85], '#E8D7A8');
+  // Wippe bei x 0, z 2.6 – 18
+  P.push([rod([0, 0, 2.6], [0, 0.45, 2.6], 0.15, 3), R], [box(3.0, 0.08, 0.3, 0, 0.5, 2.6), G]);
   return sparParts(P);
 }
 /** EIN Aufruf je Gegend: list = [x, z] (OSM leisure=playground, Punkt oder Schwerpunkt); Drehung per hash2(x, z). */
@@ -178,12 +179,15 @@ export function buildPlaygrounds(list: number[][], groundY: GY) {
  *  und offene Schranke (senkrecht stehender, rot-weiss gestreifter Baum) mit Antriebskasten. ≤ 80 Dreiecke. */
 export function levelCrossingGeometry(): THREE.BufferGeometry {
   const P: SparPart[] = [], RD = '#D52B1E', W = '#F4F4F0';
-  for (const s of [-1, 1]) {                // s = Seite (vor/nach dem Gleis), rechts der Fahrbahn
-    const x = s * 4.5, z = s * 3.6;
-    P.push([box(0.1, 2.2, 0.1, x, 1.1, z), '#8A8F94']);                                         // Pfosten Andreaskreuz
-    for (const r of [0.6, -0.6]) P.push([new THREE.BoxGeometry(0.04, 0.16, 1.2).rotateX(r).translate(x, 2.3, z), r > 0 ? RD : W]); // Andreaskreuz (Balken rot bzw. weiss [Annahme vereinfacht])
-    P.push([box(0.4, 1.0, 0.4, x, 0.5, z + s * 0.9), '#E4E6E6']);                              // Antriebskasten
-    for (let k = 0; k < 3; k++) P.push([box(0.09, 0.9, 0.09, x, 1.2 + k * 0.9, z + s * 0.9), k % 2 ? W : RD]); // Schrankenbaum senkrecht (offen)
+  for (const s of [-1, 1]) {                // s = Seite (vor/nach dem Gleis), rechts der Fahrbahn; je Seite 40 Dreiecke
+    const x = s * 4.5, z = s * 3.6, f = -s;  // Andreaskreuz schaut zum herannahenden Verkehr (Richtung −s in x)
+    P.push([rod([x, 0, z], [x, 2.3, z], 0.05, 4), '#8A8F94']);                                   // Pfosten
+    for (const [r, col] of [[0.6, RD], [-0.6, W]] as [number, string][]) {                       // Andreaskreuz: zwei gekreuzte Balken als Flächen
+      const cz = Math.cos(r) * 0.6, cy = Math.sin(r) * 0.6, dz = -Math.sin(r) * 0.08, dy = Math.cos(r) * 0.08, xx = x + f * 0.06;
+      P.push([quad([xx, 2.3 - cy - dy, z - cz - dz], [xx, 2.3 + cy - dy, z + cz - dz], [xx, 2.3 + cy + dy, z + cz + dz], [xx, 2.3 - cy + dy, z - cz + dz], [f, 0, 0]), col]);
+    }
+    P.push([box(0.4, 1.0, 0.4, x, 0.5, z + s * 0.9), '#E4E6E6']);                                // Antriebskasten
+    P.push([rod([x, 1.0, z + s * 0.9], [x, 2.4, z + s * 0.9], 0.05, 4), RD], [rod([x, 2.4, z + s * 0.9], [x, 3.8, z + s * 0.9], 0.05, 4), W]); // Schrankenbaum senkrecht (offen), rot/weiss
   }
   return sparParts(P);
 }

@@ -4,6 +4,53 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 19:20 – Lauf 10 (OSM-Bausteine, `src/real/osmprops.ts`)
+
+Stil wie `src/real/fuel.ts`: Liste in Spielkoordinaten + `groundY(x, z)` → EINE `THREE.Group`, alle Objekte einer Gegend in EINEM Netz (`realMaterial()`), Teile über `sparParts`/`box`/`quad`. Keine Kollision, keine Logos. `group.userData.dreiecke` = Dreiecke des Netzes.
+
+### Aufruf-Signaturen (Einbau)
+```ts
+import { buildPowerLines, buildPitches, buildPlaygrounds, buildLevelCrossings, buildMasts } from './real/osmprops';
+// 3) Hochspannung: towers = [x, z][] (power=tower), lines = Punktfolgen [[x, z], …][] (power=line; Knoten = Masten)
+group.add(buildPowerLines(towers, lines, (x, z) => terrain.ground(x, z)));            // optional 4. Parameter H = Masthöhe (32)
+// 2) Sportplätze: p = Umriss (leisure=pitch), sport = 'soccer' | 'tennis' | 'basketball'
+group.add(buildPitches(pitches /* { sport, p }[] */, (x, z) => terrain.ground(x, z)));
+// 1) Spielplätze: [x, z][] (leisure=playground, Punkt oder Schwerpunkt), Drehung per hash2(x, z)
+group.add(buildPlaygrounds(playgrounds, (x, z) => terrain.ground(x, z)));
+// 4) Bahnübergänge: [x, z, rot?][] (railway=level_crossing), rot = Strassenrichtung wie fuel.ts roadDir (lokale x = Strasse)
+group.add(buildLevelCrossings(crossings, (x, z) => terrain.ground(x, z)));
+// 5) Kamine/Funkmasten: [x, z, kind, height?][], kind = 'chimney' | 'mast' | 'tower' | 'communications_tower'
+group.add(buildMasts(masts, (x, z) => terrain.ground(x, z)));
+```
+Rückgabe jeweils 1 Mesh je Gegend (Hochspannung: 1 Mesh Masten + 1 `LineSegments` Seile, Material `realSeil`). Hilfsexporte: `fitRect(p)` (Rechteck minimaler Fläche), `pylonGeometry`, `playgroundGeometry`, `levelCrossingGeometry`, `mastGeometry`, `seilMaterial`.
+
+### Dreiecke je Objekt (gemessen, `tests/par/pa_osmprops.py` → «OSMPROPS OK»)
+| Baustein | Dreiecke | Budget |
+|---|---|---|
+| Hochspannungsmast (4 Eckstiele, 2 Traversen, 2 Diagonalen) | 60 | ≤ 60 |
+| Seile | 0 (Linien: 3 je Leitung × 2 Liniensegmente je Spannfeld) | – |
+| Fussballplatz 105 × 68 / 120 × 80 / 40 × 25 | 176 / 186 / 116 | ≤ 200 |
+| Tennisplatz | 56 | ≤ 200 |
+| Basketballplatz | 124 | ≤ 200 |
+| Spielplatz | 106 | ≤ 120 |
+| Bahnübergang (beidseits) | 80 | ≤ 80 |
+| Kamin / Funkmast | 36 / 36 | ≤ 40 |
+
+### Masse, Quellen, Annahmen
+- **Hochspannungsmast:** Höhe 32 m, Fussbreite 6.4 m, Traversen in 22 m (15 m breit) und 27 m (10 m breit), Leiterseile 1 m unter den Traversen (2 unten aussen, 1 oben) – **Annahme** (typischer Tragmast; nicht an Swissgrid-Plänen geprüft). Ausrichtung: Traversen quer zur Leitung (Winkelhalbierende an Knickmasten, damit die Seile ohne Sprung durchlaufen). Durchhang 3 % der Spannweite, höchstens 8 m, 3 Stützpunkte je Spannfeld – **Annahme**. Leitungspunkte ohne Mast (> 5 m entfernt) bekommen trotzdem Seile in Masthöhe.
+- **Fussball:** Mittelkreis 9.15 m, Strafraum 16.5 × 40.3 m, Tor 7.32 × 2.44 m (Fussball-Regeln/IFAB, Allgemeinwissen – **Quelle nicht verlinkt**, Vertrauen hoch); kleinere Umrisse werden proportional verkleinert (Tor min. 50 % breit). Linien 12 cm breit, 5 cm über dem Gelände, Abschnitte ≤ 12 m. Tornetz weggelassen.
+- **Tennis:** 23.77 × 10.97 m, Einzel 8.23 m, Aufschlaglinie 6.40 m vom Netz, Netz 1.07 m an den Pfosten (ITF-Regeln, Allgemeinwissen, Vertrauen hoch); Netz vereinfacht als dunkle Fläche.
+- **Basketball:** 28 × 15 m, Mittelkreis r 1.8 m, Ring 3.05 m (FIBA, Allgemeinwissen, Vertrauen hoch); Drei-Punkte-Linie weggelassen (Budget).
+- **Spielplatz:** ≈ 9 × 7 m, Schaukel 2.4 m hoch, Rutsche 1.5 m, Sandkasten 2.6 × 2.2 m, Wippe 3 m – **Annahme**, bunte Farben bewusst kindgerecht.
+- **Bahnübergang:** Andreaskreuz ~1.2 m Balken auf 2.3 m Pfosten, Schrankenbaum senkrecht (offen) auf Antriebskasten – **Annahme**; das Schweizer Andreaskreuz ist rot-weiss umrandet, hier vereinfacht ein roter und ein weisser Balken (bewusst simpel, Vertrauen mittel).
+- **Kamin:** konischer Schaft, Durchmesser ~7 % der Höhe, rot-weisse Ringe oben (Luftfahrthindernis-Markierung, **Annahme**); **Funkmast:** schlanker Dreikant-Schaft mit 2 Antennen-Trommeln und roter Spitze. Ohne `height` 30 m – **Annahme** (wie Auftrag).
+
+### Geprüft / ungeprüft
+Geprüft: `git merge` 6f563d1; `tsc --noEmit` grün; Build `OUT=dist_pa` läuft durch; Testszene `tests/par/pa_osmprops.html/.ts` (welliges Gelände, damit die Linien dem Boden folgen müssen) über `tests/par/pa_vite.config.mjs`, `tests/par/pa_osmprops.py` → «OSMPROPS OK», keine JS-Fehler; Screenshots je Baustein (Tag) angesehen: `shots/pa_osm_{ueber,strom,fussball,tennis,basket,spiel,bahn,masten}.png` (lokal). Korrigiert nach Sichtprüfung: Seile sprangen an Knickmasten (eigene Querrichtung je Spannfeld) → Winkelhalbierende je Leitungspunkt.
+Ungeprüft: echte OSM-Daten der Gegenden (Hauptsitzung), Ansicht aus der Spielkamera, Nachtansicht, Masthöhe gegen echte Luzerner Leitungen. Bekannt: Seile zeigen mit 3 Stützpunkten je Spannfeld einen «V»-Knick in Feldmitte (gerade Linienstücke).
+
+---
+
 ## 15.11.2026 16:30 – Lauf 9 (Annahmen gegen Quellen geprüft)
 
 Nur bei Beleg geändert; Dreieckszahlen unverändert (Budgetprüfung OK: PostAuto-Solobus 104, Doppelstock 88/114). Keine Logos/Wortmarken nachgezeichnet (Posthorn bewusst weggelassen).
