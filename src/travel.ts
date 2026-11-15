@@ -46,6 +46,17 @@ export interface TravelHost {
   sfx?: () => void; onClose: () => void;
 }
 
+/** P-B Lauf 5 (Simon 15.11.: «Karte realistischer»): Übersichtskarte public/karte.jpg + karte.json (tools/geo/karte.py).
+ *  Wird beim Programmstart vom eigenen Server vorgeladen; fehlt sie (404) oder ist sie noch nicht da, bleibt die bisherige Kästchen-Karte. */
+interface KarteMeta { x0: number; z0: number; x1: number; z1: number }
+let karte: KarteMeta | null = null, karteImg: HTMLImageElement | null = null;
+try {
+  fetch('karte.json').then((r) => (r.ok ? r.json() : null)).then((m: KarteMeta | null) => {
+    if (!m || !isFinite(m.x0) || !isFinite(m.x1) || !isFinite(m.z0) || !isFinite(m.z1)) return;
+    const im = new Image(); im.onload = () => { karte = m; karteImg = im; }; im.src = 'karte.jpg';
+  }).catch(() => { /* ohne Karte weiter */ });
+} catch { /* ohne fetch */ }
+
 const dist = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const destAt = (d: TravelDest, h: TravelHost): [number, number] => {
   if (!d.ready) return SOON_AT[d.id] || [0, 0];
@@ -63,7 +74,8 @@ export function openTravel(ui: HTMLElement, h: TravelHost): HTMLElement {
   const all = [...REGIONS];
   const pts = DESTS.map((d) => destAt(d, h));
   const xs = [...all.flatMap((r) => [r.b[0], r.b[2]]), ...pts.map((p) => p[0])], zs = [...all.flatMap((r) => [r.b[1], r.b[3]]), ...pts.map((p) => p[1])];
-  const pad = 1200, x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, z0 = Math.min(...zs) - pad, z1 = Math.max(...zs) + pad;
+  const K = karte && karteImg && karteImg.naturalWidth > 0 ? karte : null; // Bildkarte verfügbar?
+  const pad = 1200, x0 = K ? K.x0 : Math.min(...xs) - pad, x1 = K ? K.x1 : Math.max(...xs) + pad, z0 = K ? K.z0 : Math.min(...zs) - pad, z1 = K ? K.z1 : Math.max(...zs) + pad;
   const W = 600, H = Math.round(W * (z1 - z0) / (x1 - x0));
   const px = (x: number) => ((x - x0) / (x1 - x0) * W).toFixed(1), pz = (z: number) => ((z - z0) / (z1 - z0) * H).toFixed(1);
   const here: [number, number] = [h.carX(), h.carZ()];
@@ -83,10 +95,15 @@ export function openTravel(ui: HTMLElement, h: TravelHost): HTMLElement {
     }
     if (lab[i].hid) lab[i] = { x: Math.min(Math.max(cx, w / 2 + 2), W - w / 2 - 2), y: cy > 20 ? cy - 14 : cy + 22, hid: true };
   }
-  const svg = `<svg class="tr-map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Karte der Spielwelt">
-    ${all.map((r) => `<rect class="tr-reg${r.id === h.region ? ' here' : ''}" x="${px(r.b[0])}" y="${pz(r.b[1])}" width="${(+px(r.b[2]) - +px(r.b[0])).toFixed(1)}" height="${(+pz(r.b[3]) - +pz(r.b[1])).toFixed(1)}"><title>${r.name}</title></rect>`).join('')}
-    ${DESTS.map((d, i) => `<g class="tr-pin${d.ready ? '' : ' soon'}" data-i="${i}"><circle cx="${px(pts[i][0])}" cy="${pz(pts[i][1])}" r="${d.icon === '🏥' ? 9 : 7}"/><text class="${lab[i].hid ? 'hid' : ''}" x="${lab[i].x.toFixed(1)}" y="${lab[i].y.toFixed(1)}">${short(d.name)}</text></g>`).join('')}
-    <g class="tr-me"><circle cx="${px(here[0])}" cy="${pz(here[1])}" r="7"/></g>
+  // Trefferfläche je Ziel: so gross wie möglich (bis r = 46 Einheiten), aber höchstens halber Abstand zum nächsten Ziel
+  const hitR = pts.map((p, i) => Math.max(12, Math.min(46, ...pts.filter((_, j) => j !== i).map((q) => Math.hypot(+px(q[0]) - +px(p[0]), +pz(q[1]) - +pz(p[1])) / 2))));
+  const regRect = (r: TravelRegion, cls: string) => `<rect class="${cls}" x="${px(r.b[0])}" y="${pz(r.b[1])}" width="${(+px(r.b[2]) - +px(r.b[0])).toFixed(1)}" height="${(+pz(r.b[3]) - +pz(r.b[1])).toFixed(1)}"><title>${r.name}</title></rect>`;
+  const cur = all.find((r) => r.id === h.region);
+  const svg = `<svg class="tr-map${K ? ' img' : ''}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Karte der Spielwelt">
+    ${K ? `<image href="karte.jpg" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>${cur ? regRect(cur, 'tr-here') : ''}`
+      : all.map((r) => regRect(r, `tr-reg${r.id === h.region ? ' here' : ''}`)).join('')}
+    ${DESTS.map((d, i) => `<g class="tr-pin${d.ready ? '' : ' soon'}" data-i="${i}"><circle class="tr-hit" cx="${px(pts[i][0])}" cy="${pz(pts[i][1])}" r="${hitR[i].toFixed(1)}"/><circle cx="${px(pts[i][0])}" cy="${pz(pts[i][1])}" r="${d.icon === '🏥' ? 9 : 7}"/><text class="${lab[i].hid ? 'hid' : ''}" x="${lab[i].x.toFixed(1)}" y="${lab[i].y.toFixed(1)}">${short(d.name)}</text></g>`).join('')}
+    <g class="tr-me"><circle cx="${px(here[0])}" cy="${pz(here[1])}" r="7"/>${K ? `<text x="${px(here[0])}" y="${(+pz(here[1]) + 22).toFixed(1)}">Du bist hier</text>` : ''}</g>
     <g class="tr-amb" style="display:none"><circle r="10"/><text y="5">🚑</text></g>
   </svg>`;
   // Liste: Kinderspital zuerst, dann nach Entfernung; «kommt bald» ans Ende
