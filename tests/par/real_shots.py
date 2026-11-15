@@ -7,12 +7,13 @@ async def main():
     os.makedirs('shots', exist_ok=True)
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
-        pg = await b.new_page(viewport={'width': 960, 'height': 540}); pg.set_default_timeout(180000)
+        W, H = (int(v) for v in os.environ.get('SIZE', '960x540').split('x'))
+        pg = await b.new_page(viewport={'width': W, 'height': H}); pg.set_default_timeout(180000)
         errs = []; pg.on('pageerror', lambda e: errs.append(str(e)[:300])); pg.on('console', lambda m: m.type == 'error' and errs.append(m.text[:300]))
         for i, v in enumerate(VIEWS):
             q = v.split('+'); await pg.goto(f'http://localhost:8771/real_szene.html?v={q[0]}' + ('&nacht=1' if 'nacht' in q else '')); await pg.wait_for_function('window.__ready')
             await pg.wait_for_timeout(1200)
-            await pg.screenshot(path=f"shots/pa_{v.replace('+', '_')}.png")
+            await pg.screenshot(path=f"shots/pa_{v.replace('+', '_')}" + (f'_{W}x{H}' if (W, H) != (960, 540) else '') + '.png')
             if i == 0:
                 st = await pg.evaluate('window.__stats'); print(json.dumps(st, indent=0))
                 LIM = {'spar_leuchte_modern': 28, 'spar_leuchte': 28, 'spar_kandelaber': 48, 'spar_wartehalle': 120, 'spar_bank': 60,

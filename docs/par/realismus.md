@@ -4,6 +4,22 @@ Branch `par/realismus`, Worktree `/home/claude/wt-pa`. Dateihoheit: `src/vehicle
 
 ---
 
+## 15.11.2026 01:40 – Lauf 5
+
+Rettungswagen-Feinschliff nach den 3 Fotos von Simon (Abweichungsliste aus Lauf 4), nur `src/vehicle.ts` (`buildLuksRtw`):
+1. **Lichtbalken** über der Frontscheibe jetzt durchgehend blau (eigenes, nicht blinkendes Grundnetz, Material in die Material-Zusammenfassung aufgenommen); die zwei blinkenden Felder sitzen darin (breiter, 0.7 m). `lights` weiterhin 8 Stück in gleicher Reihenfolge (nur Lage/Grösse der ersten zwei angepasst).
+2. **Kofferbug** mit zwei Fasen-Segmenten (Profil extrudiert statt Kasten); **Haube** rot bis knapp unter die Scheibe, Spiegelschrift «Ambulance» im schmalen weissen Streifen darüber (wie KKL-Foto); **Grill** mit silbernem Rahmen, ohne Markenstern.
+3. **Heck-Bogen** auf beiden Seiten als roter Bogenstreifen (Dachkante hinten → Gürtelband) statt gefüllter Fläche.
+4. **Lesbarkeit Heck**: Schriftband 0.30 m hoch (vorher 0.22) mit 56-px-Schrift (vorher 38), «144» 104 px (vorher 80), Fenster etwas niedriger, damit die «144» zwischen Fenster und Band Platz hat.
+
+### Geprüft / ungeprüft
+Geprüft: `tsc` fehlerfrei (nach Merge 050fce1); Build `OUT=dist_pa` läuft durch; Testszene ohne JS-Fehler; `real_shots.py` «BUDGET je Baustein: OK». Fahrzeug **890 Dreiecke** (Budget ≤ 1000; vorher 852), Beschriftung weiterhin 1 Zeichenaufruf, +1 Aufruf für den blauen Balken.
+Spielkamera-Ansicht von hinten (neue Ansichten `cam8` = 8.5 m hinter dem Fahrzeug, 3.6 m hoch; `cam12` = 12.5 m, 4.4 m hoch) in **960×540** und **800×380** (`SIZE=800x380 python3 tests/par/real_shots.py cam8,cam12`): «Ambulance» und «144» sind in beiden Grössen lesbar; bei 800×380 / 12.5 m klein, aber eindeutig. Sichtvergleich vorne rechts / rechte Seite gegen die Fotos: Balken, Haube, Grill, Bogen stimmen jetzt besser.
+Ungeprüft: echtes Spiel (Kamera dort nicht exakt nachgestellt, Werte geschätzt), Nachtansicht des blauen Balkens.
+Offen (klein): die blauen Heck-Eckleuchten überdecken die Ecken des Schriftbands; die roten Heck-Bögen berühren die Rückleuchten.
+
+---
+
 ## 14.11.2026 22:55 – Lauf 4
 
 ### Gemacht

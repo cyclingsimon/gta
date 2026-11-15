@@ -182,7 +182,12 @@ function buildLuksRtw() {
     add(g, white, 0, 0, 0);
   }
   // Alkoven (Koffer-Vorbau über dem Kabinendach) mit integrierter Warnanlage
-  add(new THREE.BoxGeometry(KW, 0.52, 0.42), white, 0, 2.77, KZ1 + 0.2);
+  { // Lauf 5: Kofferbug mit zwei Fasen-Segmenten (Fotos: weich gerundet)
+    const s = new THREE.Shape(), A = [[KZ1, 2.51], [KZ1 + 0.41, 2.51], [KZ1 + 0.41, 2.86], [KZ1 + 0.33, 2.99], [KZ1 + 0.18, KY1], [KZ1, KY1]];
+    s.moveTo(A[0][0], A[0][1]); for (const q of A.slice(1)) s.lineTo(q[0], q[1]);
+    const g = new THREE.ExtrudeGeometry(s, { depth: KW, bevelEnabled: false }); g.rotateY(-Math.PI / 2); g.translate(KW / 2, 0, 0);
+    add(g, white, 0, 0, 0);
+  }
   // Kabine Sprinter: Seitenprofil (z, y) entlang x extrudiert – Stossstange, Haube, schräge Frontscheibe, Dach
   {
     const s = new THREE.Shape();
@@ -193,6 +198,7 @@ function buildLuksRtw() {
   }
   // Frontscheibe (folgt der Schräge), Kühlergrill, Stossstange, Spiegel
   { const ws = add(new THREE.BoxGeometry(1.86, 1.02, 0.04), glass, 0, 2.0, 2.45, false); ws.rotation.x = -Math.atan2(2.78 - 2.08, 2.42 - 1.6); }
+  add(new THREE.BoxGeometry(1.44, 0.46, 0.04), chrome, 0, 1.1, 3.49, false); // Lauf 5: silberner Grillrahmen (ohne Markenstern)
   add(new THREE.BoxGeometry(1.3, 0.34, 0.05), black, 0, 1.1, 3.5, false);
   for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(1.2, 0.03, 0.06), chrome, 0, 1.0 + i * 0.1, 3.51, false);
   add(new THREE.BoxGeometry(2.06, 0.32, 0.22), white, 0, 0.6, 3.46, false);  // Stossfänger weiss (Fotos)
@@ -229,9 +235,9 @@ function buildLuksRtw() {
   // Warnanlage: Lichtbalken im Alkoven (vorne), Blitzer im Grill, Heck oben links/rechts; Reihenfolge = Wechseltakt
   const blueOn = new THREE.MeshBasicMaterial({ color: '#3fa9ff' });
   const blueOff = new THREE.MeshBasicMaterial({ color: '#1d4f86' });
-  add(new THREE.BoxGeometry(2.1, 0.16, 0.06), black, 0, 2.93, KZ1 + 0.43, false);
+  const barM = toon('#2C6FD6'); add(new THREE.BoxGeometry(2.16, 0.17, 0.07), barM, 0, 2.77, KZ1 + 0.44, false); // Lauf 5: durchgehend blauer Lichtbalken (nicht blinkend)
   const lights: THREE.Mesh[] = [];
-  for (const [x, y, z, w, h] of [[-0.78, 2.93, KZ1 + 0.46, 0.5, 0.15], [0.78, 2.93, KZ1 + 0.46, 0.5, 0.15], [0.3, 1.1, 3.54, 0.16, 0.1], [-0.3, 1.1, 3.54, 0.16, 0.1],
+  for (const [x, y, z, w, h] of [[-0.62, 2.77, KZ1 + 0.47, 0.7, 0.14], [0.62, 2.77, KZ1 + 0.47, 0.7, 0.14], [0.3, 1.1, 3.54, 0.16, 0.1], [-0.3, 1.1, 3.54, 0.16, 0.1],
     [-0.98, KY1 - 0.24, KZ0 - 0.03, 0.26, 0.2], [0.98, KY1 - 0.24, KZ0 - 0.03, 0.26, 0.2], [-1.16, KY1 - 0.18, KZ1 - 0.25, 0.04, 0.16], [1.16, KY1 - 0.18, KZ1 - 0.25, 0.04, 0.16]]) {
     lights.push(add(new THREE.BoxGeometry(w, h, x * x > 1.3 ? 0.3 : 0.06), blueOff, x, y, z, false));
   }
@@ -262,7 +268,7 @@ function buildLuksRtw() {
     const X = (s: number) => (frontRight ? s : 4.4 - s) * PX, Y = (v: number) => h - v * PX;
     const rectS = (s0: number, s1: number, v0: number, v1: number) => { const a = X(s0), b = X(s1); g.fillRect(Math.min(a, b), Y(v1), Math.abs(b - a), (v1 - v0) * PX); };
     g.fillStyle = RED; rectS(0, 4.4, BAND[0], BAND[1]); rectS(0, 4.4, 2.2, 2.3);                       // Gürtelband, Dachkontur
-    g.beginPath(); g.moveTo(X(0), Y(2.3)); g.lineTo(X(0.22), Y(2.3)); g.quadraticCurveTo(X(0.4), Y(1.15), X(1.45), Y(BAND[1])); g.lineTo(X(0), Y(BAND[1])); g.closePath(); g.fill(); // Heck-Bogen
+    g.beginPath(); g.moveTo(X(0), Y(2.3)); g.quadraticCurveTo(X(0.12), Y(1.05), X(1.2), Y(BAND[1])); g.lineTo(X(1.95), Y(BAND[1])); g.quadraticCurveTo(X(0.5), Y(1.25), X(0.3), Y(2.3)); g.closePath(); g.fill(); // Heck-Bogen (Lauf 5: Bogenstreifen statt Fläche)
     g.strokeStyle = RED; g.lineWidth = 0.15 * PX; g.beginPath(); g.moveTo(X(3.8), Y(BAND[1] - 0.06)); g.quadraticCurveTo(X(4.32), Y(0.9), X(4.33), Y(2.25)); g.stroke(); // Front-Bogen zur Dachkante
     g.fillStyle = BLUE; rectS(0, 4.4, STRIPE[0], STRIPE[1]);
     g.fillStyle = WIN;
@@ -304,19 +310,19 @@ function buildLuksRtw() {
     g.fillStyle = RED; g.fillRect(0, 0, w, 0.08 * PX); g.fillRect(0, Yv(BAND[1]), w, (BAND[1] - BAND[0]) * PX);
     for (const x0 of [0.05, 1.18]) { g.strokeStyle = RED; g.lineWidth = 0.13 * PX; g.beginPath(); g.moveTo(x0 * PX, Yv(0.12)); g.quadraticCurveTo((x0 + 0.15) * PX, Yv(BAND[0] - 0.02), (x0 + 1.05) * PX, Yv(BAND[0] - 0.05)); g.stroke(); }
     g.fillStyle = BLUE; g.fillRect(0, Yv(STRIPE[1]), w, (STRIPE[1] - STRIPE[0]) * PX);
-    banner(0.35 * PX, 1.95 * PX, 0.13 * PX, 0.22 * PX, true, 38);
-    g.fillStyle = WIN; g.fillRect(0.28 * PX, 0.5 * PX, 0.55 * PX, 0.55 * PX); g.fillRect(w - 0.83 * PX, 0.5 * PX, 0.55 * PX, 0.55 * PX);
+    banner(0.2 * PX, 2.1 * PX, 0.11 * PX, 0.3 * PX, true, 56); // Lauf 5: grösser für die Spielkamera
+    g.fillStyle = WIN; g.fillRect(0.28 * PX, 0.52 * PX, 0.55 * PX, 0.48 * PX); g.fillRect(w - 0.83 * PX, 0.52 * PX, 0.55 * PX, 0.48 * PX);
     g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2, 0.1 * PX); g.lineTo(w / 2, h); g.stroke(); g.strokeRect(2, 0.1 * PX, w - 4, h - 0.1 * PX - 2);
     g.fillStyle = '#9AA0A6'; g.fillRect(w / 2 - 22, 1.15 * PX, 10, 26); g.fillRect(w / 2 + 12, 1.15 * PX, 10, 26);
-    g.fillStyle = BLUE; g.font = 'bold 80px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText('144', w * 0.76, 1.32 * PX);
+    g.fillStyle = BLUE; g.font = 'bold 104px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText('144', w * 0.76, 1.47 * PX);
     g.restore();
   }
   { // Alkoven-Front: rote Kontur an den Koffer-Vorderkanten (Fortsetzung der Dachkontur)
     const [ox, oy, w, h] = REG.front; g.fillStyle = RED; g.fillRect(ox, oy, 0.08 * PX, h); g.fillRect(ox + w - 0.08 * PX, oy, 0.08 * PX, h);
   }
   { // Motorhaube (Schräge): hinten weiss mit blauer Spiegelschrift «Ambulance», vorne rot
-    const [ox, oy, w, h] = REG.hood; g.fillStyle = RED; g.fillRect(ox, oy + h * 0.5, w, h * 0.5);
-    g.save(); g.translate(ox + w, oy); g.scale(-1, 1); g.fillStyle = BLUE; g.font = 'bold 52px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ambulance', w / 2, h * 0.27); g.restore();
+    const [ox, oy, w, h] = REG.hood; g.fillStyle = RED; g.fillRect(ox, oy + h * 0.3, w, h * 0.7); // Lauf 5: rot bis knapp unter die Scheibe (KKL-Foto)
+    g.save(); g.translate(ox + w, oy); g.scale(-1, 1); g.fillStyle = BLUE; g.font = 'bold 40px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ambulance', w / 2, h * 0.15); g.restore();
   }
   { // Haubenvorderkante (oberer Teil der Front): rot, unten blaue Kante
     const [ox, oy, w, h] = REG.nose; g.fillStyle = RED; g.fillRect(ox, oy, w, h * 0.75); g.fillStyle = BLUE; g.fillRect(ox, oy + h * 0.75, w, h * 0.2);
@@ -337,7 +343,7 @@ function buildLuksRtw() {
     decal('cL', 2.35, 2.05, -Math.PI / 2, -1.016, 0.42 + 2.05 / 2, 1.15 + 2.35 / 2),
     decal('cR', 2.35, 2.05, Math.PI / 2, 1.016, 0.42 + 2.05 / 2, 1.15 + 2.35 / 2),
     decal('rear', KW, KH, Math.PI, 0, KY0 + KH / 2, KZ0 - 0.006),
-    decal('front', KW, 0.52, 0, 0, 2.77, KZ1 + 0.416),
+    decal('front', KW, 0.35, 0, 0, 2.685, KZ1 + 0.416),
     decal('hood', 2.0, Math.hypot(0.66, 0.27), 0, 0, (1.33 + 1.6) / 2 + 0.008, (3.44 + 2.78) / 2 + 0.003, -Math.PI / 2 + hoodA),
     decal('nose', 2.0, 0.2, 0, 0, 1.235, 3.462 + 0.008, -noseA),
     decal('star', 0.36, 0.36, 0, 0, 2.0 + 0.36 * Math.cos(wsA) + 0.025 * Math.sin(wsA), 2.45 - 0.36 * Math.sin(wsA) + 0.025 * Math.cos(wsA), -wsA),
@@ -348,7 +354,7 @@ function buildLuksRtw() {
   dizzy.position.y = 3.8; dizzy.visible = false; root.add(dizzy);
   // Feste Teile nach Material zusammenfassen (Konturen in ein Liniennetz)
   {
-    const keep = new Set<THREE.Material>([white, yellow, red, dark, glass, grey, black, chrome, headM, tailM, amberM]);
+    const keep = new Set<THREE.Material>([white, yellow, red, dark, glass, grey, black, chrome, headM, tailM, amberM, barM]);
     const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>(); const lineGeos: THREE.BufferGeometry[] = []; let lineMat: THREE.Material | null = null;
     for (const c of [...body.children]) {
       const mm = c as THREE.Mesh;
