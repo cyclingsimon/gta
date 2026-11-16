@@ -13,6 +13,7 @@ import { buildFahrleitung } from './bahnmast';
 import { buildBahnsignale } from './bahnsignal';
 import { buildPlakate } from './plakat';
 import { buildSiloballen } from './ballen';
+import { buildWartende } from './wartende';
 import { buildSchachtdeckel } from './deckel';
 import { buildZone30 } from './zone30';
 import { buildWanderwegweiser } from './wanderweg';
@@ -2672,6 +2673,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   }
   // Bushaltestellen: Schild oder Wartehalle (15a, P-A E2), dazu einzelne Veloständer (E7)
   if (P.stops.length) { G.add(...buildStops(P.stops, mask, (x, z) => terrain.height(x, z)));
+    { const wt = buildWartende(P.stops as number[][], (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (wt) G.add(wt); } // 17c
     G.add(...buildParkedVelos(P.stops.filter((_, i) => i % 6 === 0).map(([x, z]) => [x + 2, z + 2, 0]), (x, z) => terrain.height(x, z))); }
   // Instanzen in 500-m-Zellen aufteilen, damit nur sichtbare Zellen gezeichnet werden (Ampeln bleiben am Stück: Index = Ampel)
   const sig = (G as any).signalLamp as THREE.Object3D | undefined;

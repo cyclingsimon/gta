@@ -275,7 +275,7 @@ export class Traffic {
     }
     i = 0;
     for (const p of this.peds) {
-      if (p.alive) { this.e.set(0, p.h, 0); this.q.setFromEuler(this.e); this.p.set(p.x, this.terrain.height(p.x, p.z, this.terrain.under(p.x, p.z, p.h)) + p.y0, p.z); this.sc.set(1, 1, 1); }
+      if (p.alive) { this.e.set(0, p.h, 0); this.q.setFromEuler(this.e); this.p.set(p.x, this.terrain.height(p.x, p.z, this.terrain.under(p.x, p.z, p.h)) + p.y0, p.z); const kd = i % 5 === 2 ? 0.66 : i % 7 === 3 ? 0.84 : 1; this.sc.set(kd, kd, kd); /* 17c: Kinder und Jugendliche */ }
       else this.sc.set(0, 0, 0);
       this.m.compose(this.p, this.q, this.sc); this.pbody.setMatrixAt(i, this.m); this.phead.setMatrixAt(i, this.m); i++;
     }
