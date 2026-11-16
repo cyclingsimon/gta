@@ -12,6 +12,7 @@ import { strassenschilder } from './schilder';
 import { buildFahrleitung } from './bahnmast';
 import { buildSchachtdeckel } from './deckel';
 import { buildZone30 } from './zone30';
+import { buildWanderwegweiser } from './wanderweg';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape } from './terrain';
@@ -1073,6 +1074,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
     { const sd = buildSchachtdeckel(d.roads, (x, z) => terrain.height(x, z)); if (sd) group.add(sd); } // 17a
     { const z30 = buildZone30(d.roads, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (z30) group.add(z30); } // 17a
+    { const ww = buildWanderwegweiser(d, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (ww) group.add(ww); } // 17a
     strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), opts.coarse ? 200 : 408); // 17a; Leicht/Nachbargegend: 200 Namen = Atlas 2048 × 1024 (8 MB statt 16)
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
       if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
