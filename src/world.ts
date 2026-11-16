@@ -6,7 +6,7 @@ import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
 import { buildRealTrees } from './real/trees';
 import { buildStops, buildLamps, realBenchGeometry } from './real/props';
-import { buildParkedCars, buildParkedVelos } from './real/cars';
+import { buildParkedCars, buildParkedVelos, lastParkedSpots } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
 import { strassenschilder } from './schilder';
 import { buildFahrleitung } from './bahnmast';
@@ -1073,7 +1073,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
     { const sd = buildSchachtdeckel(d.roads, (x, z) => terrain.height(x, z)); if (sd) group.add(sd); } // 17a
     { const z30 = buildZone30(d.roads, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (z30) group.add(z30); } // 17a
-    strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), 408); // 17a
+    strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), opts.coarse ? 200 : 408); // 17a; Leicht/Nachbargegend: 200 Namen = Atlas 2048 × 1024 (8 MB statt 16)
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
       if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
@@ -1580,7 +1580,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   await onProgress('Bäume …');
   // ---- Bäume (instanziert) ----
   group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
-  group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), 100, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6, vorerst 100
+  group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), opts.coarse ? 450 : 700, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6; 17a: 100 → 450/700
+  if (lastParkedSpots.length) { // 17a: Parkfeld unter jedem geparkten Auto – Asphaltfläche 5.6 × 2.3 m mit weissen Linien an drei Seiten
+    const tex = canvasTex(128, 64, (g) => { g.fillStyle = '#77797B'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#ECECE8'; g.fillRect(0, 0, 3, 64); g.fillRect(125, 0, 3, 64); g.fillRect(0, 0, 128, 3); }, false);
+    const pos: number[] = [], uv: number[] = [];
+    for (const [x, z, h] of lastParkedSpots) { const ux = Math.sin(h), uz = Math.cos(h), nx = uz, nz = -ux, hl = 2.8, hw = 1.15;
+      const P = [[-hl, -hw, 0, 0], [hl, -hw, 1, 0], [hl, hw, 1, 1], [-hl, hw, 0, 1]].map(([a, b, u, v]) => [x + ux * a + nx * b, z + uz * a + nz * b, u, v]);
+      for (const q of [0, 1, 2, 0, 2, 3]) { const [px, pz, u, v] = P[q]; pos.push(px, terrain.height(px, pz) + 0.05, pz); uv.push(u, v); } }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
+    const pm = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); pm.name = 'parkfelder'; pm.receiveShadow = true; group.add(pm);
+    console.log('[bau] Parkfelder', lastParkedSpots.length); }
   group.add(...buildStreetFurniture(props, d.roads, mask, (x, z) => terrain.height(x, z), 12000)); // P-A E8: Kleinmöbel, Deckel 12 000 Dreiecke
   // 14q: Hecken (OSM barrier=hedge): Reihe aus Büschen (alle 1.6 m, 1.3–2.1 m hoch), nicht auf Strassen, Wasser oder in Häusern
   if (props?.hedges?.length) {

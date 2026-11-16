@@ -160,6 +160,8 @@ export function realCarMeshes(n: number, oldBody: THREE.BufferGeometry, oldCabin
   return { body: body as THREE.InstancedMesh, cabin: cabin as THREE.InstancedMesh };
 }
 
+/** 17a: Lage der zuletzt gebauten geparkten Autos [x, z, Drehung] */
+export let lastParkedSpots: number[][] = [];
 /** Geparkte Autos am Strassenrand – Lauf 3: nur residential/living_street, mindestens 14 m von Einmündungen/Strassenenden,
  *  Platzierung rein deterministisch (Hash der Lage) → stabile Tests. Alle 6 m geprüft, ~45 % belegt, nur auf freier Fläche neben
  *  der Fahrbahn (Mask.at === 0, keine Strasse), nicht an avoid-Punkten (4-m-Raster ±1). Sparform 88 Dreiecke, fest gebacken
@@ -194,6 +196,7 @@ export function buildParkedCars(roads: { p: number[][]; c: string; w?: number; b
       }
     }
   }
+  lastParkedSpots = spots.map(([x, z, h]) => [x, z, h]); // 17a (Hauptstrang): für die Parkfeld-Markierung
   const items: [THREE.BufferGeometry, THREE.Matrix4, THREE.Color | null][] = spots.map(([x, z, h, t]) => [sparCarGeometry(t), new THREE.Matrix4().makeRotationY(h).setPosition(x, groundY(x, z), z), new THREE.Color(carColor(hash2(x, z)))]);
   return bakeCells(items, 500, 'geparkt');
 }
