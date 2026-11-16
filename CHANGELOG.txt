@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-17b  Velos
+- Velofahrerinnen und Velofahrer auf Radstreifen und Velowegen; sie halten am Rand an, wenn die Ambulanz kommt, und klingeln
+- Im Verkehr fahren jetzt auch Lieferwagen und Kleinwagen
+- Schachtdeckel und «30»-Zeichen liegen nicht mehr oben auf Überführungen
+
 2026-11-17a  Strassenbild
 - Blaue Strassennamenschilder an Kreuzungen (Namen aus OpenStreetMap)
 - Bahn: Fahrleitungsmasten mit Ausleger und Fahrdraht über allen offenen Gleisen

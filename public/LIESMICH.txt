@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-17a
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-17b
+Neu in 17b: Velofahrerinnen und Velofahrer auf Radstreifen und Velowegen (halten am Rand an, wenn die Ambulanz kommt, und klingeln), Lieferwagen und Kleinwagen im Verkehr, Schachtdeckel und «30»-Zeichen liegen nicht mehr oben auf Überführungen.
 Neu in 17a (Realismus, 16.11. tagsüber): blaue Strassennamenschilder an Kreuzungen, Fahrleitungsmasten und Fahrdraht über den Gleisen, Schachtdeckel und Einlaufroste, Tempo-30-Zonen (Signal und «30» auf der Fahrbahn), viel mehr parkierte Autos mit Parkfeldern, Markierungen und Randlinien auch auf Brücken.
 Neu in 16b: In Unterführungen bleiben Ambulanz (nach «Zurücksetzen»), Verkehr und Fussgänger unten auf der Strasse statt oben auf der Brücke.
 Neu in 16a (Rückmeldungen 15.11. abends, Teil 2): Über- und Unterführungen neu gebaut (Brücken liegen hoch genug über Bahn und Strasse, mit Rampen, Brüstung und Pfeilern; Züge fahren über die Strasse statt hindurch), KKL lässt sich nicht mehr durchfahren, zwei Schiffe am KKL-Steg, Velo-Zeichen wie auf Schweizer Strassen, Leuchttafel «KONZERT» und Noten über Schüür und KKL, Hydranten, Briefkästen, Sammelstellen und Radarkästen an echten Standorten. Neue Datei im ZIP: data/railbridges.json.
