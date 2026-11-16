@@ -1231,7 +1231,7 @@ function frame(now: number) {
     });
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }
     if (traffic) traffic.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.boing(); comic(x, z, 0); });
-    if (velos) velos.update(dt, players.map((p) => p.car));
+    if (velos) velos.update(dt, players.map((p) => p.car), () => sfxPlay.glocke());
     if (buses) { buses.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.bump(); comic(x, z, 1); }); buses.updateLabels(car.x, car.z); }
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);

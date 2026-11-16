@@ -67,6 +67,8 @@ export const sfxPlay = {
   train() { blip(660, 0.5, 'square', 0.04, 0); blip(830, 0.5, 'square', 0.035, 0, 0.05); },
   toot() { blip(98, 1.4, 'sawtooth', 0.07, 0); blip(147, 1.4, 'triangle', 0.08, 0); },
   moo() { blip(150, 0.9, 'sawtooth', 0.08, -40); blip(110, 0.9, 'triangle', 0.1, -20, 0.05); },
+  /** 17b: Veloglocke «dring-dring» */
+  glocke() { blip(2350, 0.16, 'triangle', 0.05, 0); blip(2900, 0.1, 'sine', 0.025, 0); blip(2350, 0.2, 'triangle', 0.05, 0, 0.17); blip(2900, 0.12, 'sine', 0.025, 0, 0.17); },
   boing() { blip(160, 0.38, 'sine', 0.2, 520); blip(480, 0.28, 'triangle', 0.07, -260, 0.14); },
   star(i = 0) { blip(880 + i * 220, 0.18, 'square', 0.1, 0, i * 0.12); blip(1320 + i * 220, 0.22, 'sine', 0.08, 0, i * 0.12 + 0.05); },
   radio() { blip(1200, 0.08, 'square', 0.07); blip(1600, 0.08, 'square', 0.07, 0, 0.11); },

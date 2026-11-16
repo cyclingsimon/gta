@@ -36,12 +36,13 @@ export class Velos {
     for (let t = 0; t < 12; t++) { const k = this.nearK[Math.floor(this.rnd() * this.nearK.length)], c = this.cand[k], s = this.rnd() * c.L; const [x, z] = this.at(c, s); const d = Math.hypot(x - cx, z - cz);
       if (d > 110 && d < 380) { v.r = k; v.s = s; v.dir = this.rnd() < 0.5 ? 1 : -1; v.on = true; v.v = v.v0; return; } } v.on = false; }
   private at(c: { r: Road; cum: number[] }, s: number): [number, number, number, number] { let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const A = c.r.p[i - 1], B = c.r.p[i], l = c.cum[i] - c.cum[i - 1] || 1, t = (s - c.cum[i - 1]) / l; return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, (B[0] - A[0]) / l, (B[1] - A[1]) / l]; }
-  private tick = 0;
-  update(dt: number, cars: { x: number; z: number }[]) {
+  private tick = 0; private bellT = 0;
+  update(dt: number, cars: { x: number; z: number }[], glocke?: () => void) { this.bellT -= dt;
     if (!this.cand.length || !cars.length) return; const cx = cars[0].x, cz = cars[0].z; this.tick++;
     this.list.forEach((v, i) => {
       if (!v.on || Math.min(...cars.map((c) => Math.hypot(v.x - c.x, v.z - c.z))) > 460) { if ((this.tick + i * 3) % 12 === 0) this.place(v, cx, cz); if (!v.on) { this.m.compose(this.zero, this.q.identity(), this.zero); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m); return; } }
       const c = this.cand[v.r]; const near = cars.some((k) => Math.hypot(v.x - k.x, v.z - k.z) < 9);
+      if (near && v.side < 0.05 && this.bellT <= 0 && glocke) { glocke(); this.bellT = 8; }
       v.v += ((near ? 0 : v.v0) - v.v) * Math.min(1, dt * 3); v.side += ((near ? 1.1 : 0) - v.side) * Math.min(1, dt * 3);
       v.s += v.dir * v.v * dt; if (v.s > c.L) { v.s = c.L; v.dir = -1; } else if (v.s < 0) { v.s = 0; v.dir = 1; }
       const [x, z, ux, uz] = this.at(c, v.s), dx = ux * v.dir, dz = uz * v.dir, off = (c.r.c === 'cycleway' ? Math.min(0.6, c.r.w / 4) : c.r.w / 2 - 0.75) + v.side;
