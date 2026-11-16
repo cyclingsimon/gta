@@ -1085,9 +1085,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   {
     const pos: number[] = [], col: number[] = [];
     const c = new THREE.Color('#8E847C');
-    for (const r of d.rail) ribbon(pos, col, r, 2.6, 0.25, c, false);
+    const steel = new THREE.Color('#4A4E52'), bed = new THREE.Color('#7A726B');
+    for (const r of d.rail) { ribbon(pos, col, r, 3.3, 0.25, c, false); const l: number[][] = (r as any).p || r; if (l.length < 2) continue; ribbon(pos, col, l, 1.7, 0.27, bed, false); // 17a: Schotterbett 3.3 m, dunklere Schwellenzone, zwei Schienen (Normalspur 1.435 m)
+      for (const o of [-0.72, 0.72]) ribbon(pos, col, offsetLine(l, o), 0.11, 0.31, steel, false); }
     const drl = drape(pos, col, terrain, 12);
-    if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25; } // 16a: Gleis auf der Bahnbrücke
+    if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25 + (drl.col![i] < 0.1 ? 0.06 : drl.col![i] < 0.23 ? 0.02 : 0); } // 16a: Gleis auf der Bahnbrücke (17a: Schienen bleiben oben)
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
     { const fl = buildFahrleitung(d.rail.map((l: any) => l.p || l), (x, z) => terrain.railY(x, z), (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (fl) group.add(fl); } // 17a
   }
