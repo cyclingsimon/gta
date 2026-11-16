@@ -944,7 +944,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const last = r.p[r.p.length - 1];
       capEnd(t.pos, t.col, last[0], last[1], r.w / 2, y, c);
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
-      if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5 && !r.b) edgeLines(dashes, trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
+      if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5) edgeLines(dashes, r.b ? r.p : trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); /* 17a: Randlinien auch auf Brücken und Rampen (dort durchgehend) */ // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
     // Belag: feines Korn, dunklere Flicken und Bitumen-Fugen (Fotos Luzerner Kantonsstrassen); 512 px auf 16 m
     const asphTex = canvasTex(512, 512, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512);
