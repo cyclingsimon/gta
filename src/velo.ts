@@ -17,6 +17,7 @@ export class Velos {
     this.group.name = 'velos';
     for (const r of roads) { if (r.b || r.tu || r.p.length < 2) continue; if (!(r.c === 'cycleway' || (r.cy && (r.cy[0] || r.cy[1])))) continue;
       const cum = [0]; for (let i = 1; i < r.p.length; i++) cum.push(cum[i - 1] + Math.hypot(r.p[i][0] - r.p[i - 1][0], r.p[i][1] - r.p[i - 1][1])); if (cum[cum.length - 1] >= 60) this.cand.push({ r, L: cum[cum.length - 1], cum }); }
+    this.cand.forEach((c, k) => { for (const atEnd of [0, 1]) { const q = atEnd ? c.r.p[c.r.p.length - 1] : c.r.p[0], key = Math.round(q[0] / 3) + ',' + Math.round(q[1] / 3); if (!this.ends.has(key)) this.ends.set(key, []); this.ends.get(key)!.push([k, atEnd]); } });
     // Velo (vorne = +z): zwei Räder, Rahmen, Lenker; Mensch: Beine, Kopf, Helm – Leibchen separat (Farbe je Fahrer)
     const wheel = (z: number) => new THREE.CylinderGeometry(0.34, 0.34, 0.05, 10).rotateZ(Math.PI / 2).translate(0, 0.34, z);
     const bikeG = merge([part(wheel(0.52), '#1B1D20'), part(wheel(-0.52), '#1B1D20'), part(box(0.05, 0.05, 0.75, 0, 0.74, 0.02, -0.12), '#2B6CB0'), part(box(0.05, 0.05, 0.62, 0, 0.52, 0.2, 0.75), '#2B6CB0'), part(box(0.05, 0.5, 0.05, 0, 0.62, -0.26, 0.25), '#2B6CB0'),
@@ -36,6 +37,7 @@ export class Velos {
     for (let t = 0; t < 12; t++) { const k = this.nearK[Math.floor(this.rnd() * this.nearK.length)], c = this.cand[k], s = this.rnd() * c.L; const [x, z] = this.at(c, s); const d = Math.hypot(x - cx, z - cz);
       if (d > 110 && d < 380) { v.r = k; v.s = s; v.dir = this.rnd() < 0.5 ? 1 : -1; v.on = true; v.v = v.v0; return; } } v.on = false; }
   private at(c: { r: Road; cum: number[] }, s: number): [number, number, number, number] { let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++; const A = c.r.p[i - 1], B = c.r.p[i], l = c.cum[i] - c.cum[i - 1] || 1, t = (s - c.cum[i - 1]) / l; return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, (B[0] - A[0]) / l, (B[1] - A[1]) / l]; }
+  private ends = new Map<string, [number, number][]>();
   private tick = 0; private bellT = 0;
   update(dt: number, cars: { x: number; z: number }[], glocke?: () => void) { this.bellT -= dt;
     if (!this.cand.length || !cars.length) return; const cx = cars[0].x, cz = cars[0].z; this.tick++;
@@ -44,7 +46,11 @@ export class Velos {
       const c = this.cand[v.r]; const near = cars.some((k) => Math.hypot(v.x - k.x, v.z - k.z) < 9);
       if (near && v.side < 0.05 && this.bellT <= 0 && glocke) { glocke(); this.bellT = 8; }
       v.v += ((near ? 0 : v.v0) - v.v) * Math.min(1, dt * 3); v.side += ((near ? 1.1 : 0) - v.side) * Math.min(1, dt * 3);
-      v.s += v.dir * v.v * dt; if (v.s > c.L) { v.s = c.L; v.dir = -1; } else if (v.s < 0) { v.s = 0; v.dir = 1; }
+      v.s += v.dir * v.v * dt;
+      if (v.s > c.L || v.s < 0) { // P-C V4: am Wegende auf ein anschliessendes Radstreifen-Stück wechseln, nur sonst wenden
+        const end = v.s > c.L ? c.r.p[c.r.p.length - 1] : c.r.p[0], nx = this.ends.get(Math.round(end[0] / 3) + ',' + Math.round(end[1] / 3))?.filter((q) => q[0] !== v.r);
+        if (nx && nx.length) { const [k, atEnd] = nx[Math.floor(this.rnd() * nx.length)]; v.r = k; v.dir = atEnd ? -1 : 1; v.s = atEnd ? this.cand[k].L : 0; return; }
+        if (v.s > c.L) { v.s = c.L; v.dir = -1; } else { v.s = 0; v.dir = 1; } }
       const [x, z, ux, uz] = this.at(c, v.s), dx = ux * v.dir, dz = uz * v.dir, off = (c.r.c === 'cycleway' ? Math.min(0.6, c.r.w / 4) : c.r.w / 2 - 0.75) + v.side;
       v.x = x - dz * off; v.z = z + dx * off; const th = Math.atan2(dx, dz); let dh = th - v.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; v.h += dh * Math.min(1, dt * 6);
       this.e.set(0, v.h, 0); this.q.setFromEuler(this.e); this.p.set(v.x, this.groundY(v.x, v.z, v.h) + 0.02, v.z); this.m.compose(this.p, this.q, this.one); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m);
