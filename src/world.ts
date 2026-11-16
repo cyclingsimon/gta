@@ -8,6 +8,7 @@ import { buildRealTrees } from './real/trees';
 import { buildStops, buildLamps, realBenchGeometry } from './real/props';
 import { buildParkedCars, buildParkedVelos } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
+import { strassenschilder } from './schilder';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape } from './terrain';
@@ -943,6 +944,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       ribbon(t.pos, t.col, r.p, r.w, y, c, true);
       const last = r.p[r.p.length - 1];
       capEnd(t.pos, t.col, last[0], last[1], r.w / 2, y, c);
+      if (r.b && r.L && !(r as any).ramp) { mainMarkings(r, y + 0.012, dashes, yellow, { pos: [], col: [] }, decals, false, false); continue; } // 17a: Brücken mit OSM-Fahrstreifen bekommen die Normmarkierung (ohne Trottoir-Band: läge sonst unter dem Deck)
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
       if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5) edgeLines(dashes, r.b ? r.p : trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); /* 17a: Randlinien auch auf Brücken und Rampen (dort durchgehend) */ // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
@@ -1066,6 +1068,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
     kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
+    strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), 408); // 17a
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
       if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
     if (leitpf.length) { const g = new THREE.BoxGeometry(0.12, 1.0, 0.16, 1, 10, 1).toNonIndexed(); g.translate(0, 0.5, 0); const ca = new Float32Array(g.getAttribute('position').count * 3);
