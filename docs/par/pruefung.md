@@ -1,5 +1,63 @@
 # P-C Unabhängige Prüfung & Fehlerjagd
 
+## 16.11.2026 ca. 19:00 – Prüflauf 17c (nur Code-Lesung)
+
+Prüfgegenstand: `ee55241..2f2ae1c` (Bahnsignale/Hektometertafeln, Plakatwände, Siloballen, Wartende, Kinder unter den Fussgängern, Rücknahme
+der Wagen-Skalierung). Dazu `src/velo.ts` (17b, auf Wunsch) und der Einbau in `main.ts`. `claude/13i-gebiet-a` per Fast-Forward hineingemergt.
+
+**Ausgeführt:**
+- `npx tsc --noEmit -p .` → ok.
+- Python-Zählungen, die nur Daten lesen: Luzern hat 153 Velo-Kandidaten mit 1 769 Punkten und 362 Haltestellen.
+
+**Nicht ausgeführt:** kein Build, kein Browser.
+
+### Ergebnis: keine Befunde der Schwere 1–3
+
+Geprüft:
+- **Schleifen / Länge 0:** In `bahnsignal.ts` (+420/+100), `plakat.ts` (+260), `ballen.ts` (höchstens 14 Versuche) und `wartende.ts` (höchstens 8 Versuche) sind alle Schleifen begrenzt, Segmente < 0.5 m werden übersprungen. In `velo.ts` wird `at()` mit `l || 1` gerechnet, Kandidaten sind ≥ 60 m lang, die Winkel-`while` sind endlich.
+- **Leere Listen:** Ohne Radstreifen bleibt die Gruppe unsichtbar und `update` kehrt sofort zurück. Ohne Haltestellen, Wiesen oder Hauptstrassen geben die Module `null` zurück, und der Aufrufer prüft das.
+- **Speicher:** Velo-InstancedMesh und Material samt Klon sowie Plakat-CanvasTexture (`map`) gibt `freeGroup` frei, beim Gegendwechsel über `main.ts:1906`. Bahnsignale, Ballen und Wartende sind einfache Netze in `world.group`. Kein Leck.
+- **Handy-Leistung:**
+  - `velo.update`: 8 Velos × ≤ 4 Ambulanzen je Bild, vernachlässigbar.
+  - `place()`: rechnet nur nach 120 m Fahrt neu, über ~1 800 Punkte, unkritisch.
+  - Wartende: etwa 720 Figuren × 32 Dreiecke ≈ 23 000 Dreiecke in einem Netz.
+- **Plakat-Leserichtung:** nachgerechnet. Von der Strasse aus gesehen liegt `u0` links und oben ist oben. Die Rückseite deckt die weisse Tafel ab (Plakat 0.056 m vor der Tafelmitte, Tafel 0.05 m halbe Tiefe). Nicht spiegelverkehrt.
+- **Kinder-Skalierung:** `this.peds` hat feste Länge (kein `splice`), Index `i` ist stabil, also wechselt die Grösse nicht. Skaliert wird ab den Füssen.
+- **Grundsätze:** Plakate ohne Marken (Berg, Fasnacht, Wochenmarkt, Zirkus, Glace, Schifffahrt, Velo-Sonntag, Kinderfest). Keine Gewalt. Velos halten bei Annäherung an, kein Scheitern. Glocke höchstens alle 8 s. Keine Netzaufrufe.
+- **Objekte auf Fahrbahn, im See, in Häusern:** Pfosten, Plakate, Ballen und Wartende stehen nur auf `mask 0 && !isRoad`. Plakate prüfen 6 Punkte, Ballen jeden Ballen, Wartende 5 Punkte. Velos fahren absichtlich auf Radstreifen und Velowegen.
+
+### Schwere 4–5
+
+| # | Schwere | Befund | Beleg |
+|---|---|---|---|
+| V1 | 4 | Velos auf einer Strasse unter einer gehobenen Überführung fahren **oben auf dem Deck** (`groundY = terrain.height(x, z)` ohne `under()`). Velostrecken unter Überführungen (z. B. Velowege entlang Bahn/Strasse) springen für einige Meter 6 m hoch | `src/main.ts:1368`, `:1906`, `src/velo.ts:50` |
+| V2 | 5 | Bahnsignal-Lichter: Der Versatz nach vorn und hinten nutzt nur `uz` (`mz ∓ uz·0.09`), die x-Komponente fehlt. Auf Gleisen in Ost-West-Richtung (uz ≈ 0) liegen beide Lichter im 0.14 m tiefen Schirm → **Signal ohne Licht** | `src/bahnsignal.ts:18` |
+| V3 | 5 | Bahnsignale als `MeshBasicMaterial`: Mast und Schirm werden am Abend nicht dunkler (nur die Lichter sollten leuchten) | `src/bahnsignal.ts:25` |
+| V4 | 5 | Velos wenden am Ende jedes Wegstücks mitten auf der Strecke (`dir` kehrt bei `s = 0/L` um) – sieht auf kurzen Radstreifen-Stücken (≥ 60 m) seltsam aus | `src/velo.ts:47` |
+
+### Patches
+
+V1:
+```diff
+--- a/src/velo.ts
+-  constructor(roads: Road[], private groundY: (x: number, z: number) => number, n = 14) {
++  constructor(roads: Road[], private groundY: (x: number, z: number, h?: number) => number, n = 14) {
+@@
+-      … this.p.set(v.x, this.groundY(v.x, v.z) + 0.02, v.z); …
++      … this.p.set(v.x, this.groundY(v.x, v.z, v.h) + 0.02, v.z); …
+--- a/src/main.ts (Z. 1368 und 1906)
+-velos = new Velos(cityData.roads as any, (x, z) => terrain.height(x, z), MOBILE ? 8 : 14);
++velos = new Velos(cityData.roads as any, (x, z, h = 0) => terrain.height(x, z, terrain.under(x, z, h)), MOBILE ? 8 : 14);
+```
+
+V2:
+```diff
+-        box(mx, y + 5.45, mz - uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); box(mx, y + 5.45, mz + uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); n++; }
++        box(mx - ux * 0.09, y + 5.45, mz - uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); box(mx + ux * 0.09, y + 5.45, mz + uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); n++; }
+```
+
+V3 (optional): Mast und Schirm mit `MeshLambertMaterial({ vertexColors: true })`, die Lichter als zweites Netz mit `MeshBasicMaterial` – oder alles so lassen (rein kosmetisch).
+
 ## 16.11.2026 tagsüber – Prüflauf 17a (nur Code-Lesung)
 
 Prüfgegenstand: `d77becc..51d064e` (9 Commits 17a: Strassennamenschilder, Fahrleitung, Schachtdeckel, Zone 30, Wanderwegweiser,
