@@ -1,5 +1,8 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-16b  Unterführungen
+- In Unterführungen bleiben Ambulanz (nach «Zurücksetzen»), Verkehr und Fussgänger unten auf der Strasse statt oben auf der Brücke
+
 2026-11-16a  Über- und Unterführungen, Konzert-Tafeln
 - Brücken über Bahn und Strasse liegen jetzt hoch genug (mindestens 5 m frei), mit Rampen, Stützmauern, Brüstung und Pfeilern
 - Wo der Zug über die Strasse fährt, fährt er wirklich oben durch – nicht mehr durch die Ambulanz
