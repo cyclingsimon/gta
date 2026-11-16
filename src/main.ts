@@ -17,6 +17,7 @@ import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepa
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
 import { Konzerte } from './konzert';
+import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
 export const VERSION = '2026-11-17a';
@@ -292,6 +293,7 @@ async function loadForestMask(x0: number, z0: number, dir = DIR): Promise<Forest
     return { w: c.width, h: c.height, x0, z0, step: 4, data }; } catch { return undefined; }
 }
 let world: World, nav: NavGraph, car: Vehicle, terrain: Terrain, traffic: Traffic | null = null;
+let velos: Velos | null = null;
 let b3dMeta: { buildings: number[][] } | null = null;
 let b3dData: { pos: ArrayLike<number> } | null = null;
 const gy = (x: number, z: number) => (terrain ? terrain.height(x, z) : 0);
@@ -1229,6 +1231,7 @@ function frame(now: number) {
     });
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }
     if (traffic) traffic.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.boing(); comic(x, z, 0); });
+    if (velos) velos.update(dt, players.map((p) => p.car));
     if (buses) { buses.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.bump(); comic(x, z, 1); }); buses.updateLabels(car.x, car.z); }
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);
@@ -1362,6 +1365,7 @@ async function boot() {
   });
   await new Promise((r) => setTimeout(r, 30));
   { const t0 = performance.now(); nav = new NavGraph(data, world.mask); console.log('[bau] Navi', (performance.now() - t0).toFixed(0), 'ms'); }
+  if (!/[?&]novelo/.test(location.search)) { velos = new Velos(cityData.roads as any, (x, z) => terrain.height(x, z), MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
   { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
   setHospital(world, REGION);
@@ -1897,6 +1901,7 @@ function activate(s: Slot) {
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
   nav = s.nav;
   for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
+  if (velos) { scene.remove(velos.group); freeGroup(velos.group); velos = new Velos(cityData.roads as any, (x, z) => terrain.height(x, z), MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
   if (traffic) { scene.remove(traffic.group); freeGroup(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
     const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); }
   if (buses) { scene.remove(buses.group); freeGroup(buses.group); buses = null; } if (busWires) { scene.remove(busWires); freeGroup(busWires); busWires = null; }

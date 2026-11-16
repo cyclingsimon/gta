@@ -1072,8 +1072,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
     kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
-    { const sd = buildSchachtdeckel(d.roads, (x, z) => terrain.height(x, z)); if (sd) group.add(sd); } // 17a
-    { const z30 = buildZone30(d.roads, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (z30) group.add(z30); } // 17a
+    // P-C W4: Deckel/«30» nur auf Strassen, die keine Brücke sind; unter einem hohen Deck am Boden statt oben auf der Überführung
+    const yLow = (x: number, z: number) => { const b = terrain.bridgeAt(x, z); if (!isNaN(b)) { const g = terrain.ground(x, z); if (b - g > 3.2) return g; } return terrain.height(x, z); };
+    const lowRoads = d.roads.filter((r) => !r.b);
+    { const sd = buildSchachtdeckel(lowRoads, yLow); if (sd) group.add(sd); } // 17a
+    { const z30 = buildZone30(lowRoads, yLow, (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (z30) group.add(z30); } // 17a
     { const ww = buildWanderwegweiser(d, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (ww) group.add(ww); } // 17a
     strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), opts.coarse ? 200 : 408); // 17a; Leicht/Nachbargegend: 200 Namen = Atlas 2048 × 1024 (8 MB statt 16)
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
