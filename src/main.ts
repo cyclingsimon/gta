@@ -1365,7 +1365,7 @@ async function boot() {
   });
   await new Promise((r) => setTimeout(r, 30));
   { const t0 = performance.now(); nav = new NavGraph(data, world.mask); console.log('[bau] Navi', (performance.now() - t0).toFixed(0), 'ms'); }
-  if (!/[?&]novelo/.test(location.search)) { velos = new Velos(cityData.roads as any, (x, z) => terrain.height(x, z), MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
+  if (!/[?&]novelo/.test(location.search)) { velos = new Velos(cityData.roads as any, (x, z, h) => terrain.height(x, z, terrain.under(x, z, h)) /* P-C V1 */, MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
   if (!/[?&]notraffic/.test(location.search)) { traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group); { const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } }
   { const bl = await pBus; if (bl && !/[?&]nobus/.test(location.search)) { buses = new Buses(bl, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops); const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } }
   setHospital(world, REGION);
@@ -1903,7 +1903,7 @@ function activate(s: Slot) {
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
   nav = s.nav;
   for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
-  if (velos) { scene.remove(velos.group); freeGroup(velos.group); velos = new Velos(cityData.roads as any, (x, z) => terrain.height(x, z), MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
+  if (velos) { scene.remove(velos.group); freeGroup(velos.group); velos = new Velos(cityData.roads as any, (x, z, h) => terrain.height(x, z, terrain.under(x, z, h)) /* P-C V1 */, MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
   if (traffic) { scene.remove(traffic.group); freeGroup(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
     const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); }
   if (buses) { scene.remove(buses.group); freeGroup(buses.group); buses = null; } if (busWires) { scene.remove(busWires); freeGroup(busWires); busWires = null; }

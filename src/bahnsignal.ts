@@ -15,7 +15,7 @@ export function buildBahnsignale(lines: number[][][], railY: (x: number, z: numb
       while (accS <= sl) { const x = A[0] + ux * accS, z = A[1] + uz * accS; accS += 420; const ck = Math.round(x / 60) + ',' + Math.round(z / 60); if (cell.has(ck)) continue;
         const mx = x - uz * 2.6, mz = z + ux * 2.6; if (!frei(mx, mz)) continue; cell.add(ck); const y = railY(x, z);
         box(mx, y + 2.4, mz, 0.16, 4.8, 0.16, ux, uz, MAST); box(mx, y + 5.3, mz, 0.7, 1.3, 0.14, ux, uz, SCHIRM);
-        box(mx, y + 5.45, mz - uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); box(mx, y + 5.45, mz + uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); n++; }
+        box(mx - ux * 0.09, y + 5.45, mz - uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); box(mx + ux * 0.09, y + 5.45, mz + uz * 0.09, 0.26, 0.26, 0.06, ux, uz, LICHT[n % LICHT.length]); /* P-C V2 */ n++; }
       accS -= sl;
       while (accH <= sl) { const x = A[0] + ux * accH, z = A[1] + uz * accH; accH += 100; const hx = x + uz * 2.3, hz = z - ux * 2.3; const ck = 'h' + Math.round(x / 30) + ',' + Math.round(z / 30); if (cell.has(ck) || !frei(hx, hz)) continue; cell.add(ck);
         const y = railY(x, z); box(hx, y + 0.5, hz, 0.06, 1.0, 0.06, ux, uz, MAST); box(hx, y + 1.1, hz, 0.34, 0.3, 0.04, ux, uz, WEISS); nh++; }

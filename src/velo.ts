@@ -13,7 +13,7 @@ export class Velos {
   group = new THREE.Group(); list: Velo[] = []; private cand: { r: Road; L: number; cum: number[] }[] = [];
   private bike: THREE.InstancedMesh; private shirt: THREE.InstancedMesh; private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private e = new THREE.Euler(); private p = new THREE.Vector3(); private one = new THREE.Vector3(1, 1, 1); private zero = new THREE.Vector3(0, 0, 0);
   private seed = 4711; private rnd() { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
-  constructor(roads: Road[], private groundY: (x: number, z: number) => number, n = 14) {
+  constructor(roads: Road[], private groundY: (x: number, z: number, h: number) => number, n = 14) {
     this.group.name = 'velos';
     for (const r of roads) { if (r.b || r.tu || r.p.length < 2) continue; if (!(r.c === 'cycleway' || (r.cy && (r.cy[0] || r.cy[1])))) continue;
       const cum = [0]; for (let i = 1; i < r.p.length; i++) cum.push(cum[i - 1] + Math.hypot(r.p[i][0] - r.p[i - 1][0], r.p[i][1] - r.p[i - 1][1])); if (cum[cum.length - 1] >= 60) this.cand.push({ r, L: cum[cum.length - 1], cum }); }
@@ -47,7 +47,7 @@ export class Velos {
       v.s += v.dir * v.v * dt; if (v.s > c.L) { v.s = c.L; v.dir = -1; } else if (v.s < 0) { v.s = 0; v.dir = 1; }
       const [x, z, ux, uz] = this.at(c, v.s), dx = ux * v.dir, dz = uz * v.dir, off = (c.r.c === 'cycleway' ? Math.min(0.6, c.r.w / 4) : c.r.w / 2 - 0.75) + v.side;
       v.x = x - dz * off; v.z = z + dx * off; const th = Math.atan2(dx, dz); let dh = th - v.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; v.h += dh * Math.min(1, dt * 6);
-      this.e.set(0, v.h, 0); this.q.setFromEuler(this.e); this.p.set(v.x, this.groundY(v.x, v.z) + 0.02, v.z); this.m.compose(this.p, this.q, this.one); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m);
+      this.e.set(0, v.h, 0); this.q.setFromEuler(this.e); this.p.set(v.x, this.groundY(v.x, v.z, v.h) + 0.02, v.z); this.m.compose(this.p, this.q, this.one); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m);
     });
     this.bike.instanceMatrix.needsUpdate = true; this.shirt.instanceMatrix.needsUpdate = true;
   }
