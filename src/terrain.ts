@@ -95,6 +95,10 @@ export class Terrain {
     return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
   }
 
+  /** P-C D5: Ebene für etwas, das in Richtung h (0 = +z) unterwegs ist. Liegt ein hohes Deck quer darüber (läuft 8 m voraus oder zurück nicht weiter),
+   *  gehört es auf den Boden → Rückgabe Bodenhöhe als ref für height(); sonst undefined (Deck bzw. normales Gelände). */
+  under(x: number, z: number, h: number): number | undefined { const b = this.bridgeAt(x, z); if (isNaN(b)) return undefined; const g = this.ground(x, z); if (b - g <= 3.2) return undefined;
+    const sx = Math.sin(h) * 8, sz = Math.cos(h) * 8; return isNaN(this.bridgeAt(x + sx, z + sz)) || isNaN(this.bridgeAt(x - sx, z - sz)) ? g : undefined; }
   bridgeAt(x: number, z: number): number { const o = this.other(x, z); return o ? o.bridgeAtOwn(x, z) : this.bridgeAtOwn(x, z); }
   bridgeAtOwn(x: number, z: number) {
     const i = Math.round((x - this.x0) / this.bridgeRes), j = Math.round((z - this.z0) / this.bridgeRes);

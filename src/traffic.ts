@@ -258,7 +258,7 @@ export class Traffic {
   }
 
   /** 14zg: Höhe mit Ebene (Tunnel oder Gelände), gemerkt je Fahrzeug */
-  private hy(c: any, x: number, z: number) { const T = this.terrain; const ref = c.ty ?? (isNaN(T.tunnelAt(x, z)) ? undefined : -1e6); const y = T.height(x, z, ref); c.ty = y; return y; }
+  private hy(c: any, x: number, z: number) { const T = this.terrain; const ref = c.ty ?? (isNaN(T.tunnelAt(x, z)) ? T.under(x, z, c.h) : -1e6); const y = T.height(x, z, ref); c.ty = y; return y; }
   private draw() {
     let i = 0, ib = 0;
     for (const c of this.cars) {
@@ -275,7 +275,7 @@ export class Traffic {
     }
     i = 0;
     for (const p of this.peds) {
-      if (p.alive) { this.e.set(0, p.h, 0); this.q.setFromEuler(this.e); this.p.set(p.x, this.terrain.height(p.x, p.z) + p.y0, p.z); this.sc.set(1, 1, 1); }
+      if (p.alive) { this.e.set(0, p.h, 0); this.q.setFromEuler(this.e); this.p.set(p.x, this.terrain.height(p.x, p.z, this.terrain.under(p.x, p.z, p.h)) + p.y0, p.z); this.sc.set(1, 1, 1); }
       else this.sc.set(0, 0, 0);
       this.m.compose(this.p, this.q, this.sc); this.pbody.setMatrixAt(i, this.m); this.phead.setMatrixAt(i, this.m); i++;
     }

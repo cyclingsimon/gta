@@ -852,7 +852,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       for (const [x0, z0, y0, x1, z1, y1] of railSlabs) { const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(x1 - x0, z1 - z0), ym = (y0 + y1) / 2, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, nx = Math.cos(yaw), nz = -Math.sin(yaw);
         if (ym - terrain.ground(xm, zm) < 1.2) continue; const pitch = -Math.atan2(y1 - y0, len);
         put(new THREE.BoxGeometry(5.2, 0.9, len + 1), xm, ym - 0.4, zm, yaw, pitch); for (const sd of [-1, 1]) put(new THREE.BoxGeometry(0.2, 0.7, len + 1), xm + nx * sd * 2.5, ym + 0.4, zm + nz * sd * 2.5, yaw, pitch);
-        for (const [ex, ez, ey] of [[x0, z0, y0], [x1, z1, y1]]) { const ge = terrain.ground(ex, ez); if (ey - ge > 0.5 || true) put(new THREE.BoxGeometry(5.6, Math.max(1, ey - Math.min(ge, terrain.ground(xm, zm)) + 0.5), 1.2), ex, (ey + Math.min(ge, terrain.ground(xm, zm))) / 2 - 0.5, ez, yaw, 0); } } // Widerlager
+        for (const [ex, ez, ey] of [[x0, z0, y0], [x1, z1, y1]]) { const ge = terrain.ground(ex, ez); put(new THREE.BoxGeometry(5.6, Math.max(1, ey - Math.min(ge, terrain.ground(xm, zm)) + 0.5), 1.2), ex, (ey + Math.min(ge, terrain.ground(xm, zm))) / 2 - 0.5, ez, yaw, 0); } } // Widerlager
       if (geos.length) { const bm = mergeGeometries(geos.map((g) => { const ng = g.index ? g.toNonIndexed() : g; ng.deleteAttribute('uv'); return ng; }), false);
         if (bm) { const mesh = new THREE.Mesh(bm, toon('#B7B3AA')); mesh.name = 'bruecken-koerper'; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); } } }
     // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)

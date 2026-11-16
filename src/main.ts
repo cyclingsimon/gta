@@ -1029,7 +1029,7 @@ function placeCar(x: number, z: number, heading?: number, car: Vehicle = players
   // Falls doch eingeklemmt: Richtung drehen, bis frei
   for (let i = 0; i < 16 && car.blocked(car.x, car.z, car.heading); i++) car.heading += Math.PI / 8;
   car.speed = 0;
-  { const t = terrain.tunnelAt(car.x, car.z); car.y = terrain.height(car.x, car.z, !isNaN(t) && terrain.ground(car.x, car.z) > t + 3 ? -1e6 : undefined); } // 14zg: Strasse im Tunnel → unten
+  { const t = terrain.tunnelAt(car.x, car.z); car.y = terrain.height(car.x, car.z, !isNaN(t) && terrain.ground(car.x, car.z) > t + 3 ? -1e6 : terrain.under(car.x, car.z, car.heading)); } // 14zg: Strasse im Tunnel → unten
   const pl = players.find((q) => q.car === car); if (pl) updateCamera(0, true, pl);
 }
 
@@ -1626,7 +1626,7 @@ function qaReport() {
     add('G7', 'Einsätze erreichbar', r.filter(Boolean).length, missions.length, r.every(Boolean)); }
   // G8 (R6): Brückendeck auf Uferhöhe – Deck weicht höchstens 1 m von der Linie zwischen den Brückenköpfen ab
   if (cityData) { let n = 0, bad = 0, worst = 0; const ex: any[] = [];
-    for (const r of cityData.roads) { if (!r.b || (r as any).ramp || r.p.length < 2) continue;
+    for (const r of cityData.roads) { if (!r.b || r.p.length < 2) continue;
       const a = r.p[0], b = r.p[r.p.length - 1]; const ha = terrain.height(a[0], a[1]), hb = terrain.height(b[0], b[1]);
       let L = 0; const segs: number[] = [0]; for (let i = 1; i < r.p.length; i++) { L += Math.hypot(r.p[i][0] - r.p[i - 1][0], r.p[i][1] - r.p[i - 1][1]); segs.push(L); }
       if (L < 8) continue; n++;
