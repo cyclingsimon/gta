@@ -1,5 +1,13 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-17a  Strassenbild
+- Blaue Strassennamenschilder an Kreuzungen (Namen aus OpenStreetMap)
+- Bahn: Fahrleitungsmasten mit Ausleger und Fahrdraht über allen offenen Gleisen
+- Schachtdeckel in der Fahrbahn und Einlaufroste am Strassenrand
+- Tempo-30-Zonen: Zonensignal und grosse «30» auf der Fahrbahn, wo Quartierstrassen von Hauptstrassen abzweigen (Annahme: Quartierstrassen = Zone 30)
+- Deutlich mehr parkierte Autos, jedes in einem markierten Parkfeld
+- Brücken: Fahrstreifen-, Velo- und Busmarkierung wie auf der übrigen Strasse (Seebrücke), Randlinien auch auf Rampen
+
 2026-11-16b  Unterführungen
 - In Unterführungen bleiben Ambulanz (nach «Zurücksetzen»), Verkehr und Fussgänger unten auf der Strasse statt oben auf der Brücke
 
