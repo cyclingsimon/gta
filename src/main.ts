@@ -1728,6 +1728,8 @@ if (location.search.includes('test')) {
     busCam: (k: number | string = 0) => { if (typeof k === 'string' && buses) { const i = buses.buses.findIndex((b) => buses!.lines[b.line].ref === k); if (i < 0) return null; k = i; } if (!buses || !buses.buses[k as number]) return null; const b = buses.buses[k as number], sg = b.segs[0]; const h = sg.rotation.y; (window as any).__cam = [sg.position.x + Math.sin(h) * 14 + Math.cos(h) * 6, sg.position.y + 4, sg.position.z + Math.cos(h) * 14 - Math.sin(h) * 6, sg.position.x, sg.position.y + 1.5, sg.position.z]; return buses.lines[b.line].ref; },
     busRear: (k = 0) => { if (!buses || !buses.buses[k]) return null; const b = buses.buses[k], sg = b.segs[b.segs.length - 1]; const h = sg.rotation.y; (window as any).__cam = [sg.position.x - Math.sin(h) * 13, sg.position.y + 3, sg.position.z - Math.cos(h) * 13, sg.position.x, sg.position.y + 1.6, sg.position.z]; return buses.lines[b.line].ref; },
     traffic: () => traffic ? traffic.check() : null,
+    trafficRaw: () => traffic,
+    ud: (name: string) => world.group.getObjectByName(name)?.userData,
     siren: (on: boolean) => { car.siren = on; },
     fun: () => fun ? { kegel: fun.hops.filter((o) => o.kind === 0).length, eimer: fun.hops.filter((o) => o.kind === 1).length, herzen: fun.heartTotal, gefunden: fun.heartCount, boings: fun.stats.boings, fliegen: fun.hops.filter((o) => o.t > 0).length } : null,
     funHit: () => { const o = fun!.hops[0]; const h = o.h0; placeCar(o.x0 - Math.sin(h) * 9, o.z0 - Math.cos(h) * 9, h); car.x = o.x0 - Math.sin(h) * 1.5; car.z = o.z0 - Math.cos(h) * 1.5; car.heading = h; car.speed = 9; return [Math.round(o.x0), Math.round(o.z0)]; },

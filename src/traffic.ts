@@ -65,7 +65,7 @@ export class Traffic {
     const ph = new THREE.SphereGeometry(0.22, 8, 6); ph.translate(0, 1.42, 0);
     this.pbody = new THREE.InstancedMesh(pb, toon('#ffffff'), N_PEDS);
     this.phead = new THREE.InstancedMesh(ph, toon('#ffffff'), N_PEDS);
-    for (let i = 0; i < N_CARS; i++) this.body.setColorAt(i, new THREE.Color(i % 6 === 3 ? (i % 12 === 3 ? '#F4F4F2' : '#F2C418') : CAR_COLORS[i % CAR_COLORS.length]));
+    for (let i = 0; i < N_CARS; i++) this.body.setColorAt(i, new THREE.Color(CAR_COLORS[i % CAR_COLORS.length]));
     for (let i = 0; i < N_PEDS; i++) { this.pbody.setColorAt(i, new THREE.Color(PED_COLORS[i % PED_COLORS.length])); this.phead.setColorAt(i, new THREE.Color(SKIN[i % SKIN.length])); }
     for (const im of [this.body, this.cabin, this.pbody, this.phead]) { im.frustumCulled = false; im.name = 'traffic'; this.group.add(im); }
     // VBL-Bus (blau), 12 m
@@ -269,7 +269,7 @@ export class Traffic {
       if (c.alive) { const f = c.fly! > 0, ox = f ? c.fx! : 0, oz = f ? c.fz! : 0;
         this.e.set(f ? c.roll || 0 : 0, c.h + (f ? c.spin! : 0), 0); this.q.setFromEuler(this.e);
         this.p.set(c.x + ox, this.hy(c, c.x + ox, c.z + oz) + (f ? c.fy! : 0), c.z + oz);
-        const sq = f && c.fy! < 0.3 && c.fly! < 1.5 ? 0.85 : 1, k = i % 6; /* 17b: Lieferwagen (höher, länger) und Kleinwagen */ const sw = k === 3 ? 1.06 : k === 5 ? 0.9 : 1, sh = k === 3 ? 1.42 : k === 5 ? 0.93 : 1, sl = k === 3 ? 1.18 : k === 5 ? 0.8 : 1; this.sc.set(sw / sq, sh * sq, sl / sq); }
+        const sq = f && c.fy! < 0.3 && c.fly! < 1.5 ? 0.85 : 1; this.sc.set(1 / sq, sq, 1 / sq); }
       else this.sc.set(0, 0, 0);
       this.m.compose(this.p, this.q, this.sc); this.body.setMatrixAt(i, this.m); this.cabin.setMatrixAt(i, this.m); i++;
     }
