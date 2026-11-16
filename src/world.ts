@@ -9,6 +9,7 @@ import { buildStops, buildLamps, realBenchGeometry } from './real/props';
 import { buildParkedCars, buildParkedVelos } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
 import { strassenschilder } from './schilder';
+import { buildFahrleitung } from './bahnmast';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape } from './terrain';
@@ -1084,6 +1085,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const drl = drape(pos, col, terrain, 12);
     if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25; } // 16a: Gleis auf der Bahnbrücke
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
+    { const fl = buildFahrleitung(d.rail.map((l: any) => l.p || l), (x, z) => terrain.railY(x, z), (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (fl) group.add(fl); } // 17a
   }
 
   if (d.shelters?.length || d.wagenbach) group.add(bahnhofExtras(d, terrain));
