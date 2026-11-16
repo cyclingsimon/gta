@@ -10,6 +10,7 @@ import { buildParkedCars, buildParkedVelos } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
 import { strassenschilder } from './schilder';
 import { buildFahrleitung } from './bahnmast';
+import { buildSchachtdeckel } from './deckel';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape } from './terrain';
@@ -1069,6 +1070,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         posts.forEach(([x, z, y], k) => { m4.makeTranslation(x, y, z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitplanken'; group.add(chunkInstanced(im, 1000)); }
       console.log('[bau] Leitplanken-Pfosten', posts.length); }
     kantonsPaket(d, props, terrain, group, vAt, nk, sideVortritt);
+    { const sd = buildSchachtdeckel(d.roads, (x, z) => terrain.height(x, z)); if (sd) group.add(sd); } // 17a
     strassenschilder(d, terrain, group, new THREE.MeshLambertMaterial({ color: '#8C9299' }), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), 408); // 17a
     { const onPath = ([x, z]: number[]) => { const gx = Math.floor(x / 20), gz = Math.floor(z / 20); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of sidePath.get(`${gx + a},${gz + b}`) || []) if (Math.hypot(q[0] - x, q[1] - z) < q[2]) return true; return false; };
       if (sidePath.size) { const keep = leitpf.filter((p) => !onPath(p)); leitpf.length = 0; leitpf.push(...keep); } }
