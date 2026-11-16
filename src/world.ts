@@ -10,6 +10,7 @@ import { buildParkedCars, buildParkedVelos, lastParkedSpots } from './real/cars'
 import { SIGN_PLACES } from './signPlaces';
 import { strassenschilder } from './schilder';
 import { buildFahrleitung } from './bahnmast';
+import { buildBahnsignale } from './bahnsignal';
 import { buildSchachtdeckel } from './deckel';
 import { buildZone30 } from './zone30';
 import { buildWanderwegweiser } from './wanderweg';
@@ -1097,6 +1098,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25 + (drl.col![i] < 0.1 ? 0.06 : drl.col![i] < 0.23 ? 0.02 : 0); } // 16a: Gleis auf der Bahnbrücke (17a: Schienen bleiben oben)
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
     { const fl = buildFahrleitung(d.rail.map((l: any) => l.p || l), (x, z) => terrain.railY(x, z), (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), (x, z) => terrain.bridgeAt(x, z)); if (fl) group.add(fl); } // 17a
+    { const bs = buildBahnsignale(d.rail.map((l: any) => l.p || l), (x, z) => terrain.railY(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (bs) group.add(bs); } // 17c
   }
 
   if (d.shelters?.length || d.wagenbach) group.add(bahnhofExtras(d, terrain));
