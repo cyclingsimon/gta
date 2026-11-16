@@ -24,17 +24,18 @@ export function buildWanderwegweiser(d: CityData, yOf: (x: number, z: number) =>
     if (!ok) continue; done.push([jx, jz]); const y = yOf(px, pz); poles.push([px, pz, y, Math.min(3, signs.length)]);
     signs.slice(0, 3).forEach((s, n) => panels.push({ x: px, z: pz, y: y + 2.0 + n * 0.36, ux: s.u[0], uz: s.u[1], txt: s.txt })); }
   if (!panels.length) return null;
-  const names = [...new Set(panels.map((p) => p.txt))], RH = 48, W = 256, cv = document.createElement('canvas'); cv.width = W; cv.height = THREE.MathUtils.ceilPowerOfTwo(names.length * 2 * RH); const g = cv.getContext('2d')!;
+  // P-C W1: Atlas mit 8 Spalten (2048 breit) statt einer – sonst bis 32 768 px hoch (über der Leinwandgrenze der Browser)
+  const names = [...new Set(panels.map((p) => p.txt))], RH = 48, W = 256, COLS = 8, cv = document.createElement('canvas'); cv.width = W * COLS; cv.height = THREE.MathUtils.ceilPowerOfTwo(Math.ceil(names.length * 2 / COLS) * RH); const g = cv.getContext('2d'); if (!g) return null;
   names.forEach((t, i) => { const [nm, zeit] = t.split('|');
-    for (const side of [0, 1]) { const y0 = (i * 2 + side) * RH; g.save(); if (side) { g.translate(W, 0); g.scale(-1, 1); }
+    for (const side of [0, 1]) { const j = i * 2 + side, x0 = (j % COLS) * W, y0 = Math.floor(j / COLS) * RH; g.save(); g.translate(x0, 0); if (side) { g.translate(W, 0); g.scale(-1, 1); }
       g.fillStyle = '#F6C915'; g.beginPath(); g.moveTo(2, y0 + 4); g.lineTo(W - 30, y0 + 4); g.lineTo(W - 3, y0 + RH / 2); g.lineTo(W - 30, y0 + RH - 4); g.lineTo(2, y0 + RH - 4); g.closePath(); g.fill(); g.strokeStyle = '#2A2A2A'; g.lineWidth = 2; g.stroke(); g.restore();
       g.fillStyle = '#17181A'; g.textBaseline = 'middle'; let fs = 22; g.font = `bold ${fs}px sans-serif`; while (g.measureText(nm).width > 130 && fs > 12) { fs--; g.font = `bold ${fs}px sans-serif`; }
-      g.textAlign = 'left'; g.fillText(nm, side ? 36 : 10, y0 + RH / 2 + 1); g.font = '16px sans-serif'; g.textAlign = 'right'; g.fillText(zeit, side ? W - 10 : W - 36, y0 + RH / 2 + 1); } });
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const pos: number[] = [], uv: number[] = [], L = 1.4, H = 0.265, V = cv.height;
+      g.textAlign = 'left'; g.fillText(nm, x0 + (side ? 36 : 10), y0 + RH / 2 + 1); g.font = '16px sans-serif'; g.textAlign = 'right'; g.fillText(zeit, x0 + (side ? W - 10 : W - 36), y0 + RH / 2 + 1); } });
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.onUpdate = () => { cv.width = cv.height = 1; }; // P-C W2: Leinwand nach dem Hochladen freigeben
+  const pos: number[] = [], uv: number[] = [], L = 1.4, H = 0.265, V = cv.height, UW = cv.width;
   for (const p of panels) { const i = names.indexOf(p.txt), ax = p.x + p.ux * 0.06, az = p.z + p.uz * 0.06, bx = p.x + p.ux * (L + 0.06), bz = p.z + p.uz * (L + 0.06);
-    for (const side of [0, 1]) { const v0 = 1 - ((i * 2 + side) * RH + RH) / V, v1 = 1 - ((i * 2 + side) * RH) / V, nx = -p.uz, nz = p.ux, e = side ? -0.012 : 0.012;
-      const A = [ax + nx * e, p.y, az + nz * e], B = [bx + nx * e, p.y, bz + nz * e], C = [bx + nx * e, p.y + H, bz + nz * e], D = [ax + nx * e, p.y + H, az + nz * e]; const [ua, ub] = side ? [1, 0] : [0, 1];
+    for (const side of [0, 1]) { const j = i * 2 + side, cu = (j % COLS) * W / UW, cw = W / UW, row = Math.floor(j / COLS), v0 = 1 - (row * RH + RH) / V, v1 = 1 - (row * RH) / V, nx = -p.uz, nz = p.ux, e = side ? -0.012 : 0.012;
+      const A = [ax + nx * e, p.y, az + nz * e], B = [bx + nx * e, p.y, bz + nz * e], C = [bx + nx * e, p.y + H, bz + nz * e], D = [ax + nx * e, p.y + H, az + nz * e]; const [ua, ub] = side ? [cu + cw, cu] : [cu, cu + cw];
       const tri = side ? [[A, ua, v0], [C, ub, v1], [B, ub, v0], [A, ua, v0], [D, ua, v1], [C, ub, v1]] : [[A, ua, v0], [B, ub, v0], [C, ub, v1], [A, ua, v0], [C, ub, v1], [D, ua, v1]];
       for (const [P, u, v] of tri as [number[], number, number][]) { pos.push(P[0], P[1], P[2]); uv.push(u, v); } } }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));

@@ -34,13 +34,13 @@ export function strassenschilder(d: CityData, terrain: Terrain, group: THREE.Gro
     [A, B].forEach((s, n) => { if (!names.has(s.r.n)) names.set(s.r.n, names.size); panels.push({ x: px, z: pz, y: y + 2.5 + n * 0.37, ux: s.u[0], uz: s.u[1], name: s.r.n }); });
   }
   if (!panels.length) { console.log('[bau] Strassenschilder 0, Knoten', at.size); return 0; }
-  const CW = 256, RH = 40, COLS = 8, rows = Math.ceil(names.size / COLS), cv = document.createElement('canvas'); cv.width = CW * COLS; cv.height = THREE.MathUtils.ceilPowerOfTwo(Math.max(1, rows) * RH); const g = cv.getContext('2d')!;
+  const CW = 256, RH = 40, COLS = 8, rows = Math.ceil(names.size / COLS), cv = document.createElement('canvas'); cv.width = CW * COLS; cv.height = THREE.MathUtils.ceilPowerOfTwo(Math.max(1, rows) * RH); const g = cv.getContext('2d'); if (!g) return 0;
   const wOf = new Map<string, number>();
   for (const [nm, i] of names) { const x0 = (i % COLS) * CW, y0 = Math.floor(i / COLS) * RH; let fs = 25; g.font = `bold ${fs}px sans-serif`; while (g.measureText(nm).width > CW - 22 && fs > 13) { fs -= 1; g.font = `bold ${fs}px sans-serif`; }
     const tw = Math.min(CW - 4, Math.ceil(g.measureText(nm).width) + 22); wOf.set(nm, tw);
     g.fillStyle = '#fff'; g.fillRect(x0, y0 + 1, tw, RH - 2); g.fillStyle = '#1B4FA0'; g.fillRect(x0 + 2, y0 + 3, tw - 4, RH - 6); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(nm, x0 + 11, y0 + RH / 2 + 1, CW - 22); }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const pos: number[] = [], uv: number[] = [], H = 0.32, V = cv.height, U = cv.width;
+  const pos: number[] = [], uv: number[] = [], H = 0.32, V = cv.height, U = cv.width; tex.onUpdate = () => { cv.width = cv.height = 1; }; // P-C W2
   for (const p of panels) { const i = names.get(p.name)!, tw = wOf.get(p.name)!, L = H * tw / (RH - 2), x0 = (i % COLS) * CW, y0 = Math.floor(i / COLS) * RH;
     const u0 = x0 / U, u1 = (x0 + tw) / U, v0 = 1 - (y0 + RH - 1) / V, v1 = 1 - (y0 + 1) / V, nx = -p.uz, nz = p.ux;
     for (const side of [0, 1]) { const e = side ? -0.012 : 0.012, ax = p.x + p.ux * 0.06 + nx * e, az = p.z + p.uz * 0.06 + nz * e, bx = p.x + p.ux * (L + 0.06) + nx * e, bz = p.z + p.uz * (L + 0.06) + nz * e;

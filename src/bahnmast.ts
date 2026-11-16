@@ -3,7 +3,9 @@ import * as THREE from 'three';
 /** 17a: Fahrleitung der Bahn – Masten mit Ausleger alle ~50 m neben dem Gleis, Fahrdraht und Tragseil darüber.
  *  lines = sichtbare Gleisachsen (ohne Tunnel). railY = Gleishöhe (auch auf Bahnbrücken), frei = Mast darf hier stehen.
  *  Ein Netz, Vertexfarben, keine Kollision. */
-export function buildFahrleitung(lines: number[][][], railY: (x: number, z: number) => number, groundY: (x: number, z: number) => number, frei: (x: number, z: number) => boolean): THREE.Mesh | null {
+export function buildFahrleitung(lines: number[][][], railY: (x: number, z: number) => number, groundY: (x: number, z: number) => number, frei: (x: number, z: number) => boolean, deckAt: (x: number, z: number) => number = () => NaN): THREE.Mesh | null {
+  /** P-C W3: unter einer Strassenbrücke (Deck weniger als 8 m über dem Gleis) keine Drähte und keine Masten */
+  const unterDeck = (x: number, z: number) => { const b = deckAt(x, z); return !isNaN(b) && b - railY(x, z) > 2 && b - railY(x, z) < 8; };
   const pos: number[] = [], col: number[] = [];
   const C = (hex: string) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
   const quad = (a: number[], b: number[], c: number[], d: number[], k: number[]) => { for (const p of [a, b, c, a, c, d]) { pos.push(p[0], p[1], p[2]); col.push(k[0], k[1], k[2]); } };
@@ -19,10 +21,10 @@ export function buildFahrleitung(lines: number[][][], railY: (x: number, z: numb
     let acc = 25; // erster Mast 25 m nach Linienanfang
     for (let i = 0; i + 1 < l.length; i++) { const A = l[i], B = l[i + 1], sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 0.5) continue; const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl;
       // Fahrdraht + Tragseil (dünne Bänder), je Gleisstück einmal (Doppelspur-Duplikate über Zellen ausfiltern)
-      const wk = Math.round((A[0] + B[0]) / 4) + ',' + Math.round((A[1] + B[1]) / 4); if (!wcell.has(wk)) { wcell.add(wk); const ya = railY(A[0], A[1]), yb = railY(B[0], B[1]);
+      const wk = Math.round((A[0] + B[0]) / 4) + ',' + Math.round((A[1] + B[1]) / 4); let zu = false; for (let q = 0; q <= sl && !zu; q += 8) zu = unterDeck(A[0] + ux * q, A[1] + uz * q); if (!wcell.has(wk) && !zu) { wcell.add(wk); const ya = railY(A[0], A[1]), yb = railY(B[0], B[1]);
         for (const [h, w] of [[5.5, 0.07], [6.5, 0.05]]) quad([A[0] - uz * w, ya + h, A[1] + ux * w], [A[0] + uz * w, ya + h, A[1] - ux * w], [B[0] + uz * w, yb + h, B[1] - ux * w], [B[0] - uz * w, yb + h, B[1] + ux * w], WIRE); }
       while (acc <= sl) { const x = A[0] + ux * acc, z = A[1] + uz * acc; acc += 50;
-        const ck = Math.round(x / 14) + ',' + Math.round(z / 14); if (cell.has(ck)) continue;
+        const ck = Math.round(x / 14) + ',' + Math.round(z / 14); if (cell.has(ck) || unterDeck(x, z)) continue;
         for (const sd of [1, -1]) { const mx = x - uz * 3.1 * sd, mz = z + ux * 3.1 * sd; if (!frei(mx, mz)) continue;
           cell.add(ck); nMast++; const yr = railY(x, z), g0 = groundY(mx, mz), yg = yr - g0 > 2 ? yr - 0.6 : Math.min(g0, yr); // auf Viadukten steht der Mast auf der Brücke, nicht unten im Trottoir
           beam([mx, yg - 0.3, mz], [mx, yr + 7.4, mz], 0.24, MAST);
