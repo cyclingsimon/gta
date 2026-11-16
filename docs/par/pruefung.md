@@ -1,5 +1,92 @@
 # P-C Unabhängige Prüfung & Fehlerjagd
 
+## 16.11.2026 tagsüber – Prüflauf 17a (nur Code-Lesung)
+
+Prüfgegenstand: `d77becc..51d064e` (9 Commits 17a: Strassennamenschilder, Fahrleitung, Schachtdeckel, Zone 30, Wanderwegweiser,
+Normmarkierung und Randlinien auf Brücken, Gleise mit Schienen, 450/700 geparkte Autos mit Parkfeldern). `claude/13i-gebiet-a` per Fast-Forward
+hineingemergt.
+
+**Ausgeführt:**
+- `npx tsc --noEmit -p .` → ok.
+- Skript `/tmp/pcw/ww.py` liest nur Daten: Es bildet die Auswahl in `wanderweg.ts` (Verzweigungen, 300 m Abstand, Zielorte aus
+  `SIGN_PLACES`) für alle 25 Gegenden nach. **Ohne** die Pfosten-Prüfung `frei()` – die echten Zahlen sind deshalb eher etwas kleiner.
+
+**Nicht ausgeführt:** kein Build, kein Browser. Alle Befunde stammen aus Code-Lesung oder dem Skript.
+
+`src/terrain.ts under()` und `traffic.ts hy`/Fussgänger liegen **vor** `d77becc` (Commit c96050e, 16b) und haben sich im Prüfbereich
+nicht geändert. Ich habe sie kurz gelesen: kein Befund.
+
+### Befunde
+
+| # | Schwere | Befund | Szenario → falsches Ergebnis | Vertrauen | Beleg |
+|---|---|---|---|---|---|
+| W1 | 1 oder 3 (je Browser) | Wanderweg-Atlas wird **256 × 32 768 px** gross | Die Atlashöhe ist `ceilPowerOfTwo(Namen × 2 × 48)`, also eine einzige Spalte. Skript: Luzern 187, a10 195, a17 187, a6 182, Nord 175 verschiedene Tafeltexte → 32 768 px; alle übrigen Gegenden → 16 384. Chrome und Firefox erlauben höchstens 32 767 px je Seite. Bei 32 768 ist die Leinwand unbrauchbar: je nach Browser liefert `getContext` `null` → `g.save()` wirft → `buildWorld` bricht ab, Start in Luzern unmöglich (C1-Ausweichen landet wieder in Luzern) – **oder** alle Tafeln bleiben leer. Wo es klappt, sind es 32 MB + Mip-Stufen GPU je Gegend (Desktop mit MAX_TEXTURE_SIZE 32 768). Am Handy (MAX_TEXTURE_SIZE 4096/8192) verkleinert three.js auf 32 × 4096 px → Schrift unlesbar | hoch für Grösse und Grenzwert (Skript), mittel für die Folge (ohne `frei()` gerechnet, Browser nicht getestet) | `src/wanderweg.ts:27`, `:28-32` |
+| W2 | 3 | Canvas-Atlanten bleiben im Arbeitsspeicher | `CanvasTexture` hält die Leinwand: Schilder 2048 × 2048 (Echt, 16 MB) bzw. 2048 × 1024 (Leicht, 8 MB) je Gegend, dazu W1. Am iPhone gilt ein Gesamtlimit für Leinwand-Speicher (Safari: «Total canvas memory use exceeds the maximum limit»). Wird es erreicht, liefert `getContext` `null` → nächster `canvasTex` wirft. Nach Entladen gibt der GC frei, aber Stufe A + Stufe B + Nachbar liegen gleichzeitig vor | mittel (Grenzwert je Gerät verschieden, nicht gemessen) | `src/schilder.ts:37`, `src/wanderweg.ts:27` |
+| W3 | 4 | Fahrleitung sticht durch Strassenbrücken | Die 16a-Hebung garantiert nur 5.6 m Deck über dem Gleis (Fahrbahn ≈ Boden + 6.2 m). Fahrdraht liegt bei +5.5, Tragseil bei +6.5, Ausleger bei +6.5, Mast bis +7.4 → an jeder knapp gehobenen Überführung liegt das Tragseil **über** der Fahrbahn der Brücke (Draht quer über die Strasse), der Fahrdraht steckt in der Platte | hoch (Rechnung) | `src/bahnmast.ts:23-24`, `src/world.ts:783` (5.6 m) |
+| W4 | 5 | Schachtdeckel und Zone-30-Zeichen unter hohen Decks oben auf dem Deck | `yOf = terrain.height(x, z)` ohne `under()` → Deckel der unterführten Strasse liegen quer auf der Überführung | hoch | `src/world.ts:1075-1076` |
+| W5 | 5 | Schienen-Anhebung über Farbschwellen | Die Gleishöhe auf Bahnbrücken unterscheidet Schiene, Schwelle und Schotter über `col < 0.1 / 0.23` (linear). Wer die Farben ändert, lässt die Schienen auf Brücken verschwinden. Heute stimmt es (#4A4E52 → 0.068, #7A726B → 0.195, #8E847C → 0.27) | hoch | `src/world.ts:1094` |
+
+Ohne Befund geprüft:
+- **Schleifen:** In `deckel.ts` steigen `accD`/`accR` jedes Mal um ≥ 38/45 m, Segmente < 0.5 m werden übersprungen. In `bahnmast.ts` steigt `acc` um 50. In `zone30.ts` ist `i` durch die Länge begrenzt. `dirOf`/`along` laufen auch bei Doppelpunkten weiter. → keine Endlosschleife bei Länge 0.
+- **NaN:** `|| 1` bei `sl`/`L`, `beam` mit `|| 1`.
+- **Wicklung/UV:** Strassenschilder, Wanderwegweiser (beidseitig), Zone-30-Signal (Vorderseite gegen die Einfahrt) und Bodenzeichen «30» (oben = Fahrtrichtung) habe ich nachgerechnet. Text liest sich überall von links nach rechts, die Pfeile zeigen in die Astrichtung.
+- **Speicher beim Entladen:** Alle neuen Netze hängen in `world.group`, auch Gruppen in Gruppen. `freeGroup` läuft rekursiv und gibt Material und `map` frei. Jeder Aufruf erzeugt eigene Materialien, keine geteilten. Kein Leck.
+- **Objekte auf der Fahrbahn:** Pfosten (Schilder, Zone 30, Wanderweg, Masten) stehen nur auf `mask 0 && !isRoad`. Deckel und Bodenzeichen liegen absichtlich auf der Fahrbahn.
+- **`lastParkedSpots`:** wird synchron direkt nach dem Bau gelesen. Die Abschaltung `REAL.parked` lässt den Wert leer → kein Übertrag zwischen Gegenden.
+- **O(n²):** `done.some`/`seen.some`/`names.indexOf` laufen über höchstens ein paar hundert Einträge (Skript: höchstens 142 Pfosten, 393 Tafeln) → unkritisch. Schilder nutzen ein Raster.
+- **Normmarkierung auf Brücken:** trägt das +100-Kennzeichen (bleibt auf dem Deck). Pfeile über `roadDecals` → `terrain.height` → Deck.
+- **Grundsätze:** keine Marken oder Logos (Strassennamen aus OSM, «ZONE 30», Ortsnamen), keine Netzaufrufe.
+
+### Patch-Vorschläge
+
+W1 – Wanderweg-Atlas mehrspaltig wie die Strassenschilder (2048 breit, 8 Spalten; 195 Namen → 2048 × 4096 statt 256 × 32 768):
+```diff
+-  const names = [...new Set(panels.map((p) => p.txt))], RH = 48, W = 256, cv = document.createElement('canvas'); cv.width = W; cv.height = THREE.MathUtils.ceilPowerOfTwo(names.length * 2 * RH); const g = cv.getContext('2d')!;
++  const names = [...new Set(panels.map((p) => p.txt))].slice(0, 336), RH = 48, W = 256, COLS = 8; // höchstens 2048 × 4096
++  const cv = document.createElement('canvas'); cv.width = W * COLS; cv.height = THREE.MathUtils.ceilPowerOfTwo(Math.ceil(names.length * 2 / COLS) * RH); const g = cv.getContext('2d')!;
++  const cellXY = (slot: number) => [(slot % COLS) * W, Math.floor(slot / COLS) * RH];
+   names.forEach((t, i) => { const [nm, zeit] = t.split('|');
+-    for (const side of [0, 1]) { const y0 = (i * 2 + side) * RH; g.save(); if (side) { g.translate(W, 0); g.scale(-1, 1); }
++    for (const side of [0, 1]) { const [x0, y0] = cellXY(i * 2 + side); g.save(); g.translate(x0, 0); if (side) { g.translate(W, 0); g.scale(-1, 1); }
+       … (Pfeil wie bisher) … g.restore();
+-      … g.fillText(nm, side ? 36 : 10, …); … g.fillText(zeit, side ? W - 10 : W - 36, …); } });
++      … g.fillText(nm, x0 + (side ? 36 : 10), …); … g.fillText(zeit, x0 + (side ? W - 10 : W - 36), …); } });
+@@ UV
+-  for (const p of panels) { const i = names.indexOf(p.txt), …
+-    for (const side of [0, 1]) { const v0 = 1 - ((i * 2 + side) * RH + RH) / V, v1 = 1 - ((i * 2 + side) * RH) / V, …; const [ua, ub] = side ? [1, 0] : [0, 1];
++  const idx = new Map(names.map((t, i) => [t, i] as [string, number]));
++  for (const p of panels) { const i = idx.get(p.txt); if (i === undefined) continue; …
++    for (const side of [0, 1]) { const [x0, y0] = cellXY(i * 2 + side), U = cv.width, v0 = 1 - (y0 + RH) / V, v1 = 1 - y0 / V, …;
++      const [ua, ub] = side ? [(x0 + W) / U, x0 / U] : [x0 / U, (x0 + W) / U];
+```
+Zusätzlich als Absicherung in allen drei Atlas-Modulen: `const g = cv.getContext('2d'); if (!g) return null;` (bzw. `0` in `schilder.ts`). Dann fehlen Tafeln, aber die Welt baut weiter.
+
+W2 – Leinwand nach dem Hochladen klein machen (gilt für `schilder.ts`, `wanderweg.ts`, `zone30.ts`, `deckel.ts`):
+```diff
+   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
++  tex.onUpdate = () => { cv.width = cv.height = 1; }; // GPU hat die Pixel – Leinwand-Speicher (iOS-Limit) sofort freigeben
+```
+(Nebenwirkung: Bei WebGL-Kontextverlust fehlt die Textur bis zum Neuladen – das gilt im Spiel ohnehin.)
+
+W3 – Fahrleitung unter Brücken absenken (Deck aus `terrain.bridgeAt`):
+```diff
+-export function buildFahrleitung(lines: number[][][], railY: …, groundY: …, frei: …): THREE.Mesh | null {
++export function buildFahrleitung(lines: number[][][], railY: …, groundY: …, frei: …, deckAt: (x: number, z: number) => number = () => NaN): THREE.Mesh | null {
+@@
+-        for (const [h, w] of [[5.5, 0.07], [6.5, 0.05]]) quad([A[0] - uz * w, ya + h, …
++        const cl = (x: number, z: number, y: number) => { const b = deckAt(x, z); return isNaN(b) || b - y > 8 ? 0 : Math.min(0, b - 1.1 - (y + 6.5)); }; // unter einem Deck: Tragseil 1.1 m unter der Fahrbahn
++        const oa = Math.max(-1.6, cl(A[0], A[1], ya)), ob = Math.max(-1.6, cl(B[0], B[1], yb));
++        for (const [h, w] of [[5.5, 0.07], [6.5, 0.05]]) quad([A[0] - uz * w, ya + h + oa, …], […, ya + h + oa, …], […, yb + h + ob, …], […, yb + h + ob, …], WIRE);
+```
+und in `world.ts` beim Aufruf `(x, z) => terrain.bridgeAt(x, z)` als 5. Argument. Masten unter einem Deck auslassen: In der Mast-Schleife `if (!isNaN(deckAt(x, z))) continue;`.
+
+W4 – Deckel und Zone-30-Zeichen auf der richtigen Ebene:
+```diff
+-    { const sd = buildSchachtdeckel(d.roads, (x, z) => terrain.height(x, z)); if (sd) group.add(sd); } // 17a
++    { const sd = buildSchachtdeckel(d.roads.filter((r) => !r.b), (x, z) => terrain.height(x, z, terrain.under(x, z, 0) ?? undefined)); if (sd) group.add(sd); } // 17a
+```
+(Ohne Fahrtrichtung genügt `h = 0` nur ungefähr. Einfacher und sicher: `terrain.ground(x, z)` für Strassen ohne `r.b`, weil Deckel nur auf Strassen liegen, die keine Brücke sind.)
+
 ## 16.11.2026 00:15 – Prüflauf (vorgezogen, nur Code-Lesung)
 
 Prüfgegenstand: `640e268..62b6bee` (8 Commits 16a: Brückenumbau, Bahnbrücken, Einmündungen auf Decks, Fussbrücken, Konzert-Zeichen,
