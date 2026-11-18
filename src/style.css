@@ -571,3 +571,12 @@ body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Hand
 /* 16a (Simon 15.11.): Distanz zum Ziel war auf dem Handy hinter dem Gas-Knopf – jetzt oben neben dem Tempo */
 body.touch #navbox { top: 14px !important; left: calc(50% + 74px) !important; right: auto !important; }
 body.touch #dist { font-size: 20px !important; white-space: nowrap; }
+/* 18a (Simon 18.11.: «Hinweis beim Laden geht unter»): Bau-Hinweis gross, oben Mitte, mit Puls; bei Baustellen-Bremse gelb */
+#lazy-ind { top: auto; bottom: 96px; font: 400 22px var(--display, var(--font)); letter-spacing: .5px; padding: 10px 22px; border-radius: 14px;
+  background: rgba(20,17,31,.9); border: 3px solid var(--sun, #FFD23F); box-shadow: 0 5px 0 #000; z-index: 30; max-width: 80vw; text-align: center; animation: lazyPuls 1.6s ease-in-out infinite; }
+#lazy-ind.bremse { background: #FFD23F; color: #14111F; border-color: #14111F; }
+#lazy-ind.fertig { animation: none; border-color: #3FD18B; }
+@keyframes lazyPuls { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
+@media (orientation: landscape) { body.touch #lazy-ind { font-size: 15px; padding: 6px 12px; border-width: 2px; animation: none; } }
+@media (orientation: portrait) { body.touch #lazy-ind { font-size: 15px; padding: 6px 12px; border-width: 2px; animation: none; } }
+@media (prefers-reduced-motion: reduce) { #lazy-ind { animation: none; } }

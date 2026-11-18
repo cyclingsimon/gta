@@ -32,20 +32,19 @@ let saved: AmbienceProbe | null = null;
 let lastX = 0, lastZ = 0, mix: AmbienceMix = { music: 0, venue: 0, siren: false, muted: false, hidden: false };
 
 /** Lautstärken je Schicht (relativ; vor AMB_GAIN und Master 0.6). Lauf 2: konservativ – Stadtverkehr deutlich leiser und seltener. */
-export const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0.04, tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05, trolley: 0.02, ship: 0.03 };
+export const VOL = { bus: 0.5, stadt: 0.045, see: 0.07, wald: 0, /* 18a: Wald-Rauschen entfernt (Rückmeldung Simon), Vögel bleiben */ tunnel: 0.12, car: 0.022, gull: 0.025, bird: 0.018, cow: 0.022, gong: 0.035, train: 0.05, bell: 0.05, trolley: 0.02, ship: 0.03 };
 
 export function initAmbience(c: AudioContext, master: AudioNode, sfx: AudioNode) {
   if (ctx) return; ctx = c;
   bus = c.createGain(); bus.gain.value = 0; bus.connect(master);
   const stadt = noiseBed(c, bus, [{ type: 'lowpass', f: 340 }, { type: 'highpass', f: 45 }]);
   const see = noiseBed(c, bus, [{ type: 'bandpass', f: 620, q: 0.6 }, { type: 'lowpass', f: 1600 }], 0.7);
-  const wald = noiseBed(c, bus, [{ type: 'highpass', f: 1400 }, { type: 'lowpass', f: 5200 }], 1.4);
+  // 18a: Wald-Rauschen klang wie Störgeräusch (Simon) → Rauschbett stumm und nicht gestartet (Vögel bleiben)
+  const wald = { g: c.createGain() }; wald.g.gain.value = 0;
   const tun = noiseBed(c, bus, [{ type: 'lowpass', f: 110 }, { type: 'lowpass', f: 160 }], 2.1);
   // Wellen: Bandpass-Mitte und Lautstärke schwanken langsam; Wind im Laub ebenso
   const seeMod = c.createGain(); seeMod.gain.value = 1; see.fl[1].disconnect(); see.fl[1].connect(seeMod); seeMod.connect(see.g);
   lfo(c, seeMod.gain, 0.16, 0.45); lfo(c, see.fl[0].frequency, 0.11, 140);
-  const waldMod = c.createGain(); waldMod.gain.value = 1; wald.fl[1].disconnect(); wald.fl[1].connect(waldMod); waldMod.connect(wald.g);
-  lfo(c, waldMod.gain, 0.07, 0.5); lfo(c, wald.fl[0].frequency, 0.05, 500);
   beds = { stadt: stadt.g, see: see.g, wald: wald.g, tunnel: tun.g };
   // Tunnelhall: Effekte (Motor, Sirene, Hupe) zusätzlich über eine Raumantwort – nur verbunden, solange man im Tunnel ist (spart Rechenzeit)
   wet = c.createGain(); wet.gain.value = 0; wet.connect(master); sfxIn = sfx;

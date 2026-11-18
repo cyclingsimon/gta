@@ -1,5 +1,15 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-18a  Rückmeldungen Simon (Dokument «Luksi Verbesserungen»)
+- Häuser sind wieder feste Hindernisse: Im Modus «Echt» fehlten die 3D-Häuser in der Hinderniskarte (Dach und Boden hoben sich gegenseitig auf) – man konnte durchfahren
+- Autos, Busse, Velos und parkierte Autos stehen auf der Fahrbahn statt 35 cm darin
+- Weniger Ruckeln beim Gegendwechsel: Verkehr, Busse, Züge und Tiere werden nach dem Wechsel nacheinander aufgebaut, die echten 3D-Häuser blenden nach und nach ein statt alles in einem Bild; die nächste Gegend wird bei hohem Tempo früher geladen
+- Bau-Hinweis beim Nachladen gross und gut sichtbar; muss die Ambulanz kurz warten, steht das gelb da
+- Sonnenbergtunnel: Man bleibt nicht mehr im Tunnel hängen (Häuser über der Tunnelachse zählten als Hindernis)
+- KKL hat im Modus «Echt» wieder sein grosses Dach
+- Wald: das Rauschen ist weg (Vögel bleiben)
+- Ambulanz folgt dem Gelände bei hohem Tempo schneller (fuhr bei 250 km/h am Hang teils im Boden oder in der Luft)
+
 2026-11-17c  Mehr Leben am Strassenrand
 - An den Bushaltestellen warten Leute, unter den Fussgängern sind jetzt auch Kinder
 - Bahnsignale und Hektometertafeln am Gleis

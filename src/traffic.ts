@@ -7,6 +7,8 @@ import type { NavGraph } from './nav';
 import type { Terrain } from './terrain';
 import type { Mask } from './world';
 import { toon } from './world';
+/** 18a (Simon 18.11.: «Autos und Velos fahren in der Strasse drin»): Fahrbahn wird 0.33–0.38 m über terrain.height gezeichnet (world.ts ROAD_LAYER) → Fahrzeuge ebenso hoch stellen */
+export const SURF = 0.36;
 
 let N_CARS = 36, N_PEDS = 60;
 const CAR_COLORS = ['#D9473B', '#3E7CC9', '#F2C14E', '#F4F4F2', '#2E3A46', '#7BB662', '#9AA3AD', '#E58A3A', '#6C4FA3', '#1F5E4B'];
@@ -263,12 +265,12 @@ export class Traffic {
     let i = 0, ib = 0;
     for (const c of this.cars) {
       if (c.bus) {
-        if (c.alive) { this.e.set(0, c.h, 0); this.q.setFromEuler(this.e); this.p.set(c.x, this.hy(c, c.x, c.z), c.z); this.sc.set(1, 1, 1); } else this.sc.set(0, 0, 0);
+        if (c.alive) { this.e.set(0, c.h, 0); this.q.setFromEuler(this.e); this.p.set(c.x, this.hy(c, c.x, c.z) + SURF, c.z); this.sc.set(1, 1, 1); } else this.sc.set(0, 0, 0);
         this.m.compose(this.p, this.q, this.sc); this.busBody.setMatrixAt(ib, this.m); this.busWin.setMatrixAt(ib, this.m); ib++; continue;
       }
       if (c.alive) { const f = c.fly! > 0, ox = f ? c.fx! : 0, oz = f ? c.fz! : 0;
         this.e.set(f ? c.roll || 0 : 0, c.h + (f ? c.spin! : 0), 0); this.q.setFromEuler(this.e);
-        this.p.set(c.x + ox, this.hy(c, c.x + ox, c.z + oz) + (f ? c.fy! : 0), c.z + oz);
+        this.p.set(c.x + ox, this.hy(c, c.x + ox, c.z + oz) + SURF + (f ? c.fy! : 0), c.z + oz);
         const sq = f && c.fy! < 0.3 && c.fly! < 1.5 ? 0.85 : 1; this.sc.set(1 / sq, sq, 1 / sq); }
       else this.sc.set(0, 0, 0);
       this.m.compose(this.p, this.q, this.sc); this.body.setMatrixAt(i, this.m); this.cabin.setMatrixAt(i, this.m); i++;

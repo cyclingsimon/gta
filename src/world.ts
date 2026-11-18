@@ -823,6 +823,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     // der Bahnbrücke nur die Strasse – das Gleis sackte dort ab. Jetzt läuft es gerade von Widerlager zu Widerlager, mindestens 5 m über der
     // Strasse; fehlt Höhe, steigt das Gleis beidseits auf 120 m sanft an. Dazu eine Brückenplatte.
     const railSlabs: [number, number, number, number, number, number][] = []; // x0, z0, y0, x1, z1, y1
+    const underpasses: [number, number, number, number[], number[], number][] = []; // 18a: Strasse unter Bahnbrücke: x, z, Schienenhöhe, Strassenstück A–B, Breite
     if (opts.railBridges?.length && !/[?&]altbruecken/.test(location.search)) { const lines: number[][][] = ((d as any).railAll || d.rail || []).map((l: any) => l.p || l);
       const roadsU = d.roads.filter((r) => !r.b && DRV.has(r.c) && r.p.length >= 2);
       const X2 = (a: number[], b: number[], c: number[], e: number[]) => { const o = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); const o3 = o(c, e, a), o4 = o(c, e, b); return o(a, b, c) * o(a, b, e) < 0 && o3 * o4 < 0 ? o3 / (o3 - o4) : -1; };
@@ -835,8 +836,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           let Ltot = 0; for (let k = 0; k + 1 < l.length; k++) Ltot += Math.hypot(l[k + 1][0] - l[k][0], l[k + 1][1] - l[k][1]);
           const pa = at(sa), pb = at(sb), ga = terrain.ground(pa[0], pa[1]), gb = terrain.ground(pb[0], pb[1]);
           let dl = 0; // fehlende Höhe über gekreuzten Strassen
-          for (const r of roadsU) for (let m = 0; m + 1 < r.p.length; m++) { const t = X2(pa, pb, r.p[m], r.p[m + 1]); if (t > 0.02 && t < 0.98) { const x = pa[0] + (pb[0] - pa[0]) * t, z = pa[1] + (pb[1] - pa[1]) * t; dl = Math.max(dl, terrain.ground(x, z) + 5.0 - (ga + (gb - ga) * t)); } }
+          const cr: [number, number, number, number[], number[], number][] = [];
+          for (const r of roadsU) for (let m = 0; m + 1 < r.p.length; m++) { const t = X2(pa, pb, r.p[m], r.p[m + 1]); if (t > 0.02 && t < 0.98) { const x = pa[0] + (pb[0] - pa[0]) * t, z = pa[1] + (pb[1] - pa[1]) * t; dl = Math.max(dl, terrain.ground(x, z) + 5.0 - (ga + (gb - ga) * t)); cr.push([x, z, ga + (gb - ga) * t, r.p[m], r.p[m + 1], r.w]); } }
           dl = dl < 0.3 ? 0 : Math.min(dl, 6); const R = dl ? 120 : 0;
+          for (const c of cr) underpasses.push([c[0], c[1], c[2] + dl, c[3], c[4], c[5]]);
           for (let sq = Math.max(0, sa - R); sq <= Math.min(Ltot, sb + R); sq += 2) { const q = at(sq);
             const y = sq < sa ? terrain.ground(q[0], q[1]) + dl * (1 - (sa - sq) / R) : sq > sb ? terrain.ground(q[0], q[1]) + dl * (1 - (sq - sb) / R) : ga + (gb - ga) * (sq - sa) / (sb - sa) + dl;
             terrain.setRail(q[0], q[1], y, 2.5); }
@@ -862,6 +865,26 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         if (ym - terrain.ground(xm, zm) < 1.2) continue; const pitch = -Math.atan2(y1 - y0, len);
         put(new THREE.BoxGeometry(5.2, 0.9, len + 1), xm, ym - 0.4, zm, yaw, pitch); for (const sd of [-1, 1]) put(new THREE.BoxGeometry(0.2, 0.7, len + 1), xm + nx * sd * 2.5, ym + 0.4, zm + nz * sd * 2.5, yaw, pitch);
         for (const [ex, ez, ey] of [[x0, z0, y0], [x1, z1, y1]]) { const ge = terrain.ground(ex, ez); put(new THREE.BoxGeometry(5.6, Math.max(1, ey - Math.min(ge, terrain.ground(xm, zm)) + 0.5), 1.2), ex, (ey + Math.min(ge, terrain.ground(xm, zm))) / 2 - 0.5, ez, yaw, 0); } } // Widerlager
+      // 18a (Simon 18.11., Bahnhof Sempach-Neuenkirch: «sieht komisch aus»): Unterführung unter einer Bahnbrücke als Betonrahmen statt V-Kerbe im
+      // Bahndamm (das Geländemodell hat dort keine Brücke, nur einen Einschnitt). Seitenwände, Decke und Stirnwände mit Öffnung, wo der Damm steht.
+      let nUp = 0;
+      for (const [cx, cz, yr, A, B, w] of underpasses) { const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, nx = -uz, nz = ux;
+        const y0 = terrain.ground(cx, cz), top = yr - 0.9; if (top - y0 < 3.6) continue; // zu niedrig: kein Rahmen
+        const hw = w / 2 + 0.9;
+        // Damm im sichtbaren Boden: im Modus «Echt» das feine Bodennetz (das Gelände-Raster ist entlang der Strasse eingeebnet)
+        const vs: number[] = []; if (groundMesh) { const G = groundMesh.pos; for (let i = 0; i < G.length; i += 3) { const x = G[i] / 10 - cx, z = G[i + 2] / 10 - cz; if (x * x + z * z < 2500) vs.push(x * ux + z * uz, x * nx + z * nz, G[i + 1] / 10); } }
+        const damm = (s2: number) => { const yb = terrain.ground(cx + ux * s2, cz + uz * s2); let m = -Infinity; for (const o of [-hw - 3, -hw - 1.5, hw + 1.5, hw + 3]) m = Math.max(m, terrain.ground(cx + ux * s2 + nx * o, cz + uz * s2 + nz * o));
+          for (let i = 0; i < vs.length; i += 3) if (Math.abs(vs[i] - s2) < 1.6 && Math.abs(vs[i + 1]) > hw + 0.3 && Math.abs(vs[i + 1]) < hw + 5) m = Math.max(m, vs[i + 2]); return m - yb; };
+        if (damm(0) < 2.5) continue; // kein Damm neben der Strasse (Viadukt, offene Brücke): nichts bauen
+        let sa = 3, sb = 3; while (sa < 40 && damm(-sa) > 1.0) sa += 1.5; while (sb < 40 && damm(sb) > 1.0) sb += 1.5;
+        const yaw = Math.atan2(ux, uz), len = sa + sb, mx = cx + ux * (sb - sa) / 2, mz = cz + uz * (sb - sa) / 2, H = top - y0;
+        for (const sd of [-1, 1]) put(new THREE.BoxGeometry(0.6, H + 0.6, len), mx + nx * sd * (hw + 0.3), y0 - 0.3 + (H + 0.6) / 2, mz + nz * sd * (hw + 0.3), yaw, 0); // Seitenwände
+        put(new THREE.BoxGeometry(2 * hw + 1.2, 1.0, len), mx, top + 0.5, mz, yaw, 0); // Decke
+        const E = 14; for (const [s2, f] of [[-sa, -1], [sb, 1]] as const) { const ex = cx + ux * s2, ez = cz + uz * s2; // Stirnwand: links/rechts der Öffnung und Sturz
+          for (const sd of [-1, 1]) put(new THREE.BoxGeometry(E, H + 1.6, 0.8), ex + nx * sd * (hw + E / 2), y0 - 0.6 + (H + 1.6) / 2, ez + nz * sd * (hw + E / 2), yaw, 0);
+          put(new THREE.BoxGeometry(2 * hw + 0.2, 1.4, 0.8), ex + ux * f * 0.01, top + 0.6, ez + uz * f * 0.01, yaw, 0); }
+        nUp++; if (/[?&]test/.test(location.search)) console.log('[bau]   Unterführung', Math.round(cx), Math.round(cz), 'H', H.toFixed(1), 'sa', sa, 'sb', sb); }
+      if (underpasses.length) console.log('[bau] Bahn-Unterführungen', nUp, 'von', underpasses.length);
       if (geos.length) { const bm = mergeGeometries(geos.map((g) => { const ng = g.index ? g.toNonIndexed() : g; ng.deleteAttribute('uv'); return ng; }), false);
         if (bm) { const mesh = new THREE.Mesh(bm, toon('#B7B3AA')); mesh.name = 'bruecken-koerper'; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); } } }
     // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)
@@ -1297,6 +1320,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   for (const s of special) {
     const [cx, cz] = centroid(s.b.p);
     if (s.kind === 'tor') { if (!b3d) group.add(torbogen(s.b.p, terrain)); landmarks.push({ name: 'Bahnhofstor', x: cx, z: cz }); continue; }
+    if (b3d && s.kind === 'kkl') { // 18a (Simon 18.11.: «beim KKL sollte das Dach sichtbar sein»): swissBUILDINGS3D hat das auskragende Dach nicht → Platte auf das 3D-Haus
+      const xs = s.b.p.map((q) => q[0]), zs = s.b.p.map((q) => q[1]); const minx = Math.min(...xs), maxx = Math.max(...xs), minz = Math.min(...zs), maxz = Math.max(...zs);
+      let top = -Infinity; const P = b3d.pos; for (const m of b3d.meta.buildings) { if (m[5] < minx || m[5] > maxx || m[6] < minz || m[6] > maxz) continue; for (let k = m[1]; k < m[1] + m[2]; k++) top = Math.max(top, P[k * 3 + 1] / 10); }
+      if (!isFinite(top)) top = terrain.ground(cx, cz) + Math.max(s.b.h, 24);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(maxx - minx + 30, 1.2, maxz - minz + 16), toon('#4E5660')); roof.name = 'kkl-dach';
+      roof.position.set((minx + maxx) / 2 + 10, top + 0.4, (minz + maxz) / 2); group.add(roof, outline(roof)); continue; }
     if (b3d && ['wasserturm', 'kkl', 'jesuiten', 'hofkirche', 'tor', 'kispi'].includes(s.kind)) { if (s.kind === 'wasserturm') landmarks.push({ name: 'Wasserturm', x: cx, z: cz }); continue; }
     const G = new THREE.Group(); G.position.y = Math.min(...s.b.p.map(([x, z]) => terrain.ground(x, z))); group.add(G);
     if (s.kind === 'wasserturm') {
@@ -1594,7 +1623,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   await onProgress('Bäume …');
   // ---- Bäume (instanziert) ----
   group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
-  group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z), opts.coarse ? 450 : 700, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6; 17a: 100 → 450/700
+  group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z) + 0.35 /* 18a: auf der Fahrbahn statt darin */, opts.coarse ? 450 : 700, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6; 17a: 100 → 450/700
   if (lastParkedSpots.length) { // 17a: Parkfeld unter jedem geparkten Auto – Asphaltfläche 5.6 × 2.3 m mit weissen Linien an drei Seiten
     const tex = canvasTex(128, 64, (g) => { g.fillStyle = '#77797B'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#ECECE8'; g.fillRect(0, 0, 3, 64); g.fillRect(125, 0, 3, 64); g.fillRect(0, 0, 128, 3); }, false);
     const pos: number[] = [], uv: number[] = [];
@@ -2109,15 +2138,22 @@ function coveredBridge(p: number[][], width: number, terrain: Terrain, flowers =
 function drawB3DFootprints(g: CanvasRenderingContext2D, b: B3D, fx: (x: number) => number, fz: (z: number) => number, minY: number) {
   const P = b.pos, I = b.idx;
   for (const m of b.meta.buildings) {
-    const [, vS, , iS, iC] = m;
+    const [, vS, vC, iS, iC] = m;
+    // 18a: nur die Bodenfläche (Dreiecke bis 1.5 m über dem tiefsten Punkt) – auskragende Dächer (KKL, Vordächer, Lauben) bleiben durchfahrbar.
+    // Häuser ohne Bodenfläche in den Daten: alle Dreiecke wie bisher.
+    let y0 = Infinity; for (let k = vS; k < vS + vC; k++) y0 = Math.min(y0, P[k * 3 + 1]);
+    let floorOnly = false; for (let t = iS; t < iS + iC && !floorOnly; t += 3) { const a = vS + I[t], c = vS + I[t + 1], e = vS + I[t + 2]; if (Math.max(P[a * 3 + 1], P[c * 3 + 1], P[e * 3 + 1]) < y0 + 15) { const ar = (P[c * 3] - P[a * 3]) * (P[e * 3 + 2] - P[a * 3 + 2]) - (P[c * 3 + 2] - P[a * 3 + 2]) * (P[e * 3] - P[a * 3]); if (Math.abs(ar) > 500) floorOnly = true; } }
     g.beginPath();
     for (let t = iS; t < iS + iC; t += 3) {
       const a = vS + I[t], c = vS + I[t + 1], e = vS + I[t + 2];
+      if (floorOnly && Math.max(P[a * 3 + 1], P[c * 3 + 1], P[e * 3 + 1]) >= y0 + 15) continue;
       // nur Dachflächen (Normale nach oben) – Wände haben keine Fläche von oben
       const ax = P[a * 3] / 10, az = P[a * 3 + 2] / 10, bx = P[c * 3] / 10, bz = P[c * 3 + 2] / 10, cx = P[e * 3] / 10, cz = P[e * 3 + 2] / 10;
       const area = (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
       if (Math.abs(area) < 0.05) continue;
-      g.moveTo(fx(ax), fz(az)); g.lineTo(fx(bx), fz(bz)); g.lineTo(fx(cx), fz(cz)); g.closePath();
+      // 18a (Simon 18.11.: «man kann durch die Häuser fahren»): alle Dreiecke gleich herum zeichnen. Vorher hoben sich Dach (von oben links herum)
+      // und Boden (rechts herum) bei «nonzero» gegenseitig auf → viele 3D-Häuser fehlten in der Hindernis-Maske.
+      if (area > 0) { g.moveTo(fx(ax), fz(az)); g.lineTo(fx(bx), fz(bz)); g.lineTo(fx(cx), fz(cz)); } else { g.moveTo(fx(ax), fz(az)); g.lineTo(fx(cx), fz(cz)); g.lineTo(fx(bx), fz(bz)); } g.closePath();
     }
     g.fill('nonzero');
   }

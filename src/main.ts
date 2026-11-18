@@ -20,7 +20,7 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-17c';
+export const VERSION = '2026-11-18a';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1213,7 +1213,7 @@ function frame(now: number) {
     }
     if (playing && fullReady) { save.km = (save.km || 0) + Math.abs(car.speed) * dt; badgeT += dt; if (badgeT > 30) { badgeT = 0; checkBadges(); writeSave(); } }
     stats.players = players.length; if (fullReady) stats.tick(dt, playing ? players.map((p) => p.car.speed) : [], car.siren, [car.x, car.z]); // Mini-Spiele zählen als Spielzeit; Ladezeit nicht
-    if (revealQ.length) revealTick();
+    if (revealQ.length || actQ.length) revealTick();
     if (playing && fullReady && STREAM) streamTick(dt); else if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
@@ -1692,6 +1692,10 @@ if (location.search.includes('test')) {
     quiet: () => { offerTimer = 1e9; $('#ui').style.display = 'none'; },
     drive: (on: boolean) => { (window as any).__autodrive = on; },
     grid: (x: number, z: number, r: number) => { const rows: string[] = []; for (let j = -r; j <= r; j += 2) { let l = ''; for (let i = -r; i <= r; i += 2) { const v = world.mask.at(x + i, z + j); l += Math.abs(i) < 1 && Math.abs(j) < 1 ? 'X' : v === 2 ? '#' : v === 1 ? '~' : world.mask.isRoad(x + i, z + j) ? '.' : ' '; } rows.push(l); } return rows.join('\n'); },
+    surfGrid: (x0: number, z0: number, r: number, st: number) => { const out: number[][] = []; const rc = new THREE.Raycaster(); rc.ray.direction.set(0, -1, 0); scene.updateMatrixWorld(true);
+      const gs: THREE.Object3D[] = []; scene.traverse((o: any) => { if (o.isMesh && !o.isInstancedMesh && (o.name === 'ground' || o.name === 'apron' || o.name === 'outer' || (o.material && o.material.map && o.name === '')) ) { let v = true, q: any = o; while (q) { if (q.visible === false) v = false; q = q.parent; } if (v) gs.push(o); } });
+      for (let z = z0 - r; z <= z0 + r; z += st) for (let x = x0 - r; x <= x0 + r; x += st) { rc.ray.origin.set(x, 3000, z); const h = rc.intersectObjects(gs, false)[0]; if (!h) continue; out.push([x, z, Math.round((h.point.y - terrain.height(x, z)) * 10) / 10, gs.indexOf(h.object)]); }
+      return { n: gs.length, names: gs.map((g) => g.name + '@' + (g.parent?.name || '')), pts: out }; },
     hgt: (x: number, z: number) => ({ b: terrain.bridgeAt(x, z), g: terrain.ground(x, z), h: terrain.height(x, z) }),
     tgt: (x: number, z: number) => { setTarget([x, z]); route = null; routeTimer = 0; },
     goHospital: () => { current = missions[0]; phase = 'toHospital'; phaseTime = 0; setTarget(hospitalBay, '#3FA9FF'); },
@@ -1729,6 +1733,12 @@ if (location.search.includes('test')) {
     busRear: (k = 0) => { if (!buses || !buses.buses[k]) return null; const b = buses.buses[k], sg = b.segs[b.segs.length - 1]; const h = sg.rotation.y; (window as any).__cam = [sg.position.x - Math.sin(h) * 13, sg.position.y + 3, sg.position.z - Math.cos(h) * 13, sg.position.x, sg.position.y + 1.6, sg.position.z]; return buses.lines[b.line].ref; },
     traffic: () => traffic ? traffic.check() : null,
     trafficRaw: () => traffic,
+    tun: (x: number, z: number) => { const t = terrain.tunnelAt(x, z); return [isNaN(t) ? null : +t.toFixed(1), (terrain as any).isCarved?.(x, z) ? 1 : 0, world.mask.at(x, z), world.mask.isRoad(x, z) ? 1 : 0]; },
+    blk: () => { const c = car, T = terrain, fx = Math.sin(c.heading), fz = Math.cos(c.heading), rx = fz, rz = -fx; return { y: +c.y.toFixed(2), g: +T.ground(c.x, c.z).toFixed(2), tun: T.tunnelAt(c.x, c.z), b: c.blocked(c.x + fx * 1.5, c.z + fz * 1.5, c.heading),
+      pr: [[3.2, 1.0], [3.2, -1.0], [0, 1.1], [0, -1.1]].map(([a, bb]) => { const px = c.x + fx * a + rx * bb, pz = c.z + fz * a + rz * bb; return [+T.tunnelAt(px, pz).toFixed(2), +T.ground(px, pz).toFixed(1), world.mask.at(px, pz)]; }) }; },
+    // 18a: sichtbare Oberfläche unter einem Punkt (Strahl von oben auf die Welt) – Prüfung «Autos fahren in der Strasse»
+    roadY: (x: number, z: number, y0 = 400, all = false) => { const rc = new THREE.Raycaster(new THREE.Vector3(x, y0, z), new THREE.Vector3(0, -1, 0)); scene.updateMatrixWorld(true);
+      return rc.intersectObjects([all ? scene : world.group], true).filter((h) => (h.object as any).visible !== false && !(h.object as any).isInstancedMesh).slice(0, 3).map((h) => [h.object.name || h.object.parent?.name || h.object.type, Math.round(h.point.y * 100) / 100]); },
     ud: (name: string) => world.group.getObjectByName(name)?.userData,
     siren: (on: boolean) => { car.siren = on; },
     fun: () => fun ? { kegel: fun.hops.filter((o) => o.kind === 0).length, eimer: fun.hops.filter((o) => o.kind === 1).length, herzen: fun.heartTotal, gefunden: fun.heartCount, boings: fun.stats.boings, fliegen: fun.hops.filter((o) => o.t > 0).length } : null,
@@ -1817,8 +1827,8 @@ function upgradeSlot(s: Slot) {
     : [getJSON('b3d.json', s.dir), getBuf('b3d.bin', s.dir), opt(getJSON('roofcolors.json', s.dir)), getJSON('ground.json', s.dir), getBuf('ground.bin', s.dir)])
     .then((r) => serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(s.id)); try { return await buildStageB(r, s.data, s.props, s.terrain, s.tex, s.fm, () => { /* still */ }, false, s.id); } finally { Object.assign(AERIAL, keep); } }))
     .then((nw) => { if (slots.get(s.id) !== s) { nw.group.traverse((o: any) => o.geometry?.dispose()); return; } setHospital(nw, s.id); // P-C N7: Objekt statt Id
-      if (REGION === s.id) swapWorld(nw);
-      else { enableShadows(nw.group); void addGradually(nw.group, nw.tunnels).then(() => { if (slots.get(s.id) !== s) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
+      // 18a: auch in der aktiven Gegend nach und nach einblenden (vorher alles in einem Bild → sekundenlanger Hänger kurz nach jedem Wechsel)
+      { enableShadows(nw.group); void addGradually([nw.group, nw.tunnels], true).then(() => { if (slots.get(s.id) !== s) { scene.remove(nw.group); scene.remove(nw.tunnels); return; }
         if (REGION === s.id) { scene.remove(nw.group); scene.remove(nw.tunnels); swapWorld(nw); return; }
         scene.remove(s.world.group); scene.remove(s.world.tunnels); s.world.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); s.world = nw; linkSlots(); }); }
       ind.textContent = '✔ Echte Häuser da'; setTimeout(() => ind.remove(), 2200); })
@@ -1826,11 +1836,16 @@ function upgradeSlot(s: Slot) {
 }
 /** 14zk: Ruckeln vermeiden – Shader vorab übersetzen, Teile nach und nach (wenige pro Bild) einblenden und hochladen */
 const revealQ: THREE.Object3D[] = [];
-async function addGradually(...gs: THREE.Object3D[]) {
+let actTok = 0; const actQ: (() => void)[] = []; // 18a: Bauschritte nach einem Gegendwechsel, einer je Bild
+async function addGradually(gs: THREE.Object3D[], wait = false) {
   for (const g of gs) { try { await (renderer as any).compileAsync(g, camera, scene); } catch { /* älterer Browser: dann eben beim ersten Bild */ } }
-  for (const g of gs) { for (const c of g.children) if (c.visible) { c.visible = false; revealQ.push(c); } scene.add(g); }
+  const mine: THREE.Object3D[] = [];
+  for (const g of gs) { for (const c of g.children) if (c.visible) { c.visible = false; revealQ.push(c); mine.push(c); } scene.add(g); }
+  // 18a: erst zurückkehren, wenn alles sichtbar ist (sonst wurde die alte Welt entfernt, bevor die neue ganz da war)
+  while (wait && mine.some((c) => !c.visible)) await new Promise((r) => setTimeout(r, 120));
 }
-function revealTick() { for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; n++) revealQ.shift()!.visible = true; }
+function revealTick() { if (actQ.length) { actQ.shift()!(); return; }
+  for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; n++) revealQ.shift()!.visible = true; }
 /** 14zk: Navi der neuen Gegend schon vorbereiten, solange der Hinweis noch steht – nicht erst an der Grenze */
 function prepNav(s: Slot) {
   setTimeout(() => { if (!slots.has(s.id) || s.nav) return; const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi vorab', s.id, (performance.now() - t0).toFixed(0), 'ms'); }, 2500);
@@ -1896,6 +1911,7 @@ function regionAt(x: number, z: number, pad = 0): string[] {
 }
 /** Aktive Gegend wechseln: Navi, Einsätze, Herzen, Verkehr, Busse, Züge, Ziel – ohne Neuladen */
 function activate(s: Slot) {
+  const tA = performance.now();
   while (revealQ.length) revealQ.shift()!.visible = true; // 14zl: beim Betreten alles sofort zeigen (falls das Einblenden noch läuft)
   const from = REGION; setRegionVars(s.id);
   world = s.world; terrain = s.terrain; cityData = s.data; propsData = s.props ? JSON.parse(JSON.stringify(s.props)) : null;
@@ -1903,35 +1919,39 @@ function activate(s: Slot) {
   if (!s.nav) { const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi', s.id, (performance.now() - t0).toFixed(0), 'ms'); }
   nav = s.nav;
   for (const p of players) { p.car.mask = world.mask; p.car.terrain = terrain; }
-  if (velos) { scene.remove(velos.group); freeGroup(velos.group); velos = new Velos(cityData.roads as any, (x, z, h) => terrain.height(x, z, terrain.under(x, z, h)) /* P-C V1 */, MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; }
-  if (traffic) { scene.remove(traffic.group); freeGroup(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
-    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); }
-  if (buses) { scene.remove(buses.group); freeGroup(buses.group); buses = null; } if (busWires) { scene.remove(busWires); freeGroup(busWires); busWires = null; }
-  if (s.bus && !/[?&]nobus/.test(location.search)) { buses = new Buses(s.bus, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops);
-    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
-  if (trains) { scene.remove(trains.group); freeGroup(trains.group); trains = null; }
-  if (s.trains) { trains = new Trains(terrain, s.trains, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); }
+  // 18a (Simon 18.11.: «stockt 10–15 s beim Bereichswechsel»): Verkehr, Velos, Busse, Züge und Tiere nicht mehr alle im selben Bild neu bauen,
+  // sondern je Bild ein Teil – die Ambulanz fährt dabei weiter. Ein neuer Wechsel bricht die alte Kette ab.
+  const tok = ++actTok, step = (f: () => void) => actQ.push(() => { if (tok === actTok && REGION === s.id) f(); });
   for (const o of [fun, animals, ships, boats]) if (o) { scene.remove(o.group); freeGroup(o.group); } // P-C N6: GPU-Speicher beim Gegendwechsel freigeben
   fun = null; animals = null; ships = null; boats = null;
+  if (buses) { scene.remove(buses.group); freeGroup(buses.group); buses = null; } if (busWires) { scene.remove(busWires); freeGroup(busWires); busWires = null; }
+  if (trains) { scene.remove(trains.group); freeGroup(trains.group); trains = null; }
+  if (traffic) traffic.setMask(world.mask);
+  step(() => { if (velos) { scene.remove(velos.group); freeGroup(velos.group); velos = new Velos(cityData.roads as any, (x, z, h) => terrain.height(x, z, terrain.under(x, z, h)) /* P-C V1 */, MOBILE ? 8 : 14); scene.add(velos.group); (window as any).__velos = velos; } });
+  step(() => { if (traffic) { scene.remove(traffic.group); freeGroup(traffic.group); traffic = new Traffic(nav, terrain, world.mask, QUALITY === 'echt' ? {} : { cars: 16, peds: 28 }); scene.add(traffic.group);
+    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos) traffic.setSignals(pg.signalPos, pg.signalLamp); } });
+  step(() => { if (s.bus && !/[?&]nobus/.test(location.search)) { buses = new Buses(s.bus, terrain); scene.add(buses.group); busWires = buses.buildWires(); scene.add(busWires); if (propsData?.stops) buses.setStops(propsData.stops);
+    const pg = world.group.getObjectByName('props') as any; if (pg && pg.signalPos && traffic) { const tr = traffic; buses.setSignals(pg.signalPos, (i) => tr.sigState(i)); } } });
+  step(() => { if (s.trains) { trains = new Trains(terrain, s.trains, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); } });
   { const nb = snap([world.hospital.x, world.hospital.z]); // 14zk: unterwegs ins Spital – das nähere Spital nehmen
     if (phase === 'toHospital' && Math.hypot(hospitalBay[0] - car.x, hospitalBay[1] - car.z) < Math.hypot(nb[0] - car.x, nb[1] - car.z)) { /* altes bleibt */ }
     else { hospitalBay = nb; if (phase === 'toHospital') setTarget(hospitalBay, '#3FA9FF'); } }
   crossCache = null; route = null; routeTimer = 0; // 14zl: Navi sofort mit dem Netz der neuen Gegend neu rechnen
   MA = s.ma || null;
   if (phase === 'offer') declineOffer();
-  setupMissions(); setupFun(s.data); placeHospSign();
+  setupMissions(); placeHospSign(); step(() => setupFun(s.data));
   if (underground) { underground = false; setUnderground(true); }
   save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
   stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;
   if (!GEM) toast(`👋 Willkommen in ${placeNear(car.x, car.z, s) || REGION_NAME[s.id] || s.id}!`, 3000); // mit Gemeindegrenzen meldet gemTick() den Ort
   updateHud();
   if (QUALITY === 'echt' && !s.echt) { s.echt = true; upgradeSlot(s); }
-  console.log('[welt] aktiv', s.id, 'von', from);
+  console.log('[welt] aktiv', s.id, 'von', from, '[perf] activate', (performance.now() - tA).toFixed(0), 'ms');
 }
 /** 15a: Strecke bis zum Rand der geladenen Welt in Fahrtrichtung (nur wo dahinter eine bekannte, noch nicht geladene Gegend liegt) → Tempo-Deckel.
  *  400 m voraus frei = kein Deckel; 100 m = 36 km/h; am Rand Schritttempo. Am echten Weltrand (keine Gegend dahinter) greift das nicht. */
 const loadFailed = new Map<string, number>(); // P-C N2/C4: Gegend → Zeitpunkt (s) des nächsten Ladeversuchs
-let loadingP: Promise<Slot> | null = null; // P-C N5/C3: laufendes Hintergrund-Laden (Schnellreise wartet darauf)
+let loadingP: Promise<Slot> | null = null; let loadInd: HTMLElement | null = null; // P-C N5/C3: laufendes Hintergrund-Laden (Schnellreise wartet darauf)
 function streamCap() {
   for (const pl of players) {
     const c = pl.car; let cap = Infinity;
@@ -1940,7 +1960,11 @@ function streamCap() {
     else if (c.speed > 1) for (let f = 40; f <= 400; f += 40) if (!loaded(c.x + c.fx * f, c.z + c.fz * f)) { cap = Math.max(4, (f - 40) / 6); break; }
     c.vcap = cap;
   }
+  // 18a: Baustellen-Bremse sichtbar erklären (Simon: «wusste nicht, ob das Spiel abgestürzt ist»)
+  if (loadInd) { const br = players[0].car.vcap < 12; if (br !== loadInd.classList.contains('bremse')) { loadInd.classList.toggle('bremse', br); loadInd.textContent = br ? '🚧 Kurz langsam – die Bauarbeiter bauen die Strasse fertig …' : BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; } }
 }
+/** 18a: Vorausschau wächst mit dem Tempo (vorher fest 700 m → bei 150–269 km/h war die nächste Gegend oft noch nicht fertig und die Baustellen-Bremse griff) */
+function lookPts(v: number): number[][] { const F = Math.min(1800, Math.max(700, Math.abs(v) * 22)); return [[0, 0], [0, F * 0.5], [0, F], [250, F * 0.85], [-250, F * 0.85], [400, F * 0.5], [-400, F * 0.5]]; }
 function streamTick(dt: number) {
   streamCap();
   streamT -= dt; if (streamT > 0) return; streamT = 0.5;
@@ -1955,17 +1979,17 @@ function streamTick(dt: number) {
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && players.some((pl) => Math.abs(pl.car.speed) > 2)) {
     const look: number[][] = []; // P-C N8: Blickpunkte aller Spieler (Spieler 1 zuerst)
-    for (const pl of players) { const q = pl.car; if (Math.abs(q.speed) > 2 || q !== c) for (const [s2, f] of [[0, 0], [0, 700], [0, 350], [250, 600], [-250, 600]]) look.push([q.x + q.fx * f + q.fz * s2, q.z + q.fz * f - q.fx * s2]); }
+    for (const pl of players) { const q = pl.car; if (Math.abs(q.speed) > 2 || q !== c) for (const [s2, f] of lookPts(q.speed)) look.push([q.x + q.fx * f + q.fz * s2, q.z + q.fz * f - q.fx * s2]); }
     const nowS = performance.now() / 1000;
     let want = ''; for (const [x, z] of look) { const k = regionAt(x, z).find((r) => !slots.has(r) && !((loadFailed.get(r) ?? 0) > nowS)); if (k) { want = k; break; } }
     if (want) { streamTrim((MOBILE ? 2 : 3) - 1); // 15a: zuerst Platz schaffen – sonst lagen kurz 4 Gegenden im Speicher
-      loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind);
+      loadingSlot = want; const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; document.body.appendChild(ind); loadInd = ind;
       const t0 = performance.now();
-      (loadingP = loadSlot(want)).then(async (s) => { await addGradually(s.world.group, s.world.tunnels); slots.set(s.id, s); linkSlots();
+      (loadingP = loadSlot(want)).then(async (s) => { await addGradually([s.world.group, s.world.tunnels]); slots.set(s.id, s); linkSlots();
         prepNav(s);
-        ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit!`; setTimeout(() => ind.remove(), 2200);
+        ind.classList.remove('bremse'); ind.classList.add('fertig'); ind.textContent = `✔ ${REGION_NAME[s.id] || s.id} ist bereit – weiter geht's!`; setTimeout(() => ind.remove(), 2200);
         console.log('[welt] geladen', s.id, (performance.now() - t0).toFixed(0), 'ms');
-      }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); loadFailed.set(want, performance.now() / 1000 + 60); }).finally(() => { loadingSlot = ''; loadingP = null; }); }
+      }).catch((e) => { console.warn('[welt] laden fehlgeschlagen', want, e); ind.remove(); loadFailed.set(want, performance.now() / 1000 + 60); }).finally(() => { loadingSlot = ''; loadingP = null; loadInd = null; }); }
   }
   // 3) Entladen: höchstens 3 Gegenden (Handy 2); weit entfernte (> 1.5 km vom Feldrand) zuerst
   streamTrim(MOBILE ? 2 : 3);

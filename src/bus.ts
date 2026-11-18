@@ -300,7 +300,7 @@ export class Buses {
         const sl = Math.hypot(ax - bx, az - bz) || 1, ox = -(az - bz) / sl * b.yo, oz = (ax - bx) / sl * b.yo; // nach rechts ausweichen
         const ref = (b as any).ty ?? (isNaN(this.terrain.tunnelAt(cx, cz)) ? undefined : -1e6); // 14zg: Tunnel
         const yy = Math.max(this.terrain.height(ax, az, ref), this.terrain.height(bx, bz, ref)); (b as any).ty = yy;
-        seg.position.set(cx + ox, yy, cz + oz);
+        seg.position.set(cx + ox, yy + 0.36, cz + oz); // 18a: auf der gezeichneten Fahrbahn (+0.36) statt darin
         seg.rotation.y = Math.atan2(ax - bx, az - bz);
         sFront -= b.segL + b.gap;
       }

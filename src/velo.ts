@@ -53,7 +53,7 @@ export class Velos {
         if (v.s > c.L) { v.s = c.L; v.dir = -1; } else { v.s = 0; v.dir = 1; } }
       const [x, z, ux, uz] = this.at(c, v.s), dx = ux * v.dir, dz = uz * v.dir, off = (c.r.c === 'cycleway' ? Math.min(0.6, c.r.w / 4) : c.r.w / 2 - 0.75) + v.side;
       v.x = x - dz * off; v.z = z + dx * off; const th = Math.atan2(dx, dz); let dh = th - v.h; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI; v.h += dh * Math.min(1, dt * 6);
-      this.e.set(0, v.h, 0); this.q.setFromEuler(this.e); this.p.set(v.x, this.groundY(v.x, v.z, v.h) + 0.02, v.z); this.m.compose(this.p, this.q, this.one); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m);
+      this.e.set(0, v.h, 0); this.q.setFromEuler(this.e); this.p.set(v.x, this.groundY(v.x, v.z, v.h) + 0.33, v.z) /* 18a: auf der Fahrbahn statt darin */; this.m.compose(this.p, this.q, this.one); this.bike.setMatrixAt(i, this.m); this.shirt.setMatrixAt(i, this.m);
     });
     this.bike.instanceMatrix.needsUpdate = true; this.shirt.instanceMatrix.needsUpdate = true;
   }

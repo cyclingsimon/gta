@@ -422,7 +422,10 @@ export class Vehicle {
     const fx = Math.sin(h), fz = Math.cos(h), rx = fz, rz = -fx;
     // 14zg: im Tunnel (unter dem Gelände) zählen nur die Tunnelwände, nicht Häuser/Wasser oben auf dem Hügel
     const T = this.terrain;
-    if (T.anyTun && this.y < T.ground(this.x, this.z) - 2) {
+    // 18a (Simon 18.11.: «im Sonnenbergtunnel kann man nicht weiterfahren»): auch im offenen Einschnitt und an Portalen (Fahrbahn = Tunnelebene,
+    // wenig Überdeckung) zählen nur Röhren-/Einschnittwände – nicht Häuser, die in der Karte über der Tunnelachse stehen
+    const tc = T.anyTun ? T.tunnelAt(this.x, this.z) : NaN;
+    if (T.anyTun && (this.y < T.ground(this.x, this.z) - 2 || (!isNaN(tc) && Math.abs(this.y - tc) < 2.5))) {
       for (const [a, b] of [[3.2, 1.0], [3.2, -1.0], [-3.1, 1.0], [-3.1, -1.0], [0, 1.1], [0, -1.1]]) {
         const px = x + fx * a + rx * b, pz = z + fz * a + rz * b;
         if (isNaN(T.tunnelAt(px, pz)) && T.ground(px, pz) > this.y + 2) return 1;
@@ -497,7 +500,8 @@ export class Vehicle {
     const hf = T.height(this.x + fx * 2.6, this.z + fz * 2.6, Y), hb = T.height(this.x - fx * 2.6, this.z - fz * 2.6, Y);
     const hl = T.height(this.x + rx * 1.1, this.z + rz * 1.1, Y), hr = T.height(this.x - rx * 1.1, this.z - rz * 1.1, Y);
     const ty = Math.max((hf + hb) / 2, T.height(this.x, this.z, Y));
-    this.y += (ty - this.y) * Math.min(1, dt * 14);
+    // 18a (Simon 18.11.: «fährt im Boden» / «fährt in der Luft» bei 250 km/h): Höhe folgt mit dem Tempo schneller – vorher hinkte sie am Hang bis 2 m nach
+    this.y += (ty - this.y) * Math.min(1, dt * (14 + Math.abs(this.speed) * 0.9));
     this.pitch += (Math.max(-0.35, Math.min(0.35, Math.atan2(hf - hb, 5.2))) - this.pitch) * Math.min(1, dt * 10);
     this.roll += (Math.max(-0.12, Math.min(0.12, Math.atan2(hl - hr, 2.2) * 0.5)) - this.roll) * Math.min(1, dt * 10);
     m.root.position.set(this.x, this.y + 0.3, this.z);
