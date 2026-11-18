@@ -1734,6 +1734,7 @@ if (location.search.includes('test')) {
     traffic: () => traffic ? traffic.check() : null,
     trafficRaw: () => traffic,
     tun: (x: number, z: number) => { const t = terrain.tunnelAt(x, z); return [isNaN(t) ? null : +t.toFixed(1), (terrain as any).isCarved?.(x, z) ? 1 : 0, world.mask.at(x, z), world.mask.isRoad(x, z) ? 1 : 0]; },
+    maskB3d: () => { const B: any = b3dData; if (!B) return null; let n = 0, hit = 0; for (const m of B.meta.buildings) { const x = m[5], z = m[6]; if (world.mask.isRoad(x, z)) continue; n++; if (world.mask.at(x, z) === 2) hit++; } return { n, hit }; },
     blk: () => { const c = car, T = terrain, fx = Math.sin(c.heading), fz = Math.cos(c.heading), rx = fz, rz = -fx; return { y: +c.y.toFixed(2), g: +T.ground(c.x, c.z).toFixed(2), tun: T.tunnelAt(c.x, c.z), b: c.blocked(c.x + fx * 1.5, c.z + fz * 1.5, c.heading),
       pr: [[3.2, 1.0], [3.2, -1.0], [0, 1.1], [0, -1.1]].map(([a, bb]) => { const px = c.x + fx * a + rx * bb, pz = c.z + fz * a + rz * bb; return [+T.tunnelAt(px, pz).toFixed(2), +T.ground(px, pz).toFixed(1), world.mask.at(px, pz)]; }) }; },
     // 18a: sichtbare Oberfläche unter einem Punkt (Strahl von oben auf die Welt) – Prüfung «Autos fahren in der Strasse»
@@ -1939,7 +1940,7 @@ function activate(s: Slot) {
   crossCache = null; route = null; routeTimer = 0; // 14zl: Navi sofort mit dem Netz der neuen Gegend neu rechnen
   MA = s.ma || null;
   if (phase === 'offer') declineOffer();
-  setupMissions(); placeHospSign(); step(() => setupFun(s.data));
+  setupMissions(); placeHospSign(); step(() => { setupFun(s.data); updateHud(); });
   if (underground) { underground = false; setUnderground(true); }
   save.region = s.id; save.seen = [...new Set([...(save.seen || []), s.id])]; writeSave();
   stats.event('region_switch', { m: s.id }); stats.tot.region_switches++;

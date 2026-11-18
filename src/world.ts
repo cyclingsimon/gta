@@ -546,6 +546,8 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
+  // 18a: im Hintergrund (freeCPU) zwischendurch kurz an den Browser zurückgeben, wenn seit dem letzten Bild > 25 ms vergangen sind
+  let tPause = performance.now(); const pause = () => { if (!opts.freeCPU || performance.now() - tPause < 25) return Promise.resolve(); return new Promise<void>((r) => setTimeout(() => { tPause = performance.now(); r(); }, 0)); };
   const group = new THREE.Group();
   // 14zg: Strassentunnels aus der normalen Darstellung nehmen (eigene Röhre, Fahrbahn unter dem Gelände); kurze Unterführungen < 25 m bleiben normale Strassen
   const tunnels = new THREE.Group(); tunnels.name = 'tunnels';
@@ -565,6 +567,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
   hillshade(minimap, terrain, X0, Z0); lap('Schummerung');
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Boden ----
   const groundTex = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 900, 0.1); noise(g, 128, 128, 300, 0.25, false); });
   groundTex.repeat.set(1, 1);
@@ -633,6 +636,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     lap('Boden-LOD');
   } else group.add(ground);
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Umland: grobes Gitter mit Randhöhen, damit am Spielfeldrand keine Klippe entsteht
   const clip = { value: [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector4(1, 1, 0, 0)) }; // Rechtecke geladener Nachbargegenden (main.ts linkSlots)
   const apronTex = groundTex.clone(); apronTex.needsUpdate = true;
@@ -656,6 +660,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   outer.rotation.x = -Math.PI / 2; outer.position.y = Math.min(-12, lowest - 3);
   outer.name = 'outer'; group.add(outer); withClip(outer.material as THREE.MeshToonMaterial, clip);
 
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Wasser ----
   const waterMeshes: THREE.Mesh[] = [];
   const waterTex = canvasTex(128, 128, (g) => {
@@ -720,6 +725,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Grün ----
   const trees: number[][] = [];
   {
@@ -818,6 +824,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const deckOf = (r: any): [number, number] | null => { const i = brs.indexOf(r); if (i >= 0) return [lin[i][0] + lift[comp[i]], lin[i][1] + lift[comp[i]]]; return rampH.get(r) || null; };
     for (const r of d.roads) { const h = deckOf(r); if (h) terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, h[0], h[1]); }
     console.log('[bau] Brücken', brs.length, 'Stücke in', nComp, 'Ketten, gehoben', lift.filter((v) => v > 0).length, 'Rampen', nRamp);
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Brückenkörper: Platte, Brüstung, Pfeiler; Rampen mit Stützmauern bis zum Boden
     // 16a Unterführungen (Simon 15.11.: Zug fuhr auf Strassenhöhe durch die Ambulanz): Bahnbrücken aus OSM. Das Geländemodell kennt unter
     // der Bahnbrücke nur die Strasse – das Gleis sackte dort ab. Jetzt läuft es gerade von Widerlager zu Widerlager, mindestens 5 m über der
@@ -887,6 +894,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (underpasses.length) console.log('[bau] Bahn-Unterführungen', nUp, 'von', underpasses.length);
       if (geos.length) { const bm = mergeGeometries(geos.map((g) => { const ng = g.index ? g.toNonIndexed() : g; ng.deleteAttribute('uv'); return ng; }), false);
         if (bm) { const mesh = new THREE.Mesh(bm, toon('#B7B3AA')); mesh.name = 'bruecken-koerper'; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); } } }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)
     const nodeCnt = new Map<string, number>(); const nk = (q: number[]) => Math.round(q[0]) + ',' + Math.round(q[1]);
     for (const r of d.roads) { if (['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c)) continue; for (const q of [r.p[0], r.p[r.p.length - 1]]) nodeCnt.set(nk(q), (nodeCnt.get(nk(q)) || 0) + 1);
@@ -909,6 +917,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
         const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 14) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.0; vSigns.push([A[0] + ux * 12 - uz * o, A[1] + uz * 12 + ux * o, Math.atan2(ux, uz), r.v]); } }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // 14zc: Raster der Kantonsstrassen-Achsen (alle 4 m ein Punkt), um Begleitwege zu erkennen
     const mainPts = new Map<string, number[][]>(); const mk = (x: number, z: number) => `${Math.floor(x / 20)},${Math.floor(z / 20)}`;
     for (const r of d.roads) if (r.L && !r.b) for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
@@ -979,6 +988,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
       if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5) edgeLines(dashes, r.b ? r.p : trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); /* 17a: Randlinien auch auf Brücken und Rampen (dort durchgehend) */ // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Belag: feines Korn, dunklere Flicken und Bitumen-Fugen (Fotos Luzerner Kantonsstrassen); 512 px auf 16 m
     const asphTex = canvasTex(512, 512, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512);
       const rnd = (() => { let a = 7; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
@@ -1002,6 +1012,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       worldUV(m.geometry, sc);
       group.add(m);
     }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Fussgängerstreifen (OSM highway=crossing, markiert): in der Schweiz gelb, Balken 0.5 m breit, 0.5 m Abstand, 3 m lang in Fahrtrichtung
     const zebra: number[] = [], zebraSigns: number[][] = [];
     if (props?.crossings?.length) {
@@ -1035,6 +1046,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       group.add(new THREE.Mesh(mergeGeometries(po)!, toon('#8A8F94'))); console.log('[bau] Fussgängerstreifen-Signale', zebraSigns.length); }
     if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
       const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Bushaltestellen am Fahrbahnrand (OSM bus_stop neben einer Hauptstrasse): gelbe unterbrochene Umrandung 20 × 2.6 m und «BUS»
     if (props?.stops?.length) { const mains = d.roads.filter((r) => r.L && !r.b && r.p.length > 1);
       const grid = new Map<string, number[]>(); mains.forEach((r, i) => { for (const q of r.p) { const k = Math.floor(q[0] / 60) + ',' + Math.floor(q[1] / 60); if (!grid.has(k)) grid.set(k, []); const a = grid.get(k)!; if (a[a.length - 1] !== i) a.push(i); } });
@@ -1082,6 +1094,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
       hsSigns.forEach(([x, z, h], k) => { q.setFromEuler(e.set(0, h + Math.PI, 0)); m4.compose(v.set(x, terrain.height(x, z), z), q, one); ms.setMatrixAt(k, m4); mp.setMatrixAt(k, m4); });
       for (const im of [ms, mp]) { im.computeBoundingSphere(); im.name = 'hauptstrasse'; group.add(chunkInstanced(im, 1000)); } }
+    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Leitplanken ausserorts, wo das Gelände neben der Fahrbahn mehr als 2.5 m abfällt (Böschung, Hang): verzinkte Planke 0.6–0.9 m, Pfosten alle 4 m
     { const beam: number[] = [], posts: number[][] = [];
       for (const r of d.roads) { if (!r.L || r.b || (r.v || 50) <= 50) continue;
@@ -1113,6 +1126,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
       leitpf.forEach(([x, z], k) => { m4.makeTranslation(x, terrain.height(x, z), z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitpfosten'; group.add(chunkInstanced(im, 1000)); }
   }
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Bahn ----
   {
     const pos: number[] = [], col: number[] = [];
@@ -1400,6 +1414,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Holzbrücken
   for (const name of ['Kapellbrücke', 'Spreuerbrücke']) {
     const parts = roadsByName.get(name) || [];
@@ -1517,6 +1532,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (V.children.length) group.add(mergeGroup(V));
   }
 
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Spielplätze (OSM leisure=playground): Rutschbahn und Schaukel in der Mitte
   {
     const spots: [number, number, number][] = [];
@@ -1623,6 +1639,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   await onProgress('Bäume …');
   // ---- Bäume (instanziert) ----
   group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
+  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z) + 0.35 /* 18a: auf der Fahrbahn statt darin */, opts.coarse ? 450 : 700, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6; 17a: 100 → 450/700
   if (lastParkedSpots.length) { // 17a: Parkfeld unter jedem geparkten Auto – Asphaltfläche 5.6 × 2.3 m mit weissen Linien an drei Seiten
     const tex = canvasTex(128, 64, (g) => { g.fillStyle = '#77797B'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#ECECE8'; g.fillRect(0, 0, 3, 64); g.fillRect(125, 0, 3, 64); g.fillRect(0, 0, 128, 3); }, false);
