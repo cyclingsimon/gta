@@ -20,7 +20,7 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-18a';
+export const VERSION = '2026-11-19a';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -98,7 +98,9 @@ function checkBadges(quiet = false) {
   for (const [id, ic, name, ok] of BADGES) if (!got.has(id) && ok()) { got.add(id); neu++; if (!quiet) setTimeout(() => { toast(`${ic} Neues Abzeichen: ${name}!`, 4000); sfxPlay.star(2); }, 1200 + neu * 1500); stats.event('badge', { m: id }); }
   if (neu) { save.badges = [...got]; writeSave(); }
 }
+let leavingPage = false; // 19a: nach dem Speichern für einen Wechsel per Neuladen nichts mehr überschreiben (pagehide schrieb sonst Position und Gegend der alten Gegend zurück)
 function writeSave() {
+  if (leavingPage) return;
   try { save.pos = [car.x, car.z, car.heading]; save.region = REGION; localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* privat-Modus */ }
 }
 const totalStars = () => Object.values(save.best).reduce((a, b) => a + b, 0);
@@ -1122,7 +1124,7 @@ function checkRegionEdge(dt: number) {
     save.region = other; save.pos = [car.x, car.z, car.heading];
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', other); } catch { /* privat */ }
     toast('🗺️ Unterwegs nach ' + ZIEL + ' …', 4000);
-    const u = new URL(location.href); u.searchParams.set('region', other); location.replace(u.toString());
+    leavingPage = true; const u = new URL(location.href); u.searchParams.set('region', other); location.replace(u.toString());
   };
   const stay = () => { ov.remove(); placeCar(car.x - car.fx * 30, car.z - car.fz * 30, car.heading + Math.PI); sfxPlay.reset(); };
   ($('#rg-ja') as HTMLButtonElement).onclick = go; ($('#rg-nein') as HTMLButtonElement).onclick = stay;
@@ -1154,7 +1156,7 @@ function openTravelMap() {
       writeSave(); stats.tot.region_switches++; stats.event('region_switch', { m: region + ':reise' }); stats.flush(true);
       save.region = region as Save['region']; save.pos = to === 'hosp' ? undefined : [to[0], to[1], NaN];
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); sessionStorage.setItem('luksiRegionSwitch', region); sessionStorage.setItem('luksiTravel', name); } catch { /* privat */ }
-      const u = new URL(location.href); u.searchParams.set('region', region); location.replace(u.toString());
+      leavingPage = true; const u = new URL(location.href); u.searchParams.set('region', region); location.replace(u.toString());
     },
     sfx: () => sfxPlay.radio(), onClose: () => { /* weiterfahren */ },
   });
@@ -1778,7 +1780,9 @@ requestAnimationFrame(frame);
 
 
 // ---------------- 14zh Durchgehende Welt (Wunsch Simon 14.11.): Nachbargegenden im Hintergrund laden, ohne Neuladen wechseln ----------------
-const STREAM = !/[?&]nostream/.test(location.search);
+// 19a: iPhone/iPod – Safari beendet den Tab, sobald eine zweite Gegend im Speicher liegt (iPhone 11, iOS 18.7). Dort eine Gegend, Randwechsel per Neuladen. ?stream erzwingt Streaming.
+const IOS_PHONE = /iPhone|iPod/.test(navigator.userAgent);
+const STREAM = !/[?&]nostream/.test(location.search) && (!IOS_PHONE || /[?&]stream\b/.test(location.search));
 interface Slot { id: string; dir: string; data: CityData; props: any; terrain: Terrain; world: World; nav?: NavGraph; bus?: any; trains?: any; ma?: any; tex?: THREE.Texture; fm?: ForestMask; echt?: boolean }
 const slots = new Map<string, Slot>();
 let horData: any = null, busWires: THREE.Object3D | null = null, hospSign: THREE.Sprite | null = null;

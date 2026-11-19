@@ -1,11 +1,20 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 18.11.2026 (geplanter Lauf). Fertig: **2026-11-18a** (siehe Abschnitt 18a). Davor 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 18.11.2026 (geplanter Lauf). Fertig: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
+
+
+## Version 19a (19.11. abends) – iPhone-Absturz
+Befund Simon (Video 19.11. 19:06, iPhone 11 von Hans, iOS 18.7.8, Safari, live 18a): nach ca. 5 s Bau-Hinweis (streamTick lädt Nachbargegend), dann weiss und «wiederholt ein Problem aufgetreten» = Safari beendet den Tab (Speicher). Ursache (Vertrauen mittel-hoch): zweite Gegend im Speicher.
+- main.ts: `IOS_PHONE = /iPhone|iPod/` → `STREAM` aus (ausser `?stream`). iPhone = eine Gegend, Randwechsel per Dialog und Neuladen (checkRegionEdge), Schnellreise per Neuladen. iPad (Desktop-UA) und Android unverändert.
+- Geprüft, was STREAM voraussetzt: crossRoute gibt ohne STREAM null zurück, Schnellreise hat den Neuladen-Zweig, Grenz-Wegweiser erscheinen nur ohne STREAM (gewollt), Gemeinde-Toast unabhängig, 18a-Teile (actQ, upgradeSlot, lookPts, Bau-Hinweis) laufen nur über activate/streamTick.
+- **Fehler gefunden und behoben** (betraf auch `?nostream`): Schnellreise mit Neuladen landete an der alten Position – `pagehide` → `writeSave()` überschrieb `save.pos`/`save.region` nach dem Speichern für die Reise. Jetzt `leavingPage` vor `location.replace` (Schnellreise und Randwechsel).
+- Tests (Chromium/SwiftShader mit iPhone-UA, Touch, 414×896, Leicht; tests/ios_phone.py): 60 s Autopilot + Fahrt bis x −3680 (vor der Westgrenze): höchstens 1 Gegend, keine «[welt] geladen»-Meldung; Randwechsel Luzern → West per Dialog und Neuladen ok; Schnellreise West → Spital Nidwalden: Neuladen, Ambulanz am Spital (3772, 10058) – vor dem Fix bei (−3725, 1200) ausserhalb des Feldes. JS-Heap (Chromium, nicht Safari): Luzern 456 MB nach dem Fahren, Spitze 755–890 MB kurz nach Start, West 968 MB direkt nach Laden. Weitere Speicherbremse nicht eingebaut (kein Anlass aus den Tests messbar; Safari-Grenze hier nicht messbar).
+- **Am echten iPhone nichts getestet.** Bis zum Upload: https://gta.simon-infanger.ch/?nostream.
 
 ## Version 18a (18.11. 03:20–06:30, geplanter Lauf «Luksi Verbesserungen.docx») – kommt mit ZIP 18a
 Quelle: Downloads/Luksi Verbesserungen.docx (8 Bilder, Rückmeldungen Simon nach Spiel mit 17c, Echt-Modus am PC). Umsetzung und Befund je Punkt:

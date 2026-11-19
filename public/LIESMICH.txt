@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-18a
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-19a
+Neu in 19a: iPhone: Gegenden werden einzeln geladen, damit Safari nicht abstürzt. Am Rand einer Gegend fragt das Spiel «Neue Gegend!» und lädt sie dann neu. iPad und Android unverändert.
 Neu in 18a (Rückmeldungen Simon 17./18.11.): Häuser sind im Modus «Echt» wieder feste Hindernisse, Autos und Velos fahren auf statt in der Strasse, weniger Ruckeln beim Gegendwechsel, grosser Bau-Hinweis beim Nachladen, kein Hängenbleiben im Sonnenbergtunnel, KKL mit Dach, kein Rauschen im Wald, Ambulanz bei hohem Tempo nicht mehr im Boden oder in der Luft.
 Neu in 17c: Wartende an den Bushaltestellen, Kinder unter den Fussgängern, Bahnsignale und Hektometertafeln am Gleis, Plakatwände an Hauptstrassen (erfundene Plakate, keine Marken), Siloballen auf Wiesen. Velos fahren am Wegende weiter statt zu wenden und bleiben unter Überführungen unten. Korrektur: Die in 17b verzerrten Autos (jeder sechste zu hoch und zu lang) sehen wieder normal aus.
 Neu in 17b: Velofahrerinnen und Velofahrer auf Radstreifen und Velowegen (halten am Rand an, wenn die Ambulanz kommt, und klingeln), Lieferwagen und Kleinwagen im Verkehr, Schachtdeckel und «30»-Zeichen liegen nicht mehr oben auf Überführungen.
