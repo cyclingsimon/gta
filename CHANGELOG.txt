@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20e  Schneller Start im Modus «Echt»
+- Die echte Welt wird beim Start direkt gebaut (vorher: erst einfache Welt, dann echte)
+- Testrechner (Software-Grafik): Startknopf nach 48 statt 214 Sekunden, spielbereit nach 88 statt 251 Sekunden; auf echten Geräten nicht gemessen
+- Mit ?stufeA im Link lässt sich der alte Ablauf erzwingen
+
 2026-11-20d  Nachladen noch flüssiger
 - Auch Karte, Boden und Strassen der nächsten Gegend werden in kleinen Schritten gebaut: längster Hänger im Test 0.2 statt 2.4 Sekunden
 - Die nächste Gegend wird früher vorbereitet (32 statt 22 Sekunden Vorlauf)

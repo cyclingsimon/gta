@@ -1,12 +1,20 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-20d** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-20e** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 20e (20.11. abends) – Optimierung 3: Echt-Modus startet direkt
+- boot(): wenn b3d/ground vorhanden (pB) und kein `?stufeA`, wird die echte Welt direkt mit buildStageB gebaut (Variable `direkt`); Stufe A entfällt. Schlägt das fehl → Rückfall auf Stufe A + stageB wie bisher. Nach dem Aufbau `enableShadows(scene)`, `fullReady`/`__luksiReady` sofort.
+- Messung Testrechner (tests/perf_bau.py '&perf'): Startknopf 214 → 48 s, bereit 251 → 88 s, Rechenzeit-Summe 29.3 → 17.4 s. qa.py Gesamt OK (P1 2.013 Mio., Ladezeit 55 s), missions.py 12 Sterne ohne Fehler, stream_chain ok (0 draussen, 33 gebremst), smoke_a sued + a1 ok, Sichtbild Altstadt mit echten Häusern und Schatten.
+- Ungetestet: echte Geräte; mobile.py/ios_phone.py (Modus Leicht hat kein pB, Code-Weg unverändert – Annahme).
+- WICHTIG für Tests: Hintergrundprozesse (nohup) überleben das Ende einer Antwort nicht – Testserver vor jedem Test prüfen, lange Tests im Vordergrund (timeout ≤ 595 s).
+- Upload: Claude hat 20d am 20.11. 17:40 auf Simons Wunsch per FileZilla (Computer use, Server «Simon Infanger Hostpoint», /www/luksi-rescue) hochgeladen.
+- Offen: Punkt 4 (iPhone nahtlos, Speicherdiät).
 
 ## Version 20d (20.11. abends) – Optimierung 1: Nachladen ohne lange Rechenstücke
 - `rasterize` (Maske + Minikarte), `gridMesh` (Bodengitter) und `drape` (terrain.ts) haben einen Generator-Kern (`rasterizeGen`, `gridMeshGen`, `drapeGen`) mit synchroner und asynchroner Hülle; buildWorld ruft die async-Varianten mit `pause` (Maske: je 400 Strassen/300 Häuser/400 000 Zellen; Gitter: je 12 Zeilen; Drapieren: je 1500 Dreiecke). `onProgress` gibt im Hintergrund nur noch nach Zeit zurück statt jedes Mal ein Zwischenbild zu erzwingen.

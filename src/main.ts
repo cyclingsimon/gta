@@ -20,7 +20,7 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-20d';
+export const VERSION = '2026-11-20e';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1356,10 +1356,19 @@ async function boot() {
   fuelAll = (await pFuel)?.p ?? [];
   osmAll = await pOsm;
   railBrAll = (await pRailBr)?.p ?? [];
+  // 20e (Ladezeit Echt): Stufe A (grobe Welt mit OSM-Häusern) wurde im Echt-Modus gebaut, hochgeladen und gleich wieder verworfen, weil man seit 13h erst
+  // mit den echten Häusern losfahren kann. Jetzt wird die echte Welt direkt gebaut. Fehlen die 3D-Daten oder scheitert der Bau: Stufe A wie bisher. `?stufeA` erzwingt den alten Weg.
+  let direkt = false;
+  if (pB && !/[?&]stufeA/.test(location.search)) {
+    try { status.textContent = RA ? 'Lade feines Gelände …' : 'Lade echte Häuser …'; const r = await pB; memLog('pB');
+      if (r) { world = await buildStageB(r, data, props, terrain, aerialTex, forestMask, (t) => { memLog('B:' + t); status.textContent = t; }, true); direkt = true; memLog('worldB direkt'); } }
+    catch (e) { console.warn('Echte Welt direkt bauen fehlgeschlagen – Stufe A', e); }
+  }
+  if (!direkt)
   world = await buildWorld(data, terrain, (s) => { memLog('A:' + s); status.textContent = s; }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: echt ? 3500 : 1200, forestStep: 14, forestMask, aerial: aerialTex, aerialHr: aerialHrTex, railBridges: railBrFor(REGION), osm: osmFor(REGION), fuel: fuelFor(REGION), aerialMid: midsFor(REGION), coarse: true, freeCPU: !TEST || /[?&]free/.test(location.search) });
   scene.add(world.group); enableShadows(world.group); scene.add(world.tunnels);
   if (terrain.hz) { farScene.add(horizonMesh(terrain, [0, 0, 0, 0])); }
-  if (pB) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
+  if (pB && !direkt) stageBP = stageB(pB, data, props); else { fullReady = true; (window as any).__luksiReady = true; }
   if (TEST) (window as any).__dbgWorld = scene;
   memLog('worldA'); status.textContent = 'Navi wird eingerichtet …'; loaderProgress(0.8);
   bindAmbience({ // 15a, P-B Einbau 1: Geräuschkulisse fragt die echte Welt ab
@@ -1437,6 +1446,7 @@ async function boot() {
   updateHud();
   // 13h (Simon): Erst losfahren lassen, wenn auch die echten Häuser stehen – kein Spielbild mehr, das noch hängt
   if (stageBP) { status.textContent = RA ? 'Gelände wird verfeinert …' : 'Echte Häuser werden gebaut …'; loaderProgress(0.9); await stageBP; }
+  else if (direkt) enableShadows(scene); // 20e: wie am Ende von stageB – Schatten für alles, was nach der Welt dazukam (Verkehr, Busse, Züge)
   memLog('navTraffic'); status.textContent = ''; loaderDone();
   $('#start-btn').style.display = '';
   try { if (sessionStorage.getItem('luksiRegionSwitch')) { sessionStorage.removeItem('luksiRegionSwitch'); $('#start-btn').textContent = 'Weiterfahren ▶'; } } catch { /* privat */ }
