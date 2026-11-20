@@ -20,7 +20,7 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-20e';
+export const VERSION = '2026-11-20f';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1692,6 +1692,7 @@ function qaReport() {
 if (location.search.includes('test')) {
   (window as any).__dbg = {
     offer: () => { offerTimer = 0; },
+    scene: () => scene, roots: () => ({ scene, cityData, propsData, roofData, nav, terrain, traffic, velos, buses, trains, b3dMeta, b3dData, missions, world, forestMask }), // 20f: Speichermessung (tests/mem_ios.py)
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),
     car: () => ({ x: car.x, z: car.z, heading: car.heading, speed: car.speed }),

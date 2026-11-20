@@ -1,12 +1,23 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-20e** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-20f** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 20f (20.11. spätabends) – Optimierung 4: Speicherdiät (iPhone)
+- Messung (tests/mem_ios.py, Chromium mit iPhone-UA, Luzern «Leicht», TEST = ohne freeCPU): JS-Heap 460 MB = Geometrie 269 + Gelände 48 + Maske 31 + JS-Objekte ~60 (nav 20, cityData 12, Szene 17) …; Texturen 112 MB (davon Wegweiser-Atlas 512×16384 = 45 MB).
+- Erkenntnis: freeCPU (world.ts, seit früher) gibt Geometrie-Kopien erst frei, wenn ein Teil tatsächlich gezeichnet wurde; im Spielbetrieb liegt die Geometrie also einmal vor (JS oder Grafikkarte), nicht doppelt.
+- terrain.ts: Höhen bleiben Int16 (`q`, dm über 400 m, verlustfrei – alle Geländedateien sind vorgeglättet); Float32 `h` nur noch, falls flattenRoads zur Laufzeit läuft. carve rundet ab. −24 MB je Gegend.
+- world.ts `compactGeo`: Normalen Int8, Farben Uint16 (normalisiert) für nicht instanzierte Geometrien ≥ 3000 Eckpunkte, ohne Boden; geteilte Attribute (splitTiles) nur einmal. −44 MB (Luzern Leicht).
+- world.ts `freeCanvases` (nur freeCPU): Canvas ≥ 1 Mio. Pixel nach dem Hochladen auf 1×1; Minimap ausgenommen. Wegweiser-Atlas auf Touch-Geräten halbe Auflösung (TOUCH_SMALL).
+- Ergebnis: Heap 460 → 391 MB (−15 %), Texturen 112 → 78.5 MB. Spitze beim Bau unverändert ~640 MB (evtl. Messartefakt, ungeklärt).
+- Einschätzung (Vertrauen mittel): reicht NICHT sicher für zwei Gegenden auf dem iPhone 11. Standard bleibt: iPhone = eine Gegend. `?stream` zum Ausprobieren am echten Gerät.
+- Tests auf 20f-Code: qa.py Gesamt OK, stream_chain ok (0 draussen, 33 gebremst), ios_phone.py mit &free ok (Randwechsel, Schnellreise), Sichtbild Wegweiser im Handy-Modus lesbar.
+- Weitere Hebel, nicht umgesetzt: Strassenflächen indexieren (asphalt+cobble 74 MB, nicht indexiert), Boden-UV aus Position rechnen (ground 42 MB), nav/cityData als TypedArrays.
 
 ## Version 20e (20.11. abends) – Optimierung 3: Echt-Modus startet direkt
 - boot(): wenn b3d/ground vorhanden (pB) und kein `?stufeA`, wird die echte Welt direkt mit buildStageB gebaut (Variable `direkt`); Stufe A entfällt. Schlägt das fehl → Rückfall auf Stufe A + stageB wie bisher. Nach dem Aufbau `enableShadows(scene)`, `fullReady`/`__luksiReady` sofort.

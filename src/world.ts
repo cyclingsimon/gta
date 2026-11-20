@@ -18,6 +18,7 @@ import { buildSchachtdeckel } from './deckel';
 import { buildZone30 } from './zone30';
 import { buildWanderwegweiser } from './wanderweg';
 import * as THREE from 'three';
+const TOUCH_SMALL = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape, drapeAsync } from './terrain';
 
@@ -1835,9 +1836,41 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   signBacks(group);
+  await pause('vor-kompakt'); compactGeo(group, !!opts.freeCPU); if (opts.freeCPU) freeCanvases(group, minimap);
   return { group, tunnels, mask, minimap, clip, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
 
+/** 20f Speicherdiät: Normalen als Int8 (statt Float32, −9 Byte je Eckpunkt) und Eckpunktfarben als Uint16 (−6 Byte), beides normalisiert – die Grafikkarte rechnet gleich weiter.
+ *  Nur grosse, nicht instanzierte Geometrien (Vorlagen und Instanz-Grundkörper bleiben unverändert); Boden bleibt (Höhenabfragen). Farben nur, wenn alle Werte in 0…1 liegen. */
+function compactGeo(root: THREE.Object3D, free: boolean): number {
+  const seen = new Set<THREE.BufferGeometry>(); let saved = 0; const drop = function (this: any) { this.array = null; };
+  const done = new Map<THREE.BufferAttribute, THREE.BufferAttribute | null>(); // Kacheln (splitTiles) teilen sich Attribute: je Attribut nur einmal umwandeln
+  root.traverse((o: any) => { const g = o.geometry as THREE.BufferGeometry | undefined;
+    if (!g || o.isInstancedMesh || o.name === 'ground' || seen.has(g)) return; seen.add(g);
+    const n = g.getAttribute('normal') as THREE.BufferAttribute | undefined;
+    if (n && done.has(n)) { const r = done.get(n); if (r) g.setAttribute('normal', r); }
+    else if (n && n.isBufferAttribute && !(n as any).isInterleavedBufferAttribute && n.array instanceof Float32Array && n.count >= 3000) {
+      const src = n.array, out = new Int8Array(src.length);
+      for (let i = 0; i < src.length; i++) { const v = src[i] * 127; out[i] = v > 127 ? 127 : v < -127 ? -127 : Math.round(v); }
+      const a = new THREE.BufferAttribute(out, 3, true); if (free) a.onUpload(drop); g.setAttribute('normal', a); done.set(n, a); saved += src.byteLength - out.byteLength; }
+    const c = g.getAttribute('color') as THREE.BufferAttribute | undefined;
+    if (c && done.has(c)) { const r = done.get(c); if (r) g.setAttribute('color', r); }
+    else if (c && c.isBufferAttribute && !(c as any).isInterleavedBufferAttribute && c.array instanceof Float32Array && c.count >= 3000) {
+      const src = c.array; let ok = true; for (let i = 0; i < src.length; i++) { const v = src[i]; if (!(v >= 0 && v <= 1)) { ok = false; break; } }
+      if (ok) { const out = new Uint16Array(src.length); for (let i = 0; i < src.length; i++) out[i] = Math.round(src[i] * 65535);
+        const a = new THREE.BufferAttribute(out, c.itemSize, true); if (free) a.onUpload(drop); g.setAttribute('color', a); done.set(c, a); saved += src.byteLength - out.byteLength; } else done.set(c, null); }
+  });
+  if (/[?&]perf/.test(location.search)) console.log('[perf] kompakt gespart MB', (saved / 1e6).toFixed(1));
+  return saved;
+}
+/** 20f: Zeichenflächen (Canvas) grosser Texturen nach dem Hochladen leeren – sie liegen sonst zusätzlich zur Textur im Speicher. Nur im Spielbetrieb (freeCPU). */
+function freeCanvases(root: THREE.Object3D, keep?: HTMLCanvasElement) {
+  const seen = new Set<THREE.Texture>();
+  root.traverse((o: any) => { const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of ms) for (const k of ['map', 'emissiveMap', 'alphaMap'] as const) { const t = (m as any)[k] as THREE.Texture | undefined;
+      if (!t || seen.has(t) || !(t.image instanceof HTMLCanvasElement) || t.image === keep || t.image.width * t.image.height < 1000000 || t.userData.keepCanvas) continue; seen.add(t);
+      const prev = t.onUpdate; t.onUpdate = () => { if (prev) (prev as any)(t); const cv = t.image as HTMLCanvasElement; t.onUpdate = null as any; if (cv && cv.width) { /* Masse merken, Inhalt freigeben */ t.userData.size = [cv.width, cv.height]; cv.width = 1; cv.height = 1; } }; } });
+}
 /** Mesh nach Dreiecks-Schwerpunkt in Kacheln aufteilen (Attribute bleiben geteilt bzw. werden kopiert) */
 function splitTiles(m: THREE.Mesh, size: number): THREE.Mesh[] {
   const g = m.geometry as THREE.BufferGeometry, P = g.getAttribute('position'), I = g.index;
@@ -3144,8 +3177,8 @@ function wegweiser(d: CityData, terrain: Terrain, group: THREE.Group, steel: THR
   }
   if (!panels.length) return 0;
   // Atlas: je Ortsname zwei Zeilen (Pfeil nach rechts / nach links für die Rückseite)
-  const names = [...new Set(panels.map((p) => p.name + '|' + p.km))], RH = 64, W = 512;
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = THREE.MathUtils.ceilPowerOfTwo(names.length * 2 * RH); const g = cv.getContext('2d')!;
+  const names = [...new Set(panels.map((p) => p.name + '|' + p.km))], RH = 64, W = 512, KS = TOUCH_SMALL ? 0.5 : 1; // 20f: auf Touch-Geräten halbe Auflösung (Luzern: 512×16384 = 45 MB Textur → 11 MB)
+  const cv = document.createElement('canvas'); cv.width = W * KS; cv.height = THREE.MathUtils.ceilPowerOfTwo(names.length * 2 * RH) * KS; const g = cv.getContext('2d')!; g.scale(KS, KS);
   names.forEach((nk, i) => { const [nm, km] = nk.split('|');
     for (const side of [0, 1]) { const y0 = (i * 2 + side) * RH; g.save(); if (side) { g.translate(W, 0); g.scale(-1, 1); }
       g.fillStyle = '#fff'; g.beginPath(); g.moveTo(2, y0 + 4); g.lineTo(W - 52, y0 + 4); g.lineTo(W - 4, y0 + RH / 2); g.lineTo(W - 52, y0 + RH - 4); g.lineTo(2, y0 + RH - 4); g.closePath(); g.fill();
@@ -3154,7 +3187,7 @@ function wegweiser(d: CityData, terrain: Terrain, group: THREE.Group, steel: THR
       const tx = side ? 70 : 22; g.textAlign = 'left'; g.fillText(nm, tx, y0 + RH / 2 + 1);
       if (km) { g.font = 'bold 26px sans-serif'; g.textAlign = 'right'; g.fillText(km, side ? W - 16 : W - 70, y0 + RH / 2 + 1); } } });
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const pos: number[] = [], uv: number[] = [], L = 2.4, H = 0.5, V = cv.height;
+  const pos: number[] = [], uv: number[] = [], L = 2.4, H = 0.5, V = cv.height / KS;
   for (const p of panels) { const i = names.indexOf(p.name + '|' + p.km);
     const ax = p.x + p.ux * 0.1, az = p.z + p.uz * 0.1, bx = p.x + p.ux * (L + 0.1), bz = p.z + p.uz * (L + 0.1);
     // Vorderseite (Pfeil zeigt in Astrichtung, Text lesbar von rechts der Astrichtung gesehen) und Rückseite (gespiegelter Atlas-Eintrag)

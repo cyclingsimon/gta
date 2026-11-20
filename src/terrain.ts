@@ -4,15 +4,14 @@ export const SEA = 433.6;
 
 export class Terrain {
   nx: number; nz: number; x0: number; z0: number; step: number;
-  h: Float32Array;
+  /** 20f: Höhen bleiben als Int16 (Dezimeter über 400 m ü. M., so wie geliefert) – das Float32-Feld kostete je Gegend doppelt so viel (Luzern 48 statt 24 MB). h nur noch, wenn flattenRoads zur Laufzeit rechnen muss. */
+  h: Float32Array | null = null; q: Int16Array | null;
   // Brückendecks (DTM enthält keine Brücken): dünn besetztes 2.5-m-Raster (14zl: Map statt dichtem Float32-Feld – sparte je Gegend bis ~26 MB)
   bridgeRes = 2.5; bw: number; bh: number; bridge = new Map<number, number>();
 
   constructor(raw: ArrayBuffer, meta: { nx: number; nz: number; x0: number; z0: number; step: number }, bounds: number[]) {
     this.nx = meta.nx; this.nz = meta.nz; this.x0 = meta.x0; this.z0 = meta.z0; this.step = meta.step;
-    const i16 = new Int16Array(raw);
-    this.h = new Float32Array(i16.length);
-    for (let i = 0; i < i16.length; i++) this.h[i] = i16[i] / 10 + 400 - SEA;
+    this.q = new Int16Array(raw);
     this.bw = Math.ceil((bounds[2] - bounds[0]) / this.bridgeRes) + 1;
     this.bh = Math.ceil((bounds[3] - bounds[1]) / this.bridgeRes) + 1;
   }
@@ -22,6 +21,7 @@ export class Terrain {
    * nächstgelegenen Mittellinie (Querneigung 0), mit weichem Übergang am Rand.
    */
   flattenRoads(roads: { p: number[][]; w: number; c: string; b: number }[]) {
+    if (!this.h) { const i16 = this.q!; this.h = new Float32Array(i16.length); for (let i = 0; i < i16.length; i++) this.h[i] = i16[i] / 10 + 400 - SEA; this.q = null; }
     const orig = this.h.slice();
     const sample = (x: number, z: number) => {
       let fx = (x - this.x0) / this.step, fz = (z - this.z0) / this.step;
@@ -31,7 +31,7 @@ export class Terrain {
       return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
     };
     const best = new Float32Array(this.h.length).fill(Infinity);
-    const target = new Float32Array(this.h.length);
+    const target = new Float32Array(this.h.length); const hh = this.h;
     for (const r of roads) {
       if (r.b || ['steps', 'path'].includes(r.c)) continue;
       const half = r.w / 2, reach = half + 4;
@@ -50,12 +50,12 @@ export class Terrain {
           const idx = j * this.nx + i;
           if (dist < best[idx]) { best[idx] = dist; target[idx] = h1 + ((h2 - h1) * t) / len + (dist <= half ? 0 : 0) ; (target as any)[idx] = target[idx]; (best as any).half = half; }
           // Randgewicht merken: innerhalb der Fahrbahn voll, bis 4 m daneben auslaufend
-          if (dist === best[idx]) (this as any)._w = (this as any)._w || new Float32Array(this.h.length), (this as any)._w[idx] = dist <= half ? 1 : 1 - (dist - half) / 4;
+          if (dist === best[idx]) (this as any)._w = (this as any)._w || new Float32Array(hh.length), (this as any)._w[idx] = dist <= half ? 1 : 1 - (dist - half) / 4;
         }
       }
     }
     const w: Float32Array = (this as any)._w;
-    for (let i = 0; i < this.h.length; i++) if (best[i] < Infinity) { const a = w ? w[i] : 1; this.h[i] = orig[i] * (1 - a) + target[i] * a; }
+    for (let i = 0; i < hh.length; i++) if (best[i] < Infinity) { const a = w ? w[i] : 1; hh[i] = orig[i] * (1 - a) + target[i] * a; }
     delete (this as any)._w;
   }
 
@@ -90,8 +90,9 @@ export class Terrain {
     let fx = (x - this.x0) / this.step, fz = (z - this.z0) / this.step;
     fx = Math.max(0, Math.min(this.nx - 1.001, fx)); fz = Math.max(0, Math.min(this.nz - 1.001, fz));
     const i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
-    const a = this.h[j * this.nx + i], b = this.h[j * this.nx + i + 1];
-    const c = this.h[(j + 1) * this.nx + i], d = this.h[(j + 1) * this.nx + i + 1];
+    const k0 = j * this.nx + i, k1 = k0 + this.nx, q = this.q;
+    if (q) return ((q[k0] * (1 - tx) + q[k0 + 1] * tx) * (1 - tz) + (q[k1] * (1 - tx) + q[k1 + 1] * tx) * tz) / 10 + (400 - SEA);
+    const h = this.h!, a = h[k0], b = h[k0 + 1], c = h[k1], d = h[k1 + 1];
     return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
   }
 
@@ -142,7 +143,9 @@ export class Terrain {
   carve(x: number, z: number, r: number, y: number) {
     for (let dx = -r; dx <= r; dx += this.step) for (let dz = -r; dz <= r; dz += this.step) { if (dx * dx + dz * dz > r * r) continue;
       const i = Math.round((x + dx - this.x0) / this.step), j = Math.round((z + dz - this.z0) / this.step); if (i < 0 || j < 0 || i >= this.nx || j >= this.nz) continue;
-      const k = j * this.nx + i; if (this.h[k] > y) { this.h[k] = y; this.carved.add(k); } }
+      const k = j * this.nx + i;
+      if (this.q) { const v = Math.floor((y - (400 - SEA)) * 10); if (this.q[k] > v) { this.q[k] = v; this.carved.add(k); } } // abrunden: Gelände nie über der Fahrbahn
+      else if (this.h![k] > y) { this.h![k] = y; this.carved.add(k); } }
   }
   isCarved(x: number, z: number) { if (!this.carved.size) return false; const i = Math.round((x - this.x0) / this.step), j = Math.round((z - this.z0) / this.step); return this.carved.has(j * this.nx + i); }
   /** Liegt der Punkt (Höhe y) in einem Tunnel unter dem Gelände? */

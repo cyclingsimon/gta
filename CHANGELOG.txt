@@ -1,5 +1,12 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20f  Speicherdiät
+- Gelände bleibt als 16-Bit-Raster im Speicher (Luzern 24 statt 48 MB)
+- Normalen und Eckpunktfarben grosser Geometrien kompakt (Luzern «Leicht» 225 statt 269 MB)
+- Wegweiser-Textur auf Touch-Geräten in halber Auflösung (11 statt 45 MB); grosse Zeichenflächen werden nach dem Hochladen geleert
+- Gemessen im iPhone-Modus (Chromium, Luzern «Leicht»): JavaScript-Speicher 391 statt 460 MB
+- iPhone lädt weiterhin eine Gegend aufs Mal; ?stream zum Ausprobieren des nahtlosen Wechsels
+
 2026-11-20e  Schneller Start im Modus «Echt»
 - Die echte Welt wird beim Start direkt gebaut (vorher: erst einfache Welt, dann echte)
 - Testrechner (Software-Grafik): Startknopf nach 48 statt 214 Sekunden, spielbereit nach 88 statt 251 Sekunden; auf echten Geräten nicht gemessen
