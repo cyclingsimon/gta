@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-20g
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-21a
+Neu in 21a: Wetter! Im Pause-Menü unter «Wetter» wählbar: Schön, Regen, Schnee (weisse Dächer, Wiesen und Berge, Flocken) oder Nebel. Das Wetter ändert nur die Stimmung – gefahren wird wie immer. Es bleibt gespeichert und gilt in allen Gegenden.
 Neu in 20g: Nochmals weniger Arbeitsspeicher – Strassen und andere grosse Flächen liegen platzsparender im Speicher. Aussehen unverändert.
 Neu in 20f: Das Spiel braucht weniger Arbeitsspeicher (wichtig für Handys): Gelände, Strassen und Schilder liegen sparsamer im Speicher. iPhone zum Ausprobieren: Mit ?stream hinter der Adresse lädt auch das iPhone die Nachbargegend ohne Neuladen – ob der Speicher dafür reicht, ist am echten iPhone noch nicht getestet.
 Neu in 20e: Im Modus «Echt» startet das Spiel deutlich schneller: Die echte Welt wird direkt gebaut statt zuerst eine einfache und danach die echte.

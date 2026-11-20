@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21a  Wetter
+- Pause-Menü «Wetter»: Schön, Regen, Schnee, Nebel (mit Tag und Abend kombinierbar, im Spielstand gespeichert)
+- Schnee: nach oben zeigende Flächen werden weiss (Dächer, Wiesen, Bäume, Berge am Horizont), Strassen bleiben als geräumt erkennbar, Flocken
+- Regen: graues Licht, Regenstriche, kürzere Sicht; Nebel: Sicht ca. 300 m, keine Berge
+- Kein Einfluss aufs Fahren, keine Strafen
+
 2026-11-20g  Speicherdiät, Teil 2
 - Grosse Dreiecksnetze (Strassen, Dächer usw.) werden verschweisst: gleiche Eckpunkte nur einmal gespeichert
 - Boden-Normalen kompakter

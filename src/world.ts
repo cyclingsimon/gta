@@ -1837,6 +1837,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   signBacks(group);
+  snowAll(group);
   await pause('vor-kompakt'); compactGeo(group, !!opts.freeCPU); if (opts.freeCPU) freeCanvases(group, minimap);
   return { group, tunnels, mask, minimap, clip, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
@@ -2976,9 +2977,9 @@ export function horizonMesh(t: Terrain, hole: number[]) {
   // 14zd: Anschluss an den Nebel der Nahszene (endet bei 1500 m): bis 1500 m Nebelfarbe, bis 4000 m Übergang zur eigenen Farbe.
   // Vorher harte helle Kante (weiss vernebelte Hügel der Nahszene vor dunklerem Horizont), von Anhöhen gut sichtbar.
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.hzFog = HZ_FOG;
+    sh.uniforms.hzFog = HZ_FOG; sh.uniforms.hzSnow = SNOW;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vHzD;').replace('#include <project_vertex>', '#include <project_vertex>\nvHzD = length(mvPosition.xyz);');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vHzD;\nuniform vec3 hzFog;').replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb = mix(gl_FragColor.rgb, hzFog, 1.0 - smoothstep(1500.0, 4000.0, vHzD));\n#include <tonemapping_fragment>');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vHzD;\nuniform vec3 hzFog;\nuniform float hzSnow;').replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), hzSnow * 0.85);').replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb = mix(gl_FragColor.rgb, hzFog, 1.0 - smoothstep(1500.0, 4000.0, vHzD));\n#include <tonemapping_fragment>');
   };
   const mesh = new THREE.Mesh(g, mat);
   mesh.name = 'horizon';
@@ -3052,13 +3053,13 @@ function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE
 }
 
 /** Wasser: wandernde Wellen-Normalen, Himmel-Spiegelung bei flachem Blick (Fresnel), Sonnenglitzern als harte Comic-Funken */
-export const WATER = { time: { value: 0 }, sun: { value: new THREE.Vector3(-400, 700, 300).normalize() }, sky: { value: new THREE.Color('#CFE9F5') } };
+export const WATER = { time: { value: 0 }, sun: { value: new THREE.Vector3(-400, 700, 300).normalize() }, sky: { value: new THREE.Color('#CFE9F5') }, dull: { value: 0 } /* 21a Wetter: Wasser grauer */ };
 function withWater(m: THREE.MeshToonMaterial) {
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uWT = WATER.time; sh.uniforms.uWSun = WATER.sun; sh.uniforms.uWSky = WATER.sky;
+    sh.uniforms.uWT = WATER.time; sh.uniforms.uWSun = WATER.sun; sh.uniforms.uWSky = WATER.sky; sh.uniforms.uWDull = WATER.dull;
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n  vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n  vMapUv += vec2(0.0, 0.0);\n#endif');
-    sh.fragmentShader = 'uniform float uWT;\nuniform vec3 uWSun;\nuniform vec3 uWSky;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    sh.fragmentShader = 'uniform float uWT;\nuniform float uWDull;\nuniform vec3 uWSun;\nuniform vec3 uWSky;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       {
         vec2 p = vWP.xz;
         float t = uWT;
@@ -3070,6 +3071,7 @@ function withWater(m: THREE.MeshToonMaterial) {
         vec3 n = normalize(vec3(-g.x * 0.18, 1.0, -g.y * 0.18));
         vec3 v = normalize(cameraPosition - vWP);
         float fr = pow(1.0 - max(dot(n, v), 0.0), 5.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uWSky * 0.78, uWDull);
         diffuseColor.rgb = mix(diffuseColor.rgb, uWSky, fr * 0.45);
         // Glitzern nur als kleine Funken und vor allem bei flachem Blick (von oben sah es sonst wie Schaumflecken aus)
         float sp = pow(max(dot(reflect(-v, n), uWSun), 0.0), 900.0);
@@ -3081,6 +3083,28 @@ function withWater(m: THREE.MeshToonMaterial) {
   return m;
 }
 
+/** 21a Wetter «Schnee»: nach oben zeigende Flächen werden weiss, gesteuert über SNOW.value 0..1 (ein gemeinsamer Wert für alle Welten, kein Neuaufbau nötig).
+ *  amt: Anteil je Material (Fahrbahn und Markierungen bleiben als geräumte Strasse erkennbar). */
+export const SNOW = { value: 0 };
+function withSnow(m: THREE.Material, amt: number) {
+  if (m.userData.snow) return; m.userData.snow = 1;
+  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m), uAmt = { value: amt };
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r);
+    sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt;
+    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      if (uSnow > 0.0) { vec3 snN = inverseTransformDirection(normal, viewMatrix);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), uSnow * uSnowAmt * smoothstep(0.42, 0.78, snN.y)); }`);
+  };
+  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow';
+}
+/** Schnee-Haken an alle beleuchteten Materialien einer Welt hängen (vor dem ersten Zeichnen) */
+function snowAll(root: THREE.Object3D) {
+  root.traverse((o: any) => { if (!o.material) return; for (const m of (Array.isArray(o.material) ? o.material : [o.material]) as THREE.Material[]) {
+    if (!(m as any).isMeshToonMaterial && !(m as any).isMeshLambertMaterial && !(m as any).isMeshStandardMaterial) continue;
+    if ((m as any).emissiveIntensity > 0 && (m as any).emissive && ((m as any).emissive.r + (m as any).emissive.g + (m as any).emissive.b) > 1.2) continue; // leuchtende Teile bleiben
+    withSnow(m, m.polygonOffset || /^roads-|^apron$/.test(o.name) ? (o.name === 'apron' ? 1 : 0.4) : 1); } });
+}
 /** Abendstimmung: Fenster (bläuliche Glaspixel der Fassadentextur) leuchten zufällig warm auf, gesteuert über NIGHT.value 0..1 */
 export const NIGHT = { value: 0 };
 export function withNight(m: THREE.MeshToonMaterial) {

@@ -7,7 +7,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, SNOW, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -20,12 +20,13 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-20g';
+export const VERSION = '2026-11-21a';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
-interface Save { diffChosen?: boolean; km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
+type Weather = 'sonne' | 'regen' | 'schnee' | 'nebel';
+interface Save { diffChosen?: boolean; km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; weather?: Weather; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -256,7 +257,50 @@ function setEvening(on: boolean) {
   (scene.fog as THREE.Fog).color.set(on ? '#EDB38C' : '#CFE9F5'); HZ_FOG.value.copy((scene.fog as THREE.Fog).color);
   scene.traverse((o: any) => { const m = o.material; if (m && m.name === 'lampHead') m.emissive.set(on ? '#FFD27A' : '#5A4E20'); });
   document.body.classList.toggle('evening', on);
+  applyWeather();
 }
+// ---------------- 21a Wetter ----------------
+/** Regen/Schnee: Teilchen in einem Würfel um die jeweilige Kamera (auch im geteilten Bild), Bewegung im Shader – kein Rechnen je Bild in JS. */
+const WX = { time: { value: 0 }, cam: { value: new THREE.Vector3() }, box: { value: new THREE.Vector3(70, 40, 70) } };
+function wxParticles(kind: 'regen' | 'schnee'): THREE.Object3D {
+  const n = kind === 'regen' ? (MOBILE ? 1400 : 3200) : (MOBILE ? 1100 : 2600), rain = kind === 'regen';
+  const base = new Float32Array(n * (rain ? 2 : 1) * 3), end = new Float32Array(n * (rain ? 2 : 1));
+  for (let i = 0; i < n; i++) { const x = Math.random(), y = Math.random(), z = Math.random();
+    if (rain) { base.set([x, y, z, x, y, z], i * 6); end[i * 2 + 1] = 1; } else base.set([x, y, z], i * 3); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(base, 3)); g.setAttribute('aEnd', new THREE.BufferAttribute(end, 1));
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: false, uniforms: { uTime: WX.time, uCam: WX.cam, uBox: WX.box },
+    vertexShader: `uniform float uTime; uniform vec3 uCam; uniform vec3 uBox; attribute float aEnd; varying float vA;
+      void main() { vec3 b = position; float sp = ${rain ? '26.0 + b.x * 8.0' : '1.6 + b.z * 1.2'};
+        vec3 drift = vec3(${rain ? '2.0' : 'sin(uTime * 0.7 + b.y * 40.0) * 0.6 + 0.8'}, -sp, ${rain ? '0.6' : 'cos(uTime * 0.5 + b.x * 40.0) * 0.6'}) * uTime;
+        vec3 p = (fract(b + (drift - uCam) / uBox) - 0.5) * uBox + uCam; ${rain ? 'p += vec3(0.07, -1.0, 0.02) * aEnd * 0.9;' : ''}
+        vec4 mv = viewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv; vA = smoothstep(uBox.x * 0.5, uBox.x * 0.3, length(p.xz - uCam.xz));
+        ${rain ? '' : 'gl_PointSize = clamp(170.0 / -mv.z, 1.5, 7.0);'} }`,
+    fragmentShader: rain ? 'varying float vA; void main() { gl_FragColor = vec4(0.78, 0.84, 0.92, 0.42 * vA); }'
+      : 'varying float vA; void main() { float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard; gl_FragColor = vec4(1.0, 1.0, 1.0, (1.0 - d * 1.6) * 0.95 * vA); }' });
+  const o: THREE.Object3D = rain ? new THREE.LineSegments(g, mat) : new THREE.Points(g, mat);
+  o.frustumCulled = false; o.renderOrder = 900; o.name = 'wetter-' + kind;
+  o.onBeforeRender = (_r, _s, cam) => { WX.cam.value.copy((cam as THREE.Camera).position); (mat as any).uniformsNeedUpdate = true; };
+  return o;
+}
+let wxObj: THREE.Object3D | null = null, wxKind: Weather = 'sonne';
+/** Wetter über die Tageszeit legen: Licht, Himmel, Nebel, Schnee-Tönung, Teilchen. Fährt sich immer gleich – nur Stimmung, keine Strafen. */
+function applyWeather() {
+  const w: Weather = save.weather || 'sonne', fog = scene.fog as THREE.Fog, eve = !!save.evening;
+  SNOW.value = w === 'schnee' ? 1 : 0; WATER.dull.value = { sonne: 0, regen: 0.45, schnee: 0.4, nebel: 0.6 }[w];
+  const far = { sonne: [260, 1500], regen: [120, 1000], schnee: [110, 900], nebel: [18, 300] }[w]; fog.near = far[0]; fog.far = far[1];
+  if (w !== 'sonne') {
+    const grey = { regen: eve ? '#7B6F78' : '#9AA6AE', schnee: eve ? '#B9A9AE' : '#DDE4EA', nebel: eve ? '#B9A69C' : '#D3D9DC' }[w as 'regen'];
+    fog.color.set(grey); HZ_FOG.value.copy(fog.color); renderer.setClearColor(grey, 1);
+    SKY.zenith.set(grey).multiplyScalar(w === 'regen' ? 0.8 : 0.95); SKY.horizon.set(grey); SKY.sunCol.set(grey); WATER.sky.value.copy(SKY.horizon);
+    const k = { regen: 0.42, schnee: 0.6, nebel: 0.5 }[w as 'regen']; sun.intensity *= k; hemi.intensity *= w === 'schnee' ? 1.12 : 0.95;
+    for (const l of farScene.children) if ((l as any).isDirectionalLight) (l as any).intensity *= k;
+  }
+  for (const o of farScene.children) if ((o as any).isMesh && o !== skyDome) o.visible = w !== 'nebel'; // im Nebel keine Berge
+  const need = w === 'regen' || w === 'schnee' ? w : null;
+  if (wxKind !== w) { if (wxObj) { scene.remove(wxObj); (wxObj as any).geometry.dispose(); (wxObj as any).material.dispose(); wxObj = null; } if (need) { wxObj = wxParticles(need); scene.add(wxObj); } wxKind = w; }
+  document.body.dataset.wetter = w;
+}
+function setWeather(w: Weather) { save.weather = w; setEvening(!!save.evening); }
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -954,6 +998,7 @@ function menuRows(): MenuRow[] {
       btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Einfach', rettung: '🚑 Mittel', profi: '⚡ Schnell' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
     { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '🔭 Weiter weg', '👀 Fahrersicht'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
     { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
+    { kind: 'opt', label: 'Wetter', btns: ([['sonne', '☀️ Schön'], ['regen', '🌧️ Regen'], ['schnee', '❄️ Schnee'], ['nebel', '🌫️ Nebel']] as [Weather, string][]).map(([w, t]) => ({ t, on: (save.weather || 'sonne') === w, f: () => { setWeather(w); writeSave(); } })) },
     { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
     ...(document.documentElement.requestFullscreen ? [{ kind: 'opt' as const, label: 'Vollbild', btns: [ // 16a (Simon): Vollbild wie bei Videos
       { t: '⛶ An', on: !!document.fullscreenElement, f: () => { document.documentElement.requestFullscreen({ navigationUI: 'hide' } as any).then(() => (screen.orientation as any)?.lock?.('landscape')).catch(() => { /* nicht erlaubt */ }); } },
@@ -1247,6 +1292,7 @@ function frame(now: number) {
     updateEngine(car.speed, c.throttle);
     updateVenues(car.x, car.z);
     cullTick(dt);
+    WX.time.value += dt; if (wxObj) wxObj.visible = !underground;
     konzerte.update(dt, car.x, car.z, (x, z) => terrain.height(x, z), venueNear, (t) => toast(t, 4200));
     phaseTime += dt;
     playTime += dt; if (playTime > 90) $('#keys').classList.add('hide');
@@ -1388,7 +1434,7 @@ async function boot() {
   if (missionsAP) MA = await missionsAP;
   setupMissions();
   setupFun(data);
-  if (save.evening) setEvening(true);
+  if (save.evening || (save.weather && save.weather !== 'sonne')) setEvening(!!save.evening);
   { const tl = await pTrains; if (tl) { trains = new Trains(terrain, tl, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); } }
   { const gd = await pGondola; if (gd) { gondola = new Gondola(terrain, gd); scene.add(gondola.group); } }
 
@@ -1531,7 +1577,7 @@ function swapWorld(nw: World) {
   { const sl = slots.get(REGION); if (sl) { sl.world = nw; linkSlots(); } } // 14zj: Slot zeigt auf die neue Welt
   for (const p of players) { p.car.mask = nw.mask; if (p.car.blocked(p.car.x, p.car.z, p.car.heading)) placeCar(p.car.x, p.car.z, undefined, p.car); }
   if (traffic) { traffic.setMask(nw.mask); const pg = nw.group.getObjectByName('props') as any; if (pg && pg.signalPos) { traffic.setSignals(pg.signalPos, pg.signalLamp); const tr = traffic; buses?.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
-  if (save.evening) setEvening(true);
+  if (save.evening || (save.weather && save.weather !== 'sonne')) setEvening(!!save.evening);
 }
 
 let started = false;
@@ -1692,6 +1738,7 @@ function qaReport() {
 if (location.search.includes('test')) {
   (window as any).__dbg = {
     offer: () => { offerTimer = 0; },
+    wetter: (w: Weather) => { setWeather(w); return [SNOW.value, (scene.fog as THREE.Fog).far, wxObj ? wxObj.name : '']; },
     scene: () => scene, roots: () => ({ scene, cityData, propsData, roofData, nav, terrain, traffic, velos, buses, trains, b3dMeta, b3dData, missions, world, forestMask }), // 20f: Speichermessung (tests/mem_ios.py)
     accept: () => acceptOffer(), handover: () => handover(),
     tp: (x: number, z: number, h?: number) => placeCar(x, z, h),

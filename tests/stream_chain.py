@@ -16,6 +16,8 @@ async def main():
         nav = []; pg.on('framenavigated', lambda f: nav.append(f.url) if f == pg.main_frame else None)
         await pg.goto(f'http://localhost:{PORT}/?test&noshadow&notraffic&region=luzern{QS}'); await pg.wait_for_selector('#start-btn', state='visible')
         await pg.evaluate('localStorage.clear()'); await pg.click('#start-btn'); await pg.wait_for_function('window.__luksiReady')
+        import os
+        if os.environ.get('WETTER'): print('wetter', await pg.evaluate(f"window.__dbg.wetter('{os.environ['WETTER']}')"))
         n0 = len(nav); H = -math.pi / 2 if X1 < X0 else math.pi / 2; d = -1 if X1 < X0 else 1
         x = X0; seq = []; draussen = 0; capped = 0; maxslots = 0; t0 = time.time(); log = []
         await pg.evaluate(f'window.__dbg.warp({x},{Z},{H}); window.__dbg.speed(20)')
