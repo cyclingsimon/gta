@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20a  Radiosender (Technik)
+- Eigene Radiosender: Taste Q oder Steuerkreuz rechts schaltet weiter, auch im Pausenmenü unter Musik; Jingle, Zufallsreihenfolge, die Wahl bleibt gespeichert
+- Die Sender erscheinen erst, wenn Songs im Ordner audio/radio liegen (in diesem Paket noch keine)
+- Startbild: Hinweis zur anonymen Spielstatistik
+
 2026-11-19a  iPhone
 - iPhone: Gegenden werden einzeln geladen, damit Safari nicht abstürzt (am Rand der Gegend fragt das Spiel und lädt die nächste Gegend neu; mit ?stream wie bisher durchgehend)
 

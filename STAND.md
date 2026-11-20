@@ -1,12 +1,19 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 18.11.2026 (geplanter Lauf). Fertig: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. In Arbeit: **2026-11-20a** (Radiosender-Technik). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 20a (20.11. vormittags, Fable-Sitzung; Auftrag Simon 09:03: autark bis 14:00, neuere Versionen aus den anderen Chats übernehmen)
+- Stand übernommen: Remote `claude/13i-gebiet-a` = 4768990 (19a, live auf gta.simon-infanger.ch laut Chat «Luksi Rescue Push per FileZilla»); lokal per Fast-Forward von 17c nachgezogen.
+- **Eigene Radiosender (Technik fertig, noch ohne Songs)**: `public/audio/radio/sender.json` (6 Sender laut Doc «Luksi Rescue – Radiosender & Suno-Prompts»: Sirene 144/Metal, Tatü-Tata Riddim/Reggae, Radio 041/Hip-Hop, Rüüdig FM/Guggen, Nachtschicht FM/Synthwave, Radio Härzschlag/Techno). audio.ts: `MusicSrc` ist jetzt ein String (`spiel` | `s:<id>` | `radio` | `aus`), `loadSender/musicCycle/onNowPlaying/senderState`; Sender ohne Songs sind unsichtbar; Jingle vor dem 1. und danach vor jedem 3. Stück; Zufallsfolge ohne Wiederholung bis alle gespielt; Lautstärke duckt unter Sirene/Konzert; 3 Ladefehler → Spielmusik. Bedienung: Taste Q / Steuerkreuz rechts (Action `radio`), Pausenmenü «Musik»; Wahl in `save.music`.
+- **Songs einbauen** (wenn Simon MP3 in Downloads\Luksi Radio gelegt hat; PC muss an sein): Ordner stagen → `python3 -I tools/radio_build.py <ordner> public/audio/radio` (Zuordnung über ID3-Titel/Dateiname, Songs 128 kbit/s −16 LUFS, Jingle = lauteste 8 s) → Build → ZIP MIT `audio/radio/**`. Zuordnungstabelle steht im Skript (45 Titel + 6 Jingles).
+- Startbild/Hinweise: Absatz «Statistik» (anonyme Spielstatistik, was gesendet wird). Kein Schalter (Entscheid Simon 12.11. bleibt).
+- Tests: tests/radio_sender.py mit Testtönen (2 Sender): Liste geladen, Q schaltet, Folge Jingle → Song → Song → Song → Jingle, Menü zeigt Sender, Wahl übersteht Neuladen, 0 Fehler. Bauwerkzeug mit 5 Test-MP3 geprüft (Zuordnung, Jingle-Schnitt, unbekannter Titel gemeldet). **Nicht getestet**: echte Songs, Handy/iPhone (Autoplay-Regeln von Safari: Start erst nach Tipp – `radioKick` deckt das ab, ungeprüft), Steuerkreuz am Controller.
 
 ## Version 19a (19.11. abends) – iPhone-Absturz
 Befund Simon (Video 19.11. 19:06, iPhone 11 von Hans, iOS 18.7.8, Safari, live 18a): nach ca. 5 s Bau-Hinweis (streamTick lädt Nachbargegend), dann weiss und «wiederholt ein Problem aufgetreten» = Safari beendet den Tab (Speicher). Ursache (Vertrauen mittel-hoch): zweite Gegend im Speicher.
