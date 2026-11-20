@@ -1,12 +1,21 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-20b** (Radiosender-Technik, Gegendwechsel flüssiger; ersetzt 20a). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-20c** (Sirene 144, Sichtweite Kleinteile; davor 20b). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 20c (20.11. nachmittags; Auftrag Simon 14:25: die fünf Optimierungen umsetzen, ZIP-Grösse egal – 1000 GB auf dem Server; iPhone-Problem laut Simon gelöst)
+- **Sender «Sirene 144» eingebaut** (Simon 14:33, Ordner Downloads\Sirene 144): 9 Songs + Jingle (12 s, ungekürzt) in `public/audio/radio/sirene144/` (29 MB, 128 kbit/s, −16 LUFS), im Repo. Zwei Titel ausserhalb der Tabelle («De Luksi isch für alli da», «De Luksi») über den Ordnernamen zugeordnet – radio_build.py: Ordner heisst wie ein Sender oder `--sender=<id>` → alles gehört dazu; andere Sender in sender.json bleiben unverändert; Jingle ≤ 20 s bleibt ganz. Übrige fünf Sender noch ohne Songs (unsichtbar).
+- **Optimierung 5 (Dreiecke)**: Kleinteile, die als EIN Netz über die ganze Gegend reichten (Zebrastreifen, Schachtdeckel, Zone 30, Wartende, Strassenmöbel, Spielplätze, Siloballen, Bahnsignale, Schilder, Plakate …), werden in 400-m-Kacheln geteilt (vorher immer ganz gezeichnet). Dazu Sichtweite je Art (170–900 m, `group.userData.cull`, `cullTick` alle 0.2 s in main.ts; aus > 120 m Kamerahöhe × 2.2; abschaltbar `?nocull`). qa.py Luzern: **P1 2.353 → 2.013 Mio. Dreiecke, 925 → 851 Draw Calls; Schattenpass 0.518 → 0.397 Mio.**
+- **Optimierung 2 (Einblenden)**: `revealTick` blendet je Bild höchstens ~40 000 Eckpunkte (Handy 20 000) neu ein, mindestens ein Teil (vorher fest 4 Teile je Bild, auch die vier grössten). Wirkung auf echter Grafikkarte nicht messbar im Testrechner.
+- Neues Werkzeug tests/meshes.py (`__dbg.meshes()`): Inventar aller Weltnetze mit Dreiecken und Radius.
+- Tests auf dem 20c-Build: qa.py Luzern Gesamt OK, stream_chain ok (Luzern → West → a8 → a7; Stand vor dem Versionswechsel), tests/radio_sender.py mit echtem Sender (Jingle → Song, Menü, Speichern) ok, missions.py 4 Einsätze ok, Sichttest Haltestellen/Zebra ok. Nicht gelaufen: smoke_a, mobile.py, ios_phone.py, funkhalt, Geräte.
+- **ZIP «Luksi Rescue 2026-11-20c.zip» (311 MB, 492 Dateien = 20b + audio/radio/sirene144/*) an Simon geliefert.**
+- **Offen aus Simons Auftrag**: (1) Maske/Bodennetz/Strassen in einen Web Worker, (3) vorberechnete 3D-Häuser je Gegend für kürzere Ladezeit im Echt-Modus (ZIP darf wachsen), (4) iPhone wieder nahtlos (Speicherdiät) – erst nach 1 und 3.
 
 ## Version 20a (20.11. vormittags, Fable-Sitzung; Auftrag Simon 09:03: autark bis 14:00, neuere Versionen aus den anderen Chats übernehmen)
 - Stand übernommen: Remote `claude/13i-gebiet-a` = 4768990 (19a, live auf gta.simon-infanger.ch laut Chat «Luksi Rescue Push per FileZilla»); lokal per Fast-Forward von 17c nachgezogen.

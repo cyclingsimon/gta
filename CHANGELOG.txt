@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20c  Sirene 144
+- Radiosender «Sirene 144» mit 9 Songs und Jingle (Taste Q, Steuerkreuz rechts oder Pausenmenü → Musik)
+- Kleinteile (Zebrastreifen, Schachtdeckel, Wartende, Strassenmöbel, Schilder) werden nur noch in der Nähe gezeichnet: rund 14 % weniger Dreiecke im Bild
+- Eine neu geladene Gegend wird gleichmässiger eingeblendet
+
 2026-11-20b  Gegendwechsel flüssiger
 - Der Wechsel in eine neue Gegend ruckelt weniger: die Nachbargegend wird im Hintergrund in viel kleineren Schritten gebaut
 - Der Statistik-Absatz aus 20a ist wieder entfernt
