@@ -20,7 +20,7 @@ import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-20c';
+export const VERSION = '2026-11-20d';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -1972,7 +1972,7 @@ function activate(s: Slot) {
 const loadFailed = new Map<string, number>(); // P-C N2/C4: Gegend → Zeitpunkt (s) des nächsten Ladeversuchs
 let loadingP: Promise<Slot> | null = null; let loadInd: HTMLElement | null = null; // P-C N5/C3: laufendes Hintergrund-Laden (Schnellreise wartet darauf)
 /** 20a: Scheibenlänge (ms) für den Hintergrund-Bau – normal 9 ms (flüssiges Bild); je näher die Ambulanz der noch nicht fertigen Gegend ist, desto länger (schneller fertig, dafür weniger Bilder) */
-let bauScheibe = 9;
+let bauScheibe = 9; // 9 ms normal · 16 ms < 26 s bis zur unfertigen Gegend · 30 ms < 16 s · 100 ms < 8 s oder Baustellen-Bremse aktiv
 function streamCap() {
   for (const pl of players) {
     const c = pl.car; let cap = Infinity;
@@ -1985,7 +1985,7 @@ function streamCap() {
   if (loadInd) { const br = players[0].car.vcap < 12; if (br !== loadInd.classList.contains('bremse')) { loadInd.classList.toggle('bremse', br); loadInd.textContent = br ? '🚧 Kurz langsam – die Bauarbeiter bauen die Strasse fertig …' : BAU_TXT[Math.floor(Math.random() * BAU_TXT.length)]; } }
 }
 /** 18a: Vorausschau wächst mit dem Tempo (vorher fest 700 m → bei 150–269 km/h war die nächste Gegend oft noch nicht fertig und die Baustellen-Bremse griff) */
-function lookPts(v: number): number[][] { const F = Math.min(1800, Math.max(700, Math.abs(v) * 22)); return [[0, 0], [0, F * 0.5], [0, F], [250, F * 0.85], [-250, F * 0.85], [400, F * 0.5], [-400, F * 0.5]]; }
+function lookPts(v: number): number[][] { const F = Math.min(2400, Math.max(900, Math.abs(v) * 32)); /* 20d: 32 s statt 22 s Vorlauf, weil der Bau jetzt in feinen Scheiben läuft und dadurch länger dauert */ return [[0, 0], [0, F * 0.5], [0, F], [250, F * 0.85], [-250, F * 0.85], [400, F * 0.5], [-400, F * 0.5]]; }
 function streamTick(dt: number) {
   streamCap();
   streamT -= dt; if (streamT > 0) return; streamT = 0.5;
@@ -1998,8 +1998,8 @@ function streamTick(dt: number) {
     if (here) { activate(slots.get(here)!); }
   }
   { const sp = Math.max(...players.map((pl) => Math.abs(pl.car.speed))), br = players.some((pl) => pl.car.vcap < 1e9); let tta = 1e9;
-    if (loadingSlot && sp > 2) for (const pl of players) { const q = pl.car; for (let f = 100; f <= 2000; f += 100) { const r = regionAt(q.x + q.fx * f, q.z + q.fz * f); if (r.length && !r.some((k) => slots.has(k))) { tta = Math.min(tta, f / Math.max(2, Math.abs(q.speed))); break; } } }
-    bauScheibe = br || tta < 10 ? 40 : tta < 22 ? 20 : 9; }
+    if (loadingSlot && sp > 2) for (const pl of players) { const q = pl.car; for (let f = 100; f <= 2600; f += 100) { const r = regionAt(q.x + q.fx * f, q.z + q.fz * f); if (r.length && !r.some((k) => slots.has(k))) { tta = Math.min(tta, f / Math.max(2, Math.abs(q.speed))); break; } } }
+    bauScheibe = br || tta < 8 ? 100 : tta < 16 ? 30 : tta < 26 ? 16 : 9; }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && players.some((pl) => Math.abs(pl.car.speed) > 2)) {
     const look: number[][] = []; // P-C N8: Blickpunkte aller Spieler (Spieler 1 zuerst)

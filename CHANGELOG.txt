@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20d  Nachladen noch flüssiger
+- Auch Karte, Boden und Strassen der nächsten Gegend werden in kleinen Schritten gebaut: längster Hänger im Test 0.2 statt 2.4 Sekunden
+- Die nächste Gegend wird früher vorbereitet (32 statt 22 Sekunden Vorlauf)
+
 2026-11-20c  Sirene 144
 - Radiosender «Sirene 144» mit 9 Songs und Jingle (Taste Q, Steuerkreuz rechts oder Pausenmenü → Musik)
 - Kleinteile (Zebrastreifen, Schachtdeckel, Wartende, Strassenmöbel, Schilder) werden nur noch in der Nähe gezeichnet: rund 14 % weniger Dreiecke im Bild

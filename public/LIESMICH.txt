@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-20c
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-20d
+Neu in 20d: Beim Nachladen der nächsten Gegend bleibt das Bild noch flüssiger (auch Karte, Boden und Strassen werden jetzt in kleinen Schritten gebaut), und die nächste Gegend wird früher vorbereitet.
 Neu in 20c: Radiosender «Sirene 144» mit 9 Songs und Jingle (Taste Q, Steuerkreuz rechts oder Pausenmenü → Musik). Kleinteile wie Zebrastreifen, Schachtdeckel, Wartende und Strassenmöbel werden nur noch in der Nähe gezeichnet – das Spiel läuft dadurch flüssiger. Eine neu geladene Gegend wird gleichmässiger eingeblendet. Neue Dateien im ZIP: Ordner audio/radio/sirene144.
 Neu in 20b: Der Wechsel in eine neue Gegend ruckelt weniger (die Nachbargegend wird im Hintergrund in viel kleineren Schritten gebaut). Das Spiel kann eigene Radiosender abspielen (Taste Q oder Steuerkreuz rechts, sonst im Pausenmenü unter Musik). Die Sender erscheinen, sobald Songs im Ordner audio/radio liegen – in diesem Paket sind noch keine Songs enthalten. Neue Datei im ZIP: audio/radio/sender.json.
 Neu in 19a: iPhone: Gegenden werden einzeln geladen, damit Safari nicht abstürzt. Am Rand einer Gegend fragt das Spiel «Neue Gegend!» und lädt sie dann neu. iPad und Android unverändert.
