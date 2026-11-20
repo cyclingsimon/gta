@@ -19,7 +19,7 @@ import { buildZone30 } from './zone30';
 import { buildWanderwegweiser } from './wanderweg';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { Terrain, drape } from './terrain';
+import { Terrain, drape, drapeAsync } from './terrain';
 
 export interface CityData {
   meta: { bounds: [number, number, number, number]; credits: string };
@@ -424,17 +424,18 @@ async function hillshade(c: HTMLCanvasElement, t: Terrain, X0: number, Z0: numbe
 
 /** Geländegitter (Weltkoordinaten-UV). Jeder Punkt nimmt das Minimum der Umgebung,
  *  damit der Boden nie über Strassen/Wasser ragt. hole: Bereich auslassen (für das Umland). */
-function gridMesh(t: Terrain, x0: number, z0: number, x1: number, z1: number, step: number, yOff: number, uvScale: number, hole?: number[]) {
+function* gridMeshGen(t: Terrain, x0: number, z0: number, x1: number, z1: number, step: number, yOff: number, uvScale: number, hole?: number[]): Generator<void, THREE.BufferGeometry, void> {
   const nx = Math.ceil((x1 - x0) / step) + 1, nz = Math.ceil((z1 - z0) / step) + 1;
   const pos = new Float32Array(nx * nz * 3), uv = new Float32Array(nx * nz * 2);
   const r = step / 2;
-  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+  for (let j = 0; j < nz; j++) { if (j % 12 === 0) yield; for (let i = 0; i < nx; i++) {
     const x = Math.min(x1, x0 + i * step), z = Math.min(z1, z0 + j * step), k = j * nx + i;
     let h = t.ground(x, z);
     for (const [a, b] of [[-r, 0], [r, 0], [0, -r], [0, r], [-r, -r], [r, r], [-r, r], [r, -r]]) h = Math.min(h, t.ground(x + a, z + b));
     pos[k * 3] = x; pos[k * 3 + 1] = h + yOff; pos[k * 3 + 2] = z;
     uv[k * 2] = x / uvScale; uv[k * 2 + 1] = z / uvScale;
-  }
+  } }
+  yield;
   const idx: number[] = [];
   for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
     if (hole) {
@@ -448,7 +449,9 @@ function gridMesh(t: Terrain, x0: number, z0: number, x1: number, z1: number, st
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   g.setIndex(idx);
+  yield;
   g.computeVertexNormals();
+  yield;
   (g as any).sampler = (x: number, z: number) => {
     // exakt wie die Dreiecke (a,c,b) / (b,c,d) interpolieren
     const fx = (x - x0) / step, fz = (z - z0) / step;
@@ -459,6 +462,12 @@ function gridMesh(t: Terrain, x0: number, z0: number, x1: number, z1: number, st
     return yd + (yc - yd) * (1 - tx) + (yb - yd) * (1 - tz);
   };
   return g;
+}
+function gridMesh(t: Terrain, x0: number, z0: number, x1: number, z1: number, step: number, yOff: number, uvScale: number, hole?: number[]) {
+  const g = gridMeshGen(t, x0, z0, x1, z1, step, yOff, uvScale, hole); let r = g.next(); while (!r.done) r = g.next(); return r.value;
+}
+async function gridMeshAsync(pause: (tag?: string) => Promise<void>, t: Terrain, x0: number, z0: number, x1: number, z1: number, step: number, yOff: number, uvScale: number, hole?: number[]) {
+  const g = gridMeshGen(t, x0, z0, x1, z1, step, yOff, uvScale, hole); let r = g.next(); while (!r.done) { await pause('gitter'); r = g.next(); } return r.value;
 }
 
 /** UV aus Weltkoordinaten (für Böden, Strassen, Wasser) */
@@ -545,7 +554,7 @@ export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { smooth?: () => number; railBridges?: number[][][]; osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
-  const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
+  const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return opts.smooth ? pause('fortschritt') : new Promise<void>((r) => setTimeout(r, 0)); }; // 20d: im Hintergrund kein erzwungenes Zwischenbild je Bauabschnitt, nur nach Zeit
   // 18a: im Hintergrund (freeCPU) zwischendurch kurz an den Browser zurückgeben, wenn seit dem letzten Bild > 25 ms vergangen sind
   let tPause = performance.now(), nPause = 0; const PERF = /[?&]perf/.test(location.search);
   let lastTag = 'Start', tSite = performance.now(); const pause = (tag = '') => { nPause++; if (!opts.freeCPU) return Promise.resolve(); const nowP = performance.now(), el = nowP - tPause; if (PERF && nowP - tSite > 50) console.log('[perf] stueck ' + lastTag + '→' + tag, (nowP - tSite).toFixed(0), 'ms'); lastTag = tag; tSite = nowP; if (el < (opts.smooth ? opts.smooth() : 500)) return Promise.resolve(); /* 20a: im Hintergrund alle 9–40 ms zurückgeben (flüssiges Bild), beim ersten Laden nur alle 500 ms (dort zählt die Ladezeit; jede Rückgabe kostet bis zu ein Bild) */ return new Promise<void>((r) => setTimeout(() => { tPause = performance.now(); tSite = tPause; r(); }, 0)); };
@@ -561,7 +570,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   await onProgress('Karte wird gezeichnet …');
   let tq = performance.now(); const lap = (n: string) => { const t = performance.now(); console.log(`[bau]   ${n} ${(t - tq).toFixed(0)} ms`); tq = t; };
   await pause('L561');
-  const { mask, minimap } = rasterize(d, b3d); lap('Maske');
+  const { mask, minimap } = await rasterizeAsync(pause, d, b3d); lap('Maske');
   await pause('L562');
   {
     // keine Bäume vor dem Löwen: Felsbereich in der Maske sperren
@@ -596,7 +605,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     groundGeo.computeVertexNormals();
     // konservative Obergrenze der Netzhöhe (Gelände − 0.28 + 0.30 Fehler)
     (groundGeo as any).sampler = (x: number, z: number) => terrain.ground(x, z) + 0.02;
-  } else groundGeo = gridMesh(terrain, X0, Z0, X1, Z1, opts.coarse ? 8 : 5, -0.12, 12);
+  } else groundGeo = await gridMeshAsync(pause, terrain, X0, Z0, X1, Z1, opts.coarse ? 8 : 5, -0.12, 12);
   lap('Bodennetz');
   // Luftbild (SWISSIMAGE 2 m, leicht stilisiert) als Bodenfarbe: Wiesen, Wald, Plätze wie in echt
   await pause('L594');
@@ -696,7 +705,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const fpos: number[] = [], fcol: number[] = [];
     await pause('L681');
     for (const w of d.water) { const flat = (w as any).f === 1 || w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
-    const dw = drape(pos, col, terrain, opts.coarse ? 12 : 6);
+    const dw = await drapeAsync(pause, pos, col, terrain, opts.coarse ? 12 : 6);
     const wmat = withWater(toon('#ffffff', { vertexColors: true, map: waterTex }));
     const m = flatMesh(dw.pos, dw.col!, wmat);
     worldUV(m.geometry, 14);
@@ -1040,7 +1049,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     for (let i = 0; i < sideW.pos.length; i++) asph.pos.push(sideW.pos[i]); for (let i = 0; i < sideW.col.length; i++) asph.col.push(sideW.col[i]);
     await pause('L1009');
     for (const [t, tex, sc] of [[asph, asphTex, 16], [cobble, cobTex, 2.4]] as const) {
-      const dr = drape(t.pos, t.col, terrain, opts.coarse ? 14 : 8, true);
+      await pause('strasse'); const dr = await drapeAsync(pause, t.pos, t.col, terrain, opts.coarse ? 14 : 8, true);
       const m = flatMesh(dr.pos, dr.col!, toon('#ffffff', { vertexColors: true, map: tex, side: THREE.DoubleSide })); // beidseitig: Randsteine, Inseln und Bankette haben gemischte Umlaufrichtung
       m.name = tex === asphTex ? 'roads-asphalt' : 'roads-cobble';
       worldUV(m.geometry, sc);
@@ -1098,7 +1107,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const c = P(0, (o1 + o2) / 2); decals.push([1, c[0], c[1], sd > 0 ? ux : -ux, sd > 0 ? uz : -uz]); done.push([sx, sz]); } }
     await pause('L1066');
     for (let i = 0; i < wartel.length; i++) dashes.push(wartel[i]);
-    const dd = drape(dashes, null, terrain, 5, true);
+    const dd = await drapeAsync(pause, dashes, null, terrain, 5, true);
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
     dg.computeVertexNormals();
     group.add(new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ color: '#F5F1E6', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
@@ -1171,7 +1180,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     await pause('L1136');
     for (const r of d.rail) { ribbon(pos, col, r, 3.3, 0.25, c, false); const l: number[][] = (r as any).p || r; if (l.length < 2) continue; ribbon(pos, col, l, 1.7, 0.27, bed, false); // 17a: Schotterbett 3.3 m, dunklere Schwellenzone, zwei Schienen (Normalspur 1.435 m)
       for (const o of [-0.72, 0.72]) ribbon(pos, col, offsetLine(l, o), 0.11, 0.31, steel, false); }
-    const drl = drape(pos, col, terrain, 12);
+    const drl = await drapeAsync(pause, pos, col, terrain, 12);
     if (terrain.railBr.size) for (let i = 0; i < drl.pos.length; i += 3) { const v = terrain.railAtOwn(drl.pos[i], drl.pos[i + 2]); if (!isNaN(v) && v + 0.25 > drl.pos[i + 1]) drl.pos[i + 1] = v + 0.25 + (drl.col![i] < 0.1 ? 0.06 : drl.col![i] < 0.23 ? 0.02 : 0); } // 16a: Gleis auf der Bahnbrücke (17a: Schienen bleiben oben)
     group.add(flatMesh(drl.pos, drl.col!, toon('#ffffff', { vertexColors: true })));
     { const fl = buildFahrleitung(d.rail.map((l: any) => l.p || l), (x, z) => terrain.railY(x, z), (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z), (x, z) => terrain.bridgeAt(x, z)); if (fl) group.add(fl); } // 17a
@@ -2576,7 +2585,8 @@ function mountains() {
 }
 
 /** Zeichnet Kollisionsraster und Minimap per Canvas. */
-function rasterize(d: CityData, b3d?: B3D) {
+function* rasterizeGen(d: CityData, b3d?: B3D): Generator<void, { mask: Mask; minimap: HTMLCanvasElement }, void> {
+  let it = 0;
   const [X0, Z0, X1, Z1] = d.meta.bounds;
   const mask = new Mask(d.meta.bounds);
   const c = document.createElement('canvas'); c.width = mask.w; c.height = mask.h;
@@ -2592,10 +2602,11 @@ function rasterize(d: CityData, b3d?: B3D) {
   };
   g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   g.fillStyle = '#f00';
-  for (const w of d.water) poly(g, w.p, w.holes, tx, tz);
+  for (const w of d.water) { poly(g, w.p, w.holes, tx, tz); if (++it % 60 === 0) yield; }
   // Brücken öffnen das Wasser
   g.strokeStyle = '#000'; g.lineCap = 'round'; g.lineJoin = 'round';
   for (const r of d.roads) {
+    if (++it % 400 === 0) yield;
     if (!r.b && r.n !== 'Kapellbrücke' && r.n !== 'Spreuerbrücke') continue;
     g.lineWidth = Math.max(r.w, 4.2) / MASK_RES;
     g.beginPath(); r.p.forEach(([x, z], i) => (i ? g.lineTo(tx(x), tz(z)) : g.moveTo(tx(x), tz(z)))); g.stroke();
@@ -2603,23 +2614,30 @@ function rasterize(d: CityData, b3d?: B3D) {
   // Strassenflächen markieren (für Baum-Platzierung)
   g.strokeStyle = '#00f';
   for (const r of d.roads) {
+    if (++it % 400 === 0) yield;
     if (!r.b && r.n !== 'Kapellbrücke' && r.n !== 'Spreuerbrücke' && ['footway', 'path', 'steps'].includes(r.c)) g.lineWidth = r.w / MASK_RES;
     else g.lineWidth = (r.w + 1) / MASK_RES;
     g.beginPath(); r.p.forEach(([x, z], i) => (i ? g.lineTo(tx(x), tz(z)) : g.moveTo(tx(x), tz(z)))); g.stroke();
   }
   g.fillStyle = '#0f0';
-  if (b3d) drawB3DFootprints(g, b3d, tx, tz, 0.35); else for (const b of d.buildings) if (b.t !== 'roof' && b.t !== 'carport') poly(g, b.p, b.holes, tx, tz); // Vordächer (Busbahnhof) sind kein Hindernis
+  yield;
+  if (b3d) drawB3DFootprints(g, b3d, tx, tz, 0.35); else for (const b of d.buildings) { if (b.t !== 'roof' && b.t !== 'carport') poly(g, b.p, b.holes, tx, tz); if (++it % 300 === 0) yield; }
+  yield; // Vordächer (Busbahnhof) sind kein Hindernis
   // Fahrstrassen, die in den Daten unter einem Gebäude durchführen (Durchfahrt, Einkaufszentrum, Torbogen), bleiben befahrbar
   g.strokeStyle = '#00f';
   for (const r of d.roads) {
+    if (++it % 400 === 0) yield;
     if (['footway', 'path', 'steps', 'cycleway', 'pedestrian', 'track', 'bridleway'].includes(r.c)) continue;
     g.lineWidth = r.w / MASK_RES;
     g.beginPath(); r.p.forEach(([x, z], i) => (i ? g.lineTo(tx(x), tz(z)) : g.moveTo(tx(x), tz(z)))); g.stroke();
   }
   // 16a (Simon 15.11.: «beim KKL kann man durch ein Haus fahren»): die Zufahrt in den Daten führt unter dem KKL durch – das KKL bleibt ein Hindernis
   g.fillStyle = '#0f0'; for (const b of d.buildings) if ((b.n || '').startsWith('KKL')) poly(g, b.p, b.holes, tx, tz);
+  yield;
   const img = g.getImageData(0, 0, c.width, c.height).data;
+  yield;
   for (let i = 0, k = 0; i < mask.data.length; i++, k += 4) {
+    if (i % 400000 === 0 && i) yield;
     mask.data[i] = img[k + 1] > 128 ? 2 : img[k] > 128 ? 1 : 0;
     mask.road[i] = img[k + 2] > 128 && img[k + 1] < 128 ? 1 : 0;
   }
@@ -2630,18 +2648,23 @@ function rasterize(d: CityData, b3d?: B3D) {
   const m = mm.getContext('2d')!;
   const mx = (x: number) => (x - X0) / MINI_RES, mz = (z: number) => (z - Z0) / MINI_RES;
   m.fillStyle = '#E9E2CC'; m.fillRect(0, 0, mm.width, mm.height);
-  m.fillStyle = '#A8D08F'; for (const gr of d.green) poly(m, gr.p, [], mx, mz);
+  yield;
+  m.fillStyle = '#A8D08F'; for (const gr of d.green) { poly(m, gr.p, [], mx, mz); if (++it % 200 === 0) yield; }
   m.fillStyle = '#7CC0E8'; for (const w of d.water) poly(m, w.p, w.holes, mx, mz);
   m.lineCap = 'round'; m.lineJoin = 'round';
   for (const r of d.roads) {
+    if (++it % 400 === 0) yield;
     const car = !['footway', 'path', 'steps', 'cycleway', 'track'].includes(r.c);
     m.strokeStyle = car ? '#ffffff' : '#F3E9D2';
     m.lineWidth = Math.max(1, (car ? r.w * 1.3 : r.w * 0.8) / MINI_RES);
     m.beginPath(); r.p.forEach(([x, z], i) => (i ? m.lineTo(mx(x), mz(z)) : m.moveTo(mx(x), mz(z)))); m.stroke();
   }
-  m.fillStyle = '#C9B9A3'; if (b3d) drawB3DFootprints(m, b3d, mx, mz, 0); else for (const b of d.buildings) poly(m, b.p, b.holes, mx, mz);
+  m.fillStyle = '#C9B9A3'; yield;
+  if (b3d) drawB3DFootprints(m, b3d, mx, mz, 0); else for (const b of d.buildings) { poly(m, b.p, b.holes, mx, mz); if (++it % 300 === 0) yield; }
   return { mask, minimap: mm };
 }
+function rasterize(d: CityData, b3d?: B3D) { const g = rasterizeGen(d, b3d); let r = g.next(); while (!r.done) r = g.next(); return r.value; }
+async function rasterizeAsync(pause: (tag?: string) => Promise<void>, d: CityData, b3d?: B3D) { const g = rasterizeGen(d, b3d); let r = g.next(); while (!r.done) { await pause('maske'); r = g.next(); } return r.value; }
 
 // ---- R9/R11: Stege, Laternen, Ampeln, Brunnen, Haltestellen (OSM) ----
 /** Mehrere Geometrien mit je einer Farbe zu einer (Vertex-Farben) zusammenfügen */

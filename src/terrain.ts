@@ -191,7 +191,9 @@ export class Terrain {
  * Legt flache Dreiecke (y = Lagen-Versatz) aufs Gelände: Dreiecke werden unterteilt,
  * bis keine Kante länger als maxEdge ist, dann y = Geländehöhe + Versatz.
  */
-export function drape(pos: number[], col: number[] | null, t: Terrain, maxEdge: number, useBridge = false): { pos: number[]; col: number[] | null } {
+/** 20d: Kern als Generator – gibt alle 1500 Dreiecke ab, damit der Hintergrund-Bau zwischendurch ein Bild zeichnen kann */
+function* drapeGen(pos: number[], col: number[] | null, t: Terrain, maxEdge: number, useBridge = false): Generator<void, { pos: number[]; col: number[] | null }, void> {
+  let it = 0;
   const outP: number[] = [], outC: number[] | null = col ? [] : null;
   const stack: number[][] = [];
   for (let i = 0; i < pos.length; i += 9) {
@@ -202,6 +204,7 @@ export function drape(pos: number[], col: number[] | null, t: Terrain, maxEdge: 
   const m2 = maxEdge * maxEdge;
   let guard = 0;
   while (stack.length) {
+    if ((++it % 1500) === 0) yield;
     const v = stack.pop()!;
     const P = [[v[0], v[1], v[2]], [v[3], v[4], v[5]], [v[6], v[7], v[8]]];
     const C = col ? [[v[9], v[10], v[11]], [v[12], v[13], v[14]], [v[15], v[16], v[17]]] : null;
@@ -229,4 +232,10 @@ export function drape(pos: number[], col: number[] | null, t: Terrain, maxEdge: 
     }
   }
   return { pos: outP, col: outC };
+}
+export function drape(pos: number[], col: number[] | null, t: Terrain, maxEdge: number, useBridge = false): { pos: number[]; col: number[] | null } {
+  const g = drapeGen(pos, col, t, maxEdge, useBridge); let r = g.next(); while (!r.done) r = g.next(); return r.value;
+}
+export async function drapeAsync(pause: (tag?: string) => Promise<void>, pos: number[], col: number[] | null, t: Terrain, maxEdge: number, useBridge = false): Promise<{ pos: number[]; col: number[] | null }> {
+  const g = drapeGen(pos, col, t, maxEdge, useBridge); let r = g.next(); while (!r.done) { await pause('drape'); r = g.next(); } return r.value;
 }
