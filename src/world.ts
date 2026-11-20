@@ -1789,19 +1789,27 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // grosse Flächennetze (Wasser, Strassen, Wege …) in 400-m-Kacheln teilen → Frustum Culling + Sichtweite greifen
-  await pause('L1710');
-  for (const c of [...group.children]) {
-    const m = c as THREE.Mesh;
-    if (!(m as any).isMesh || (m as any).isInstancedMesh || !m.geometry || Array.isArray(m.material) || (m.geometry as THREE.BufferGeometry).groups.length > 1) continue;
-    const g = m.geometry as THREE.BufferGeometry; const tris = g.index ? g.index.count / 3 : g.getAttribute('position').count / 3;
-    if (!g.boundingSphere) g.computeBoundingSphere();
-    if (tris < 30000 || g.boundingSphere!.radius < 500) continue;
-    await pause('teilen');
-    const parts = splitTiles(m, 400); if (parts.length < 2) continue;
-    group.remove(m); for (const p of parts) group.add(p);
-  }
+  // 20c: auch kleine Netze, die über die ganze Gegend reichen (Zebrastreifen, Schachtdeckel, Wartende, Möbel, Schilder …) und in Untergruppen liegen –
+  //      vorher wurden sie immer ganz gezeichnet, egal wohin die Kamera schaute
+  { const cand: THREE.Mesh[] = []; const KLEIN = /^(zebra|schachtdeckel|zone30|kreisel|real-strassenmoebel|real-spielplaetze|wartende|siloballen|real-sportplaetze|bahnsignale|strassenschild|real-masten|real-tankstellen|kreisel-wartelinie|wegweiser|wegweiser-rueck|mittelinsel|wanderwegweiser|roadDecals|plakate)$/;
+    group.traverse((c: any) => { if (!c.isMesh || c.isInstancedMesh || c.isSkinnedMesh || !c.geometry || Array.isArray(c.material) || c.geometry.groups.length > 1 || c.parent?.isLOD || c.userData.noSplit) return;
+      const g = c.geometry as THREE.BufferGeometry, tris = g.index ? g.index.count / 3 : (g.getAttribute('position')?.count || 0) / 3; if (!g.boundingSphere) g.computeBoundingSphere(); const r = g.boundingSphere!.radius;
+      const nm: string = c.name || c.parent?.name || '';
+      if ((tris >= 30000 && r >= 500 && c.parent === group) || (tris >= 200 && r >= 900 && KLEIN.test(nm))) cand.push(c); });
+    let nSplit = 0;
+    for (const m of cand) { await pause('teilen'); const par = m.parent; if (!par) continue; const parts = splitTiles(m, 400); if (parts.length < 2) continue;
+      for (const q of parts) { q.castShadow = m.castShadow; q.receiveShadow = m.receiveShadow; q.frustumCulled = true; } par.remove(m); for (const q of parts) par.add(q); nSplit++; }
+    console.log('[bau] in Kacheln geteilt', nSplit, 'von', cand.length); }
+  // 20c: Sichtweite für Kleinteile – was aus der Ferne ohnehin nur Pixel ist, wird ab einer Distanz nicht mehr gezeichnet (main.ts cullTick liest group.userData.cull)
+  { const CULL: [RegExp, number][] = [[/^schachtdeckel$/, 170], [/^(zone30|roadDecals)$/, 260], [/^zebra$/, 480], [/^wartende$/, 380], [/^real-strassenmoebel$/, 280], [/^strassenmoebel-/, 240], [/^(benches|stops-bank)$/, 320],
+      [/^velos-geparkt$/, 320], [/^geparkt$/, 650], [/^hecken$/, 520], [/^railings$/, 520], [/^leitpfosten$/, 420], [/^siloballen$/, 750], [/^real-spielplaetze$/, 520], [/^(strassenschild|wanderwegweiser)$/, 300],
+      [/^(umfahren|kein-vortritt|hauptstrasse|kreisel-signal)(-rueck)?$/, 420], [/^(stops|stops-halle)$/, 520], [/^lamps$/, 650], [/^bahnsignale$/, 750], [/^yellowLines$/, 520], [/^fountains$/, 420], [/^erker$/, 520], [/^(kreisel-wartelinie|mittelinsel)$/, 520], [/^real-sportplaetze$/, 900]];
+    const list: [THREE.Object3D, number, number, number, number][] = [];
+    group.traverse((c: any) => { if (!c.isMesh) return; const nm: string = c.name || c.parent?.name || ''; const hit = CULL.find((e) => e[0].test(nm)) || (c.parent?.name === 'plakate' ? ([/x/, 480] as [RegExp, number]) : undefined); if (!hit) return;
+      let sp: THREE.Sphere | null = null; if (c.isInstancedMesh) { if (!c.boundingSphere) c.computeBoundingSphere(); sp = c.boundingSphere; } else { if (!c.geometry.boundingSphere) c.geometry.computeBoundingSphere(); sp = c.geometry.boundingSphere; }
+      if (!sp || !(sp.radius < 900)) return; list.push([c, sp.center.x + c.position.x, sp.center.z + c.position.z, sp.radius, hit[1]]); });
+    group.userData.cull = list; console.log('[bau] Sichtweite für Kleinteile', list.length, 'Netze'); }
 
-  await pause('L1720');
   if (PERF && opts.freeCPU) console.log('[perf] bau-block Ende (nach letzter pause)', (performance.now() - tPause).toFixed(0), 'ms');
   // Speicher: CPU-Kopien der Geometrie nach dem Hochladen auf die Grafikkarte freigeben (Boden bleibt für Höhenabfragen)
   await pause('L1722');

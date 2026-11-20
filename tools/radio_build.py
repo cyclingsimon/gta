@@ -60,24 +60,34 @@ def lautester_start(pfad, dauer=8.0):
 
 def main():
     if len(sys.argv) < 2: print(__doc__); sys.exit(1)
-    src, dst = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else 'public/audio/radio'
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]; fest = next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--sender=')), None)
+    src, dst = args[0], args[1] if len(args) > 1 else 'public/audio/radio'
+    if not fest:  # Ordner heisst wie ein Sender («Sirene 144») → alles darin gehört zu diesem Sender
+        on = norm(os.path.basename(os.path.normpath(src)), False); fest = next((sid for sid, name, _, _ in SENDER if norm(name, False) == on), None)
+    alt = {}
+    if os.path.exists(os.path.join(dst, 'sender.json')):
+        try: alt = {e['id']: e for e in json.load(open(os.path.join(dst, 'sender.json')))['sender']}
+        except Exception: alt = {}
     dateien = sorted(f for f in os.listdir(src) if f.lower().endswith(('.mp3', '.wav', '.m4a', '.flac', '.ogg')))
     plan = {sid: {'jingle': None, 'songs': []} for sid, *_ in SENDER}; unbekannt = []
     for f in dateien:
         p = os.path.join(src, f); z = zuordnen(id3_titel(p)) or zuordnen(os.path.splitext(f)[0])
+        if fest and (not z or z[0] != fest): z = (fest, None) if norm(os.path.splitext(f)[0]).startswith('jingle') else (fest, os.path.splitext(f)[0])  # Titel ausserhalb der Tabelle: Dateiname
         if not z: unbekannt.append(f); continue
         if z[1] is None: plan[z[0]]['jingle'] = plan[z[0]]['jingle'] or p
         else: plan[z[0]]['songs'].append((z[1], p))
     out = []
     for sid, name, stil, songs in SENDER:
         d = os.path.join(dst, sid); eintrag = {'id': sid, 'name': name, 'stil': stil, 'songs': []}
+        if not plan[sid]['songs'] and not plan[sid]['jingle'] and sid in alt: out.append(alt[sid]); print(f'{name}: unverändert ({len(alt[sid].get("songs", []))} Songs)'); continue  # anderer Sender bleibt, wie er war
         if plan[sid]['songs'] or plan[sid]['jingle']: os.makedirs(d, exist_ok=True)
         if plan[sid]['jingle']:
-            st = lautester_start(plan[sid]['jingle'])
-            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', f'{st}', '-t', '8', '-i', plan[sid]['jingle'], '-af', 'afade=t=in:d=0.15,afade=t=out:st=7.2:d=0.8,loudnorm=I=-16:TP=-1.5', '-ac', '2', '-ar', '44100', '-b:a', '128k', '-map_metadata', '-1', os.path.join(d, 'jingle.mp3')], check=True)
+            dj = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', plan[sid]['jingle']], capture_output=True, text=True).stdout.strip() or 0)
+            kurz = dj <= 20; st = 0.0 if kurz else lautester_start(plan[sid]['jingle']); dau = dj if kurz else 8.0  # 20c: Jingle bis 20 s bleibt ganz (Simon schneidet selbst)
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', f'{st}', '-t', f'{dau}', '-i', plan[sid]['jingle'], '-af', f'afade=t=in:d=0.05,afade=t=out:st={max(0.1, dau - 0.5):.2f}:d=0.5,loudnorm=I=-16:TP=-1.5', '-ac', '2', '-ar', '44100', '-b:a', '128k', '-map_metadata', '-1', os.path.join(d, 'jingle.mp3')], check=True)
             eintrag['jingle'] = f'{sid}/jingle.mp3'
         ordnung = {t: i for i, t in enumerate(songs)}
-        for n, (t, p) in enumerate(sorted(plan[sid]['songs'], key=lambda x: (ordnung[x[0]], x[1])), 1):
+        for n, (t, p) in enumerate(sorted(plan[sid]['songs'], key=lambda x: (ordnung.get(x[0], 999), x[1])), 1):
             ziel = f'{sid}/{n:02d}.mp3'
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', p, '-vn', '-af', 'loudnorm=I=-16:TP=-1.5', '-ac', '2', '-ar', '44100', '-b:a', '128k', '-map_metadata', '-1', os.path.join(dst, ziel)], check=True)
             eintrag['songs'].append({'f': ziel, 't': t})

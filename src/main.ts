@@ -1246,6 +1246,7 @@ function frame(now: number) {
     updateComics(dt);
     updateEngine(car.speed, c.throttle);
     updateVenues(car.x, car.z);
+    cullTick(dt);
     konzerte.update(dt, car.x, car.z, (x, z) => terrain.height(x, z), venueNear, (t) => toast(t, 4200));
     phaseTime += dt;
     playTime += dt; if (playTime > 90) $('#keys').classList.add('hide');
@@ -1744,6 +1745,7 @@ if (location.search.includes('test')) {
     roadY: (x: number, z: number, y0 = 400, all = false) => { const rc = new THREE.Raycaster(new THREE.Vector3(x, y0, z), new THREE.Vector3(0, -1, 0)); scene.updateMatrixWorld(true);
       return rc.intersectObjects([all ? scene : world.group], true).filter((h) => (h.object as any).visible !== false && !(h.object as any).isInstancedMesh).slice(0, 3).map((h) => [h.object.name || h.object.parent?.name || h.object.type, Math.round(h.point.y * 100) / 100]); },
     ud: (name: string) => world.group.getObjectByName(name)?.userData,
+    meshes: () => { const m = new Map<string, number[]>(); world.group.traverse((c: any) => { const g = c.geometry; if (!g) return; const n = (g.index ? g.index.count : g.getAttribute('position')?.count || 0) / 3 * (c.isInstancedMesh ? c.count : 1); if (!g.boundingSphere) g.computeBoundingSphere(); const k = (c.name || c.parent?.name || c.type) + (c.isInstancedMesh ? ' [inst]' : ''); const e = m.get(k) || [0, 0, 0]; e[0]++; e[1] += n; e[2] = Math.max(e[2], g.boundingSphere?.radius || 0); m.set(k, e); }); return [...m].map(([k, e]) => [k, e[0], Math.round(e[1]), Math.round(e[2])]).sort((a: any, b: any) => b[2] - a[2]); },
     siren: (on: boolean) => { car.siren = on; },
     fun: () => fun ? { kegel: fun.hops.filter((o) => o.kind === 0).length, eimer: fun.hops.filter((o) => o.kind === 1).length, herzen: fun.heartTotal, gefunden: fun.heartCount, boings: fun.stats.boings, fliegen: fun.hops.filter((o) => o.t > 0).length } : null,
     funHit: () => { const o = fun!.hops[0]; const h = o.h0; placeCar(o.x0 - Math.sin(h) * 9, o.z0 - Math.cos(h) * 9, h); car.x = o.x0 - Math.sin(h) * 1.5; car.z = o.z0 - Math.cos(h) * 1.5; car.heading = h; car.speed = 9; return [Math.round(o.x0), Math.round(o.z0)]; },
@@ -1848,12 +1850,21 @@ let actTok = 0; const actQ: (() => void)[] = []; // 18a: Bauschritte nach einem 
 async function addGradually(gs: THREE.Object3D[], wait = false) {
   for (const g of gs) { try { await (renderer as any).compileAsync(g, camera, scene); } catch { /* älterer Browser: dann eben beim ersten Bild */ } }
   const mine: THREE.Object3D[] = [];
-  for (const g of gs) { for (const c of g.children) if (c.visible) { c.visible = false; revealQ.push(c); mine.push(c); } scene.add(g); }
+  for (const g of gs) { for (const c of g.children) if (c.visible) { c.visible = false; c.userData.rv = 1; revealQ.push(c); mine.push(c); } scene.add(g); }
   // 18a: erst zurückkehren, wenn alles sichtbar ist (sonst wurde die alte Welt entfernt, bevor die neue ganz da war)
   while (wait && mine.some((c) => !c.visible)) await new Promise((r) => setTimeout(r, 120));
 }
 function revealTick() { if (actQ.length) { const t0 = performance.now(); actQ.shift()!(); if (/[?&]perf/.test(location.search)) console.log('[perf] actQ-Schritt', (performance.now() - t0).toFixed(0), 'ms, Rest', actQ.length); return; }
-  for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; n++) revealQ.shift()!.visible = true; }
+  // 20c: Einblenden nach Gewicht – je Bild höchstens ~40 000 Eckpunkte (Handy 20 000) neu auf die Grafikkarte, mindestens ein Teil (vorher fest 4 Teile je Bild, auch wenn es die vier grössten Netze waren)
+  let budget = MOBILE ? 20000 : 40000, n = 0;
+  while (revealQ.length && (n === 0 || budget > 0) && n < 12) { const c = revealQ.shift()!; c.visible = true; delete c.userData.rv; n++; budget -= vertsOf(c); } }
+/** 20c: Kleinteile nach Distanz zur Kamera ein-/ausblenden (Liste aus world.ts, alle 0.2 s). Teile, die gerade eingeblendet werden (rv), oder deren Eltern unsichtbar sind, bleiben unberührt. */
+let cullT = 0; const NOCULL = /[?&]nocull/.test(location.search);
+function cullTick(dt: number) { cullT -= dt; if (cullT > 0 || NOCULL) return; cullT = 0.2; const cx = camera.position.x, cz = camera.position.z, k = camera.position.y > 120 ? 2.2 : 1; // Karte/Vogelschau: weiter sehen
+  const groups = new Set<THREE.Object3D>(); if (world) groups.add(world.group); for (const s of slots.values()) groups.add(s.world.group);
+  for (const g of groups) { const L = g.userData.cull as [THREE.Object3D, number, number, number, number][] | undefined; if (!L) continue;
+    for (const e of L) { const o = e[0]; if (o.userData.rv) continue; const v = Math.hypot(e[1] - cx, e[2] - cz) - e[3] < e[4] * k; if (o.visible !== v) o.visible = v; } } }
+const vertsOf = (o: THREE.Object3D) => { let v = 0; o.traverse((c: any) => { const p = c.geometry?.getAttribute?.('position'); if (p) v += p.count * (c.isInstancedMesh ? 0.02 : 1); }); return v; };
 /** 14zk: Navi der neuen Gegend schon vorbereiten, solange der Hinweis noch steht – nicht erst an der Grenze */
 function prepNav(s: Slot) {
   setTimeout(() => { if (!slots.has(s.id) || s.nav) return; const t0 = performance.now(); s.nav = new NavGraph(s.data, s.world.mask); console.log('[welt] Navi vorab', s.id, (performance.now() - t0).toFixed(0), 'ms'); }, 2500);

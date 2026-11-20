@@ -4,7 +4,45 @@
    "id": "sirene144",
    "name": "Sirene 144",
    "stil": "Heavy Metal",
-   "songs": []
+   "songs": [
+    {
+     "f": "sirene144/01.mp3",
+     "t": "Kapellbrogg-Galopp"
+    },
+    {
+     "f": "sirene144/02.mp3",
+     "t": "D Chatz am Inseli"
+    },
+    {
+     "f": "sirene144/03.mp3",
+     "t": "Luksi Forever"
+    },
+    {
+     "f": "sirene144/04.mp3",
+     "t": "Unufhaltbar"
+    },
+    {
+     "f": "sirene144/05.mp3",
+     "t": "Schneller als s Liecht"
+    },
+    {
+     "f": "sirene144/06.mp3",
+     "t": "Rettigsgass!"
+    },
+    {
+     "f": "sirene144/07.mp3",
+     "t": "Z vill"
+    },
+    {
+     "f": "sirene144/08.mp3",
+     "t": "De Luksi isch für alli da"
+    },
+    {
+     "f": "sirene144/09.mp3",
+     "t": "De Luksi"
+    }
+   ],
+   "jingle": "sirene144/jingle.mp3"
   },
   {
    "id": "riddim",
