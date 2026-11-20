@@ -17,6 +17,9 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Ergebnis: Heap 460 → 391 MB (−15 %), Texturen 112 → 78.5 MB. Spitze beim Bau unverändert ~640 MB (evtl. Messartefakt, ungeklärt).
 - Einschätzung (Vertrauen mittel): reicht NICHT sicher für zwei Gegenden auf dem iPhone 11. Standard bleibt: iPhone = eine Gegend. `?stream` zum Ausprobieren am echten Gerät.
 - Tests auf 20f-Code: qa.py Gesamt OK, stream_chain ok (0 draussen, 33 gebremst), ios_phone.py mit &free ok (Randwechsel, Schnellreise), Sichtbild Wegweiser im Handy-Modus lesbar.
+- Nachtrag 20.11. 21:15: smoke_a auf 20f über alle Gegenden (luzern, nord, ost, west, sued, a1–a20) ohne Fehler, alle Einsätze erreichbar.
+- Entscheid: Strassenflächen indexieren NICHT gemacht – geschätzt −37 MB (9 %), reicht für das iPhone-Ziel trotzdem nicht, Risiko bei splitTiles/Markierungen. iPhone-Arbeit ruht bis zum Test von `?stream` am echten Gerät.
+- Nächste Idee (analog 20e): Im Modus «Echt» baut loadSlot die Nachbargegend erst als Stufe A, dann upgradeSlot als Stufe B – doppelte Arbeit im Hintergrund. Direkt Stufe B bauen.
 - Weitere Hebel, nicht umgesetzt: Strassenflächen indexieren (asphalt+cobble 74 MB, nicht indexiert), Boden-UV aus Position rechnen (ground 42 MB), nav/cityData als TypedArrays.
 
 ## Version 20e (20.11. abends) – Optimierung 3: Echt-Modus startet direkt
