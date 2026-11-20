@@ -15,6 +15,7 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Messung mem_ios.py (Luzern «Leicht», iPhone-UA, TEST): Geometrie 225 → 162 MB (roads-asphalt 52.7 → 25.6, cobble 21 → 11), JS-Heap 391 → ~330 MB. Gegenüber 20d: 460 → ~330 MB (−28 %), Texturen 112 → 78.5 MB.
 - Ladezeit nicht schlechter: perf_bau Startknopf 41 s, bereit 70 s (20e: 48/88; Streuung des Testrechners).
 - Sichtvergleich Altstadt vorher/nachher (shots/tmp/dir20e_1.png, weld_1.png): kein Unterschied erkennbar.
+- Nachtrag 20.11. 23:30: smoke_a auf 20g über alle 25 Gegenden ohne Fehler. mem_stream.py (1–3 Gegenden) lief ins Zeitlimit (595 s) – Zahl für zwei Gegenden fehlt weiterhin.
 - Einschätzung iPhone (Vertrauen mittel): zwei Gegenden ≈ 2 × 330 MB + Texturen + Bauspitze – immer noch mehr als die eine Gegend von früher (460 MB). `?stream` am echten Gerät testen.
 
 ## Version 20f (20.11. spätabends) – Optimierung 4: Speicherdiät (iPhone)
