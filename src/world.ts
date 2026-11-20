@@ -402,13 +402,13 @@ function addFlat(pos: number[], col: number[], p: number[][], holes: number[][][
 }
 
 /** Schummerung für die Karten: Hänge von Nordwesten beleuchtet */
-function hillshade(c: HTMLCanvasElement, t: Terrain, X0: number, Z0: number) {
+async function hillshade(c: HTMLCanvasElement, t: Terrain, X0: number, Z0: number, pause?: (tag?: string) => Promise<void>) {
   const g = c.getContext('2d')!;
   const img = g.getImageData(0, 0, c.width, c.height);
   const L = [-0.5, 0.75, -0.45]; const ll = Math.hypot(...L);
   // Schattierung in 3×3-Blöcken rechnen (9× weniger Höhenabfragen; auf dem PC dauerte das Kartenzeichnen sonst ~10 s)
   const B = 3;
-  for (let jb = 0; jb < c.height; jb += B) for (let ib = 0; ib < c.width; ib += B) {
+  for (let jb = 0; jb < c.height; jb += B) { if (pause && jb % 24 === 0) await pause('schummerung'); for (let ib = 0; ib < c.width; ib += B) {
     const x = X0 + (ib + 1) * MINI_RES, z = Z0 + (jb + 1) * MINI_RES;
     const dx = t.ground(x + 3, z) - t.ground(x - 3, z), dz = t.ground(x, z + 3) - t.ground(x, z - 3);
     const nx = -dx / 6, nz = -dz / 6, ny = 1; const nl = Math.hypot(nx, ny, nz);
@@ -418,7 +418,7 @@ function hillshade(c: HTMLCanvasElement, t: Terrain, X0: number, Z0: number) {
       const k = (j * c.width + i) * 4;
       img.data[k] = Math.min(255, img.data[k] * f); img.data[k + 1] = Math.min(255, img.data[k + 1] * f); img.data[k + 2] = Math.min(255, img.data[k + 2] * f);
     }
-  }
+  } }
   g.putImageData(img, 0, 0);
 }
 
@@ -542,40 +542,49 @@ export interface Props { hedges?: number[][][]; piers: { p: number[][]; w: numbe
 
 export interface GroundMesh { pos: ArrayLike<number>; idx: Uint32Array }
 
-export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { railBridges?: number[][][]; osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
+export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s: string) => void, b3d?: B3D, groundMesh?: GroundMesh, props?: Props, opts: { smooth?: () => number; railBridges?: number[][][]; osm?: OsmProps; fuel?: [number, number, number?][]; aerialMid?: MidLayer[]; trees?: number; freeCPU?: boolean; forestStep?: number; aerial?: THREE.Texture; aerialHr?: THREE.Texture; coarse?: boolean; forestMask?: ForestMask } = {}): Promise<World> {
   RURAL_HOUSES = !b3d && d.buildings.some((b) => b.t === 'barn');
   let tLast = performance.now();
   const onProgress = (s: string) => { const t = performance.now(); console.log(`[bau] ${(t - tLast).toFixed(0)} ms bis: ${s}`); tLast = t; onProgress0(s); return new Promise<void>((r) => setTimeout(r, 0)); };
   // 18a: im Hintergrund (freeCPU) zwischendurch kurz an den Browser zurückgeben, wenn seit dem letzten Bild > 25 ms vergangen sind
-  let tPause = performance.now(); const pause = () => { if (!opts.freeCPU || performance.now() - tPause < 25) return Promise.resolve(); return new Promise<void>((r) => setTimeout(() => { tPause = performance.now(); r(); }, 0)); };
+  let tPause = performance.now(), nPause = 0; const PERF = /[?&]perf/.test(location.search);
+  let lastTag = 'Start', tSite = performance.now(); const pause = (tag = '') => { nPause++; if (!opts.freeCPU) return Promise.resolve(); const nowP = performance.now(), el = nowP - tPause; if (PERF && nowP - tSite > 50) console.log('[perf] stueck ' + lastTag + '→' + tag, (nowP - tSite).toFixed(0), 'ms'); lastTag = tag; tSite = nowP; if (el < (opts.smooth ? opts.smooth() : 500)) return Promise.resolve(); /* 20a: im Hintergrund alle 9–40 ms zurückgeben (flüssiges Bild), beim ersten Laden nur alle 500 ms (dort zählt die Ladezeit; jede Rückgabe kostet bis zu ein Bild) */ return new Promise<void>((r) => setTimeout(() => { tPause = performance.now(); tSite = tPause; r(); }, 0)); };
   const group = new THREE.Group();
   // 14zg: Strassentunnels aus der normalen Darstellung nehmen (eigene Röhre, Fahrbahn unter dem Gelände); kurze Unterführungen < 25 m bleiben normale Strassen
   const tunnels = new THREE.Group(); tunnels.name = 'tunnels';
+  await pause('L555');
   { const tr = tunnelPieces(d); if (tr.length) { const set = new Set(tr); const rest = d.roads.filter((r) => !set.has(r)); const back = buildTunnels(tr, rest, terrain, tunnels); d = { ...d, roads: back.length ? rest.concat(back) : rest }; } }
   const [X0, Z0, X1, Z1] = d.meta.bounds;
   const W = X1 - X0, H = Z1 - Z0;
 
+  await pause('L559');
   await onProgress('Karte wird gezeichnet …');
   let tq = performance.now(); const lap = (n: string) => { const t = performance.now(); console.log(`[bau]   ${n} ${(t - tq).toFixed(0)} ms`); tq = t; };
+  await pause('L561');
   const { mask, minimap } = rasterize(d, b3d); lap('Maske');
+  await pause('L562');
   {
     // keine Bäume vor dem Löwen: Felsbereich in der Maske sperren
+    await pause('L564');
     for (let dz = -16; dz <= 16; dz += 1) for (let dx = -16; dx <= 16; dx += 1) {
       if (dx * dx + dz * dz > 256) continue;
       const i = Math.floor((240.5 + dx - mask.x0) / MASK_RES), j = Math.floor((-758 + dz - mask.z0) / MASK_RES);
       if (i > 0 && j > 0 && i < mask.w && j < mask.h && mask.data[j * mask.w + i] === 0 && !mask.road[j * mask.w + i]) mask.data[j * mask.w + i] = 2;
     }
   }
-  hillshade(minimap, terrain, X0, Z0); lap('Schummerung');
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L570');
+  await hillshade(minimap, terrain, X0, Z0, pause); lap('Schummerung');
+  await pause('L571'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Boden ----
   const groundTex = canvasTex(128, 128, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); noise(g, 128, 128, 900, 0.1); noise(g, 128, 128, 300, 0.25, false); });
   groundTex.repeat.set(1, 1);
   let groundGeo: THREE.BufferGeometry;
+  await pause('L576');
   if (groundMesh) {
     // vorberechnetes, vereinfachtes 2-m-Netz (max. 0.3 m Abweichung) → 0.28 m tiefer legen
     const n = groundMesh.pos.length / 3;
     const pos = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+    await pause('L580');
     for (let i = 0; i < n; i++) {
       const x = groundMesh.pos[i * 3] / 10, z = groundMesh.pos[i * 3 + 2] / 10; let y = groundMesh.pos[i * 3 + 1] / 10 - 0.28; if (terrain.isCarved(x, z)) y = Math.min(y, terrain.ground(x, z) - 0.28); // 14zg Voreinschnitt
       pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z; uv[i * 2] = x / 12; uv[i * 2 + 1] = z / 12;
@@ -590,29 +599,35 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   } else groundGeo = gridMesh(terrain, X0, Z0, X1, Z1, opts.coarse ? 8 : 5, -0.12, 12);
   lap('Bodennetz');
   // Luftbild (SWISSIMAGE 2 m, leicht stilisiert) als Bodenfarbe: Wiesen, Wald, Plätze wie in echt
+  await pause('L594');
   if (opts.aerial) setAerialUV(groundGeo);
   lap('Luftbild-UV');
   const groundMat = opts.aerial ? withDetail(toon('#ffffff', { map: opts.aerial }), groundTex, opts.aerialHr, opts.aerialMid) : toon('#BDB9B0', { map: groundTex });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.name = 'ground';
+  await pause('L599');
   if (groundMesh) {
     // in 400-m-Kacheln aufteilen (gleiche Vertices, eigener Index + Hüllkugel) → nur Sichtbares wird gezeichnet
     const idx = groundMesh.idx, P = (groundGeo.getAttribute('position') as THREE.BufferAttribute).array as Float32Array;
     // zwei Durchgänge mit Typed Arrays statt Millionen von push/Vector3 (vorher ~9 s Software)
     const tileKey = new Int32Array(idx.length / 3), counts = new Map<number, number>();
     const TX = 64;
+    await pause('L605');
     for (let t = 0, n = 0; t < idx.length; t += 3, n++) {
       const a = idx[t] * 3, k = (Math.floor(P[a] / 400) + 32) * TX + (Math.floor(P[a + 2] / 400) + 32);
       tileKey[n] = k; counts.set(k, (counts.get(k) || 0) + 3);
     }
     const arrs = new Map<number, { ix: Uint32Array; n: number; mn: number[]; mx: number[] }>();
+    await pause('L610');
     for (const [k, c] of counts) arrs.set(k, { ix: new Uint32Array(c), n: 0, mn: [1e9, 1e9, 1e9], mx: [-1e9, -1e9, -1e9] });
+    await pause('L611');
     for (let t = 0, n = 0; t < idx.length; t += 3, n++) {
       const A = arrs.get(tileKey[n])!;
       for (let q = 0; q < 3; q++) { const i = idx[t + q]; A.ix[A.n++] = i; for (let d = 0; d < 3; d++) { const v = P[i * 3 + d]; if (v < A.mn[d]) A.mn[d] = v; if (v > A.mx[d]) A.mx[d] = v; } }
     }
     lap('Bodenkacheln');
     const sampler = (groundGeo as any).sampler;
+    await pause('L617');
     for (const [kk, A] of arrs) {
       const key = `${Math.floor(kk / TX) - 32},${(kk % TX) - 32}`;
       const g = new THREE.BufferGeometry();
@@ -636,11 +651,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     lap('Boden-LOD');
   } else group.add(ground);
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L640'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Umland: grobes Gitter mit Randhöhen, damit am Spielfeldrand keine Klippe entsteht
   const clip = { value: [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector4(1, 1, 0, 0)) }; // Rechtecke geladener Nachbargegenden (main.ts linkSlots)
   const apronTex = groundTex.clone(); apronTex.needsUpdate = true;
   const apronG = gridMesh(terrain, X0 - 2520, Z0 - 2500, X1 + 2480, Z1 + 2500, 60, -0.6, 12, [X0 + 1, Z0 + 1, X1 - 1, Z1 - 1]);
+  await pause('L645');
   if (RURAL_HOUSES) { // Gebiet A: Umland als Flickenteppich aus Wiesen, Äckern und Waldstücken (statt einfarbig, wirkte aus der Luft wie Wüste)
     const P = apronG.getAttribute('position'), col = new Float32Array(P.count * 3), c = new THREE.Color();
     const meadow = new THREE.Color('#86AE5C'), meadow2 = new THREE.Color('#9CBB66'), field = new THREE.Color('#BDB878'), forest = new THREE.Color('#4E7040');
@@ -660,7 +676,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   outer.rotation.x = -Math.PI / 2; outer.position.y = Math.min(-12, lowest - 3);
   outer.name = 'outer'; group.add(outer); withClip(outer.material as THREE.MeshToonMaterial, clip);
 
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L664'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Wasser ----
   const waterMeshes: THREE.Mesh[] = [];
   const waterTex = canvasTex(128, 128, (g) => {
@@ -672,11 +688,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     for (const [x, y] of [[10, 20], [70, 45], [30, 80], [90, 105], [100, 12]]) { g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 8, y - 6, x + 16, y); g.quadraticCurveTo(x + 24, y + 6, x + 32, y); g.stroke(); }
     g.fillStyle = 'rgba(30,90,140,.18)'; for (let i = 0; i < 60; i++) g.fillRect(Math.random() * 128, Math.random() * 128, 6, 1.5);
   });
+  await pause('L676');
   {
     const pos: number[] = [], col: number[] = [];
     const c = new THREE.Color('#2F86A0'); // Referenz SWISSIMAGE + Fotos Kapellbrücke/Seebrücke: tiefes Blaugrün, hell nur durch Himmelsspiegelung
     // Seeflächen auf Seehöhe brauchen kein feines Netz (spart viel Speicher), Flüsse/Bäche werden aufs Gelände gelegt
     const fpos: number[] = [], fcol: number[] = [];
+    await pause('L681');
     for (const w of d.water) { const flat = (w as any).f === 1 || w.p.every(([x, z]) => Math.abs(terrain.ground(x, z)) < 0.6); addFlat(flat ? fpos : pos, flat ? fcol : col, w.p, w.holes, 0.06, c); }
     const dw = drape(pos, col, terrain, opts.coarse ? 12 : 6);
     const wmat = withWater(toon('#ffffff', { vertexColors: true, map: waterTex }));
@@ -696,8 +714,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // ---- Geländer an Quais und Flussufern (wo eine Strasse/ein Weg am Wasser liegt) ----
+  await pause('L700');
   {
     const posts: number[][] = [], rails: number[][] = [];
+    await pause('L702');
     for (const w of d.water) for (const ring of [w.p, ...(w.holes || [])]) for (let i = 0; i < ring.length; i++) {
       const a = ring[i], b = ring[(i + 1) % ring.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 2) continue;
       const dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L;
@@ -725,11 +745,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L729'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Grün ----
   const trees: number[][] = [];
+  await pause('L732');
   {
     const pos: number[] = [], col: number[] = [];
+    await pause('L734');
     for (const g of d.green) {
       const c = new THREE.Color(g.k === 'forest' ? '#56804A' : g.k === 'pitch' ? '#8FC07A' : g.k === 'playground' ? '#C9D98E' : '#9CC88A');
       addFlat(pos, col, g.p, [], 0.22, c);
@@ -753,9 +775,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (!opts.aerial) group.add(flatMesh(pos, col, toon('#ffffff', { vertexColors: true }))); // mit Luftbild kommt das Grün aus dem Bild
   }
 
+  await pause('L757');
   await onProgress('Strassen werden gebaut …');
   // ---- Strassen ----
   const roadsByName = new Map<string, number[][][]>();
+  await pause('L760');
   {
     const asph = { pos: [] as number[], col: [] as number[] }, cobble = { pos: [] as number[], col: [] as number[] }, asphIsl = { pos: [] as number[], col: [] as number[] };
     const dashes: number[] = [];
@@ -775,6 +799,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     // die Anschlussstrassen werden auf 30–110 m zu Rampen (als Brückenstücke mit Stützmauern). Dazu ein sichtbarer Brückenkörper.
     const holz = (r: any) => r.n === 'Kapellbrücke' || r.n === 'Spreuerbrücke';
     const bkey = (q: number[]) => Math.round(q[0] * 2) + ',' + Math.round(q[1] * 2), blen = (p: number[][]) => { let l = 0; for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return l; };
+    await pause('L779');
     for (const r of d.roads) if (holz(r)) terrain.addBridge(r.p, Math.max(r.w, 4.6), r.c === 'footway' ? 0.4 : 0.6); // Holzbrücken wie bisher
     const brs = d.roads.filter((r) => r.b && !holz(r) && r.p.length >= 2);
     const ends = new Map<string, [number, number][]>();
@@ -790,6 +815,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const vmap = new Map<string, number[]>(); brs.forEach((r, i) => { for (const q of r.p) { const k = bkey(q); if (!vmap.has(k)) vmap.set(k, []); const l = vmap.get(k)!; if (l[l.length - 1] !== i) l.push(i); } });
     const adj: number[][] = brs.map(() => []); brs.forEach((r, i) => { for (const e of [0, 1]) for (const j of vmap.get(bkey(e ? r.p[r.p.length - 1] : r.p[0])) || []) if (j !== i) { adj[i].push(j); adj[j].push(i); } });
     const comp = new Array(brs.length).fill(-1); let nComp = 0;
+    await pause('L794');
     for (let i = 0; i < brs.length; i++) { if (comp[i] >= 0) continue; const st = [i]; comp[i] = nComp;
       while (st.length) { const a = st.pop()!; for (const j of adj[a]) if (comp[j] < 0) { comp[j] = nComp; st.push(j); } } nComp++; }
     const DRV = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'service', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street']);
@@ -822,9 +848,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
           roads[qi] = ramp; if (rest) roads.push({ ...q, p: e ? rest.slice().reverse() : rest }); changed = true; break; } }
       if (changed) d = { ...d, roads }; }
     const deckOf = (r: any): [number, number] | null => { const i = brs.indexOf(r); if (i >= 0) return [lin[i][0] + lift[comp[i]], lin[i][1] + lift[comp[i]]]; return rampH.get(r) || null; };
+    await pause('L826');
     for (const r of d.roads) { const h = deckOf(r); if (h) terrain.addBridge(r.p, Math.max(r.w, 4.6), r.n.endsWith('brücke') && r.c === 'footway' ? 0.4 : 0.6, h[0], h[1]); }
     console.log('[bau] Brücken', brs.length, 'Stücke in', nComp, 'Ketten, gehoben', lift.filter((v) => v > 0).length, 'Rampen', nRamp);
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L828'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Brückenkörper: Platte, Brüstung, Pfeiler; Rampen mit Stützmauern bis zum Boden
     // 16a Unterführungen (Simon 15.11.: Zug fuhr auf Strassenhöhe durch die Ambulanz): Bahnbrücken aus OSM. Das Geländemodell kennt unter
     // der Bahnbrücke nur die Strasse – das Gleis sackte dort ab. Jetzt läuft es gerade von Widerlager zu Widerlager, mindestens 5 m über der
@@ -894,14 +921,16 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (underpasses.length) console.log('[bau] Bahn-Unterführungen', nUp, 'von', underpasses.length);
       if (geos.length) { const bm = mergeGeometries(geos.map((g) => { const ng = g.index ? g.toNonIndexed() : g; ng.deleteAttribute('uv'); return ng; }), false);
         if (bm) { const mesh = new THREE.Mesh(bm, toon('#B7B3AA')); mesh.name = 'bruecken-koerper'; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); } } }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L898'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Knoten: Wegenden, an denen sich mindestens drei Fahrstrassen treffen (dort keine Längsmarkierung, wie in der Realität)
     const nodeCnt = new Map<string, number>(); const nk = (q: number[]) => Math.round(q[0]) + ',' + Math.round(q[1]);
+    await pause('L901');
     for (const r of d.roads) { if (['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c)) continue; for (const q of [r.p[0], r.p[r.p.length - 1]]) nodeCnt.set(nk(q), (nodeCnt.get(nk(q)) || 0) + 1);
       for (let i = 1; i < r.p.length - 1; i++) nodeCnt.set(nk(r.p[i]), (nodeCnt.get(nk(r.p[i])) || 0) + 2); }
     // Wartelinien (SSV 6.13, unterbrochen 0.5 m / 0.25 m): wo eine Neben- auf eine Hauptstrasse (mit OSM-Streifen) trifft und keine Ampel steht
     const mainHalf = new Map<string, number>(); for (const r of d.roads) if (r.L && !r.b) for (const q of r.p) mainHalf.set(nk(q), Math.max(mainHalf.get(nk(q)) || 0, r.w / 2));
     const wartel: number[] = [], sideVortritt: number[][] = [];
+    await pause('L906');
     for (const r of d.roads) { if (r.L || r.b || !['residential', 'unclassified', 'living_street', 'tertiary_link'].includes(r.c) || r.p.length < 2) continue;
       for (const end of [0, 1]) { const q = end ? r.p[r.p.length - 1] : r.p[0]; const mh = mainHalf.get(nk(q)); if (!mh) continue;
         if (props?.signals?.some((sg) => Math.hypot(sg[0] - q[0], sg[1] - q[1]) < 25)) continue;
@@ -913,13 +942,15 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     // Höchstgeschwindigkeit (SSV 2.30): Signal 12 m nach einem Punkt, an dem das Tempo laut OSM wechselt, rechts in Fahrtrichtung
     const vAt = new Map<string, Set<number>>(); for (const r of d.roads) if (r.L && r.v && !r.b) for (const q of [r.p[0], r.p[r.p.length - 1]]) { const k = nk(q); if (!vAt.has(k)) vAt.set(k, new Set()); vAt.get(k)!.add(r.v); }
     const vSigns: number[][] = [];
+    await pause('L917');
     for (const r of d.roads) { if (!r.L || !r.v || r.b || r.p.length < 2) continue;
       for (const st of [0, 1]) { if (st === 1 && r.o) continue; const q = st ? r.p[r.p.length - 1] : r.p[0]; const vs = vAt.get(nk(q)); if (!vs || vs.size < 2) continue;
         const pp = st ? r.p.slice().reverse() : r.p; const A = pp[0], B = pp[1]; const sl = Math.hypot(B[0] - A[0], B[1] - A[1]); if (sl < 14) continue;
         const ux = (B[0] - A[0]) / sl, uz = (B[1] - A[1]) / sl, o = r.w / 2 + 1.0; vSigns.push([A[0] + ux * 12 - uz * o, A[1] + uz * 12 + ux * o, Math.atan2(ux, uz), r.v]); } }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L921'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // 14zc: Raster der Kantonsstrassen-Achsen (alle 4 m ein Punkt), um Begleitwege zu erkennen
     const mainPts = new Map<string, number[][]>(); const mk = (x: number, z: number) => `${Math.floor(x / 20)},${Math.floor(z / 20)}`;
+    await pause('L924');
     for (const r of d.roads) if (r.L && !r.b) for (let i = 1; i < r.p.length; i++) { const A = r.p[i - 1], B = r.p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
       for (let s = 0; s <= L; s += 4) { const x = A[0] + (B[0] - A[0]) * s / Math.max(L, 1e-6), z = A[1] + (B[1] - A[1]) * s / Math.max(L, 1e-6), k = mk(x, z); if (!mainPts.has(k)) mainPts.set(k, []); mainPts.get(k)!.push([x, z, r.w / 2]); } }
     const sidePath = new Map<string, number[][]>(); // Begleitwege: dort keine Leitpfosten (stünden auf dem Weg)
@@ -928,6 +959,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const alongMain = (p: number[][]) => { let n = 0, hit = 0; for (let i = 1; i < p.length; i++) { const A = p[i - 1], B = p[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
       for (let s = 0; s < L; s += 6) { n++; if (nearMain(A[0] + (B[0] - A[0]) * s / L, A[1] + (B[1] - A[1]) * s / L)) hit++; } } return n >= 3 && hit / n > 0.7; };
     const wegweiser: any[][] = [], arrows: number[][] = [], hsSigns: number[][] = [], leitpf: number[][] = [], yellow: number[] = [], sideW = asphIsl, decals: number[][] = [];
+    await pause('L932');
     for (const r of d.roads) {
       if (r.n) { if (!roadsByName.has(r.n)) roadsByName.set(r.n, []); roadsByName.get(r.n)!.push(r.p); }
       if (r.tr) { // Trottoir neben der Fahrbahn (tools/geo/roadtags.py): 12 cm erhöht, grauer Belag, Randstein beidseitig
@@ -988,7 +1020,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       if (['primary', 'secondary', 'tertiary', 'trunk'].includes(r.c)) dashLine(dashes, r.p, y + 0.01);
       if (['primary', 'secondary', 'trunk'].includes(r.c) && r.w >= 6.5) edgeLines(dashes, r.b ? r.p : trimLine(r.p, 7), r.w / 2 - 0.45, y + 0.01); /* 17a: Randlinien auch auf Brücken und Rampen (dort durchgehend) */ // durchgezogene Randlinien (Hauptstrassen), an Weg-Enden (meist Kreuzungen) 7 m frei
     }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L992'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Belag: feines Korn, dunklere Flicken und Bitumen-Fugen (Fotos Luzerner Kantonsstrassen); 512 px auf 16 m
     const asphTex = canvasTex(512, 512, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512);
       const rnd = (() => { let a = 7; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
@@ -1004,7 +1036,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(x + 4, y + 3.5, 6, 2);
       }
     });
+    await pause('L1008');
     for (let i = 0; i < sideW.pos.length; i++) asph.pos.push(sideW.pos[i]); for (let i = 0; i < sideW.col.length; i++) asph.col.push(sideW.col[i]);
+    await pause('L1009');
     for (const [t, tex, sc] of [[asph, asphTex, 16], [cobble, cobTex, 2.4]] as const) {
       const dr = drape(t.pos, t.col, terrain, opts.coarse ? 14 : 8, true);
       const m = flatMesh(dr.pos, dr.col!, toon('#ffffff', { vertexColors: true, map: tex, side: THREE.DoubleSide })); // beidseitig: Randsteine, Inseln und Bankette haben gemischte Umlaufrichtung
@@ -1012,7 +1046,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       worldUV(m.geometry, sc);
       group.add(m);
     }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L1016'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Fussgängerstreifen (OSM highway=crossing, markiert): in der Schweiz gelb, Balken 0.5 m breit, 0.5 m Abstand, 3 m lang in Fahrtrichtung
     const zebra: number[] = [], zebraSigns: number[][] = [];
     if (props?.crossings?.length) {
@@ -1046,7 +1080,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       group.add(new THREE.Mesh(mergeGeometries(po)!, toon('#8A8F94'))); console.log('[bau] Fussgängerstreifen-Signale', zebraSigns.length); }
     if (zebra.length) { const zd = drape(zebra, null, terrain, 3, true); const zg = new THREE.BufferGeometry(); zg.setAttribute('position', new THREE.Float32BufferAttribute(zd.pos, 3)); zg.computeVertexNormals();
       const zm = new THREE.Mesh(zg, new THREE.MeshBasicMaterial({ color: '#F2C21B', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); zm.name = 'zebra'; group.add(zm); }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L1050'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Bushaltestellen am Fahrbahnrand (OSM bus_stop neben einer Hauptstrasse): gelbe unterbrochene Umrandung 20 × 2.6 m und «BUS»
     if (props?.stops?.length) { const mains = d.roads.filter((r) => r.L && !r.b && r.p.length > 1);
       const grid = new Map<string, number[]>(); mains.forEach((r, i) => { for (const q of r.p) { const k = Math.floor(q[0] / 60) + ',' + Math.floor(q[1] / 60); if (!grid.has(k)) grid.set(k, []); const a = grid.get(k)!; if (a[a.length - 1] !== i) a.push(i); } });
@@ -1062,6 +1096,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         const o1 = sd * (r.w / 2 - 0.15), o2 = sd * (r.w / 2 - 2.75); const P = (s0: number, o: number) => [px + ux * s0 + nx * o, pz + uz * s0 + nz * o];
         strokeLine(yellow, [P(-10, o2), P(10, o2)], 0.372, 0.15, 1, 1); strokeLine(yellow, [P(-10, o1), P(-10, o2)], 0.372, 0.15); strokeLine(yellow, [P(10, o1), P(10, o2)], 0.372, 0.15);
         const c = P(0, (o1 + o2) / 2); decals.push([1, c[0], c[1], sd > 0 ? ux : -ux, sd > 0 ? uz : -uz]); done.push([sx, sz]); } }
+    await pause('L1066');
     for (let i = 0; i < wartel.length; i++) dashes.push(wartel[i]);
     const dd = drape(dashes, null, terrain, 5, true);
     const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dd.pos, 3));
@@ -1094,7 +1129,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
       hsSigns.forEach(([x, z, h], k) => { q.setFromEuler(e.set(0, h + Math.PI, 0)); m4.compose(v.set(x, terrain.height(x, z), z), q, one); ms.setMatrixAt(k, m4); mp.setMatrixAt(k, m4); });
       for (const im of [ms, mp]) { im.computeBoundingSphere(); im.name = 'hauptstrasse'; group.add(chunkInstanced(im, 1000)); } }
-    await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+    await pause('L1098'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
     // Leitplanken ausserorts, wo das Gelände neben der Fahrbahn mehr als 2.5 m abfällt (Böschung, Hang): verzinkte Planke 0.6–0.9 m, Pfosten alle 4 m
     { const beam: number[] = [], posts: number[][] = [];
       for (const r of d.roads) { if (!r.L || r.b || (r.v || 50) <= 50) continue;
@@ -1126,12 +1161,14 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       const im = new THREE.InstancedMesh(g, toon('#ffffff', { vertexColors: true }), leitpf.length); const m4 = new THREE.Matrix4();
       leitpf.forEach(([x, z], k) => { m4.makeTranslation(x, terrain.height(x, z), z); im.setMatrixAt(k, m4); }); im.computeBoundingSphere(); im.name = 'leitpfosten'; group.add(chunkInstanced(im, 1000)); }
   }
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L1130'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // ---- Bahn ----
+  await pause('L1132');
   {
     const pos: number[] = [], col: number[] = [];
     const c = new THREE.Color('#8E847C');
     const steel = new THREE.Color('#4A4E52'), bed = new THREE.Color('#7A726B');
+    await pause('L1136');
     for (const r of d.rail) { ribbon(pos, col, r, 3.3, 0.25, c, false); const l: number[][] = (r as any).p || r; if (l.length < 2) continue; ribbon(pos, col, l, 1.7, 0.27, bed, false); // 17a: Schotterbett 3.3 m, dunklere Schwellenzone, zwei Schienen (Normalspur 1.435 m)
       for (const o of [-0.72, 0.72]) ribbon(pos, col, offsetLine(l, o), 0.11, 0.31, steel, false); }
     const drl = drape(pos, col, terrain, 12);
@@ -1143,12 +1180,15 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     { const sb = buildSiloballen(d.green as any, (x, z) => terrain.height(x, z), (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z)); if (sb) group.add(sb); } // 17c
   }
 
+  await pause('L1147');
   if (d.shelters?.length || d.wagenbach) group.add(bahnhofExtras(d, terrain));
+  await pause('L1148');
   await onProgress('Häuser werden gebaut …');
   // ---- Gebäude ----
   let hospital = { x: -900, z: -700, name: 'Kinderspital' };
   const landmarks: { name: string; x: number; z: number }[] = [];
   const special: { b: CityData['buildings'][0]; kind: string }[] = [];
+  await pause('L1153');
   {
     // Getrennte Puffer je Fassadentyp → je ein Material mit eigener Textur
     type Buf = { pos: number[]; nor: number[]; col: number[]; uv: number[] };
@@ -1156,7 +1196,9 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const B: Record<string, Buf> = { oldGreen: mk(), oldRed: mk(), modern: mk(), block: mk(), stone: mk(), flatRoof: mk(), tiles: mk(), altstadt: mk(), painted: mk(), gruenderzeit: mk(), hotel: mk(), slate: mk(), luks: mk(), luksTurm: mk(), blockShop: mk(), modernShop: mk(), barn: mk(), hall: mk() };
     const lpos: number[] = [];
     const styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[] = [];
+    await pause('L1160');
     for (const b of d.buildings) {
+      await pause('haus');
       let kind = '';
       if (b.n === 'Wasserturm') kind = 'wasserturm';
       if (b.n.startsWith('KKL')) kind = 'kkl';
@@ -1257,9 +1299,11 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         for (let i = 1; i < r.p.length; i++) { const [x1, z1] = r.p[i - 1], [x2, z2] = r.p[i]; const L = Math.hypot(x2 - x1, z2 - z1);
           for (let t = 0; t <= L; t += 5) { const x = x1 + (x2 - x1) * t / (L || 1), z = z1 + (z2 - z1) * t / (L || 1); const k = Math.floor(x / 25) + ',' + Math.floor(z / 25); if (!g.has(k)) g.set(k, []); g.get(k)!.push([x, z]); } } }
       SHOP_NEAR = (x, z) => { const i = Math.floor(x / 25), j = Math.floor(z / 25); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of g.get((i + a) + ',' + (j + b)) || []) if (Math.hypot(q[0] - x, q[1] - z) < 24) return true; return false; }; }
-    if (b3d) await buildB3D(b3d, styles, b3dTiles, lpos, (p) => onProgress(p), terrain);
+    if (b3d) await buildB3D(b3d, styles, b3dTiles, lpos, (p) => onProgress(p), terrain, opts.smooth ? pause : undefined);
     await onProgress('Materialien …');
+    await pause('vor-fassaden');
     const tex = facadeTextures();
+    await pause('nach-fassaden');
     if (ERKER.length) { // Erker als Instanzen: Kasten mit Fenstern + kleines Kupferdach
       const body = new THREE.BoxGeometry(2.6, 1, 1.1); body.translate(0, 0.5, 0);
       const cap = new THREE.ConeGeometry(1.95, 1.4, 4); cap.rotateY(Math.PI / 4); cap.scale(1, 1, 0.6); cap.translate(0, 0.7, 0);
@@ -1272,6 +1316,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       });
       for (const im of [bm, cm]) { im.computeBoundingSphere(); im.name = 'erker'; group.add(im); }
     }
+    await pause('L1276');
     for (const [x, z, y, r, top] of ONIONS) { // Zwiebelhauben mit Laterne und goldener Spitze
       const H = Math.max(top - y, r * 2.2) + 1.5, R = r * 1.02;
       const prof = [[0.92, 0], [0.92, 0.07], [1.08, 0.2], [1.12, 0.33], [0.98, 0.46], [0.6, 0.58], [0.26, 0.66], [0.2, 0.72], [0.34, 0.77], [0.3, 0.82], [0.14, 0.87], [0.07, 0.9], [0, 0.9]].map(([a, b]) => new THREE.Vector2(a * R, b * H));
@@ -1301,10 +1346,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       barn: toon('#ffffff', { vertexColors: true, map: tex.barn }),
       hall: toon('#ffffff', { vertexColors: true, map: tex.hall }),
     };
+    await pause('L1305');
     for (const k of ['oldGreen', 'oldRed', 'modern', 'block', 'stone', 'altstadt', 'painted', 'gruenderzeit', 'hotel', 'luks', 'luksTurm', 'blockShop', 'modernShop']) withNight(mats[k] as THREE.MeshToonMaterial);
     const groups: [string, Record<string, Buf>, number[]][] = [['', B, lpos], ...[...b3dTiles].map(([k, t]) => [k, t.B, t.l] as [string, Record<string, Buf>, number[]])];
+    await pause('L1307');
     for (const [tk, BB] of groups) for (const [k, buf] of Object.entries(BB)) {
       if (!buf.pos.length) continue;
+      await pause('grp-' + k);
       void tk;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
@@ -1319,6 +1367,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
     await onProgress('Konturen …');
     const lmat = new THREE.LineBasicMaterial({ color: '#3b302b', transparent: true, opacity: 0.6 });
+    await pause('L1323');
     for (const gr of groups) {
       const L = gr[2]; if (!L.length) continue;
       const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(L, 3)); gr[2] = [];
@@ -1329,8 +1378,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     b3dTiles.clear(); lpos.length = 0;
   }
 
+  await pause('L1333');
   await onProgress('Wahrzeichen …');
   // ---- Wahrzeichen ----
+  await pause('L1335');
   for (const s of special) {
     const [cx, cz] = centroid(s.b.p);
     if (s.kind === 'tor') { if (!b3d) group.add(torbogen(s.b.p, terrain)); landmarks.push({ name: 'Bahnhofstor', x: cx, z: cz }); continue; }
@@ -1414,10 +1465,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     }
   }
 
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L1418'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Holzbrücken
+  await pause('L1420');
   for (const name of ['Kapellbrücke', 'Spreuerbrücke']) {
     const parts = roadsByName.get(name) || [];
+    await pause('L1422');
     for (const p of parts) group.add(mergeGroup(coveredBridge(p, name === 'Kapellbrücke' ? 4.6 : 4.2, terrain, name === 'Kapellbrücke')));
     if (parts.length) {
       const mid = parts[0][Math.floor(parts[0].length / 2)];
@@ -1426,6 +1479,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Fahnen auf der Seebrücke (abwechselnd Schweiz und Kanton Luzern: blau über weiss)
+  await pause('L1430');
   {
     const parts = d.roads.filter((r) => r.n === 'Seebrücke' && r.b).map((r) => r.p);
     const distTo = (x: number, z: number, q: number[][]) => { let m = 1e9; for (let i = 1; i < q.length; i++) { const [ax, az] = q[i - 1], [bx, bz] = q[i]; const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz || 1; const u = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2)); m = Math.min(m, Math.hypot(x - ax - u * vx, z - az - u * vz)); } return m; };
@@ -1433,10 +1487,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const ch = flagTex((g) => { g.fillStyle = '#D52B1E'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#fff'; g.fillRect(26, 12, 12, 40); g.fillRect(12, 26, 40, 12); });
     const lu = flagTex((g) => { g.fillStyle = '#2F6FB5'; g.fillRect(0, 0, 64, 32); g.fillStyle = '#fff'; g.fillRect(0, 32, 64, 32); });
     const fg = new THREE.PlaneGeometry(1.6, 1.6, 4, 1); const fp = fg.getAttribute('position');
+    await pause('L1437');
     for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setX(i, x + 0.8); fp.setZ(i, Math.sin((x + 0.8) * 2.6) * 0.12); }
     fg.computeVertexNormals();
     const mCH = new THREE.MeshBasicMaterial({ map: ch, side: THREE.DoubleSide }), mLU = new THREE.MeshBasicMaterial({ map: lu, side: THREE.DoubleSide }), poleM = toon('#E9E6E0');
     const poles: THREE.Matrix4[] = []; let n = 0; const fl = new THREE.Group(); fl.name = 'flags'; const gCH: THREE.BufferGeometry[] = [], gLU: THREE.BufferGeometry[] = [];
+    await pause('L1441');
     for (const p of parts) {
       let acc = 0;
       for (let i = 1; i < p.length; i++) {
@@ -1453,6 +1509,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         acc = (acc + L) % 22;
       }
     }
+    await pause('L1457');
     for (const [gs, mt] of [[gCH, mCH], [gLU, mLU]] as [THREE.BufferGeometry[], THREE.Material][]) if (gs.length) fl.add(new THREE.Mesh(mergeGeometries(gs, false)!, mt));
     if (poles.length) {
       const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 7, 6), poleM, poles.length);
@@ -1461,8 +1518,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Restaurant-Terrassen mit Sonnenschirmen an den Altstadt-Quais (Rathausquai, Unter der Egg) und am Schwanenplatz
+  await pause('L1465');
   {
     const spots: [number, number][] = [];
+    await pause('L1467');
     for (const name of ['Rathausquai', 'Unter der Egg', 'Kornmarkt', 'Kapellplatz', 'Nationalquai', 'Schwanenplatz']) {
       for (const r of d.roads) {
         if (r.n !== name) continue;
@@ -1497,6 +1556,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Verkehrshaus: Schaustücke im Hof (Flugzeug auf Stelzen, rote Lok auf einem Gleisstück)
+  await pause('L1501');
   if (X1 > 2200) {
     const free = (x: number, z: number, r: number) => { for (let a = 0; a < 6.283; a += 0.5) for (const rr of [0, r * 0.5, r]) { const q = mask.at(x + Math.cos(a) * rr, z + Math.sin(a) * rr); if (q !== 0) return false; } return true; };
     const find = (x: number, z: number, r: number): [number, number] | null => { for (let d0 = 0; d0 < 60; d0 += 4) for (let a = 0; a < 6.283; a += 0.4) { const px = x + Math.cos(a) * d0, pz = z + Math.sin(a) * d0; if (free(px, pz, r)) return [px, pz]; if (d0 === 0) break; } return null; };
@@ -1532,10 +1592,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (V.children.length) group.add(mergeGroup(V));
   }
 
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L1536'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   // Spielplätze (OSM leisure=playground): Rutschbahn und Schaukel in der Mitte
+  await pause('L1538');
   {
     const spots: [number, number, number][] = [];
+    await pause('L1540');
     for (const g of d.green) {
       if (g.k !== 'playground') continue;
       const [cx, cz] = centroid(g.p);
@@ -1562,6 +1624,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Zytturm (Museggmauer, swisstopo-Gebäude 190660948): Zifferblätter auf Stadt- und Seeseite, älteste Uhr Luzerns
+  await pause('L1566');
   if (X0 < -243) {
     const face = canvasTex(128, 128, (g) => {
       g.fillStyle = '#1E2A44'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill();
@@ -1570,6 +1633,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
       g.strokeStyle = '#E8C04A'; g.lineCap = 'round'; g.lineWidth = 7; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 26, 64 - 10); g.stroke(); g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 - 6, 64 - 40); g.stroke();
     });
     const cm = new THREE.MeshBasicMaterial({ map: face, transparent: true, alphaTest: 0.3 });
+    await pause('L1574');
     for (const [x, z, nx, nz] of [[-241.95, -293.2, 0.345, 0.939], [-244.5, -299.9, -0.345, -0.939]]) {
       const c = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), cm); c.position.set(x + nx * 0.2, 64, z + nz * 0.2); c.rotation.y = Math.atan2(nx, nz); c.name = 'zytturm-uhr'; group.add(c);
     }
@@ -1580,6 +1644,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const pieces: number[][] = [];
     const carRd = d.roads.filter((r) => !['footway', 'path', 'steps', 'cycleway', 'track', 'pedestrian'].includes(r.c) && r.p.some(([x, z]) => x > -650 && x < 200 && z > -460 && z < -130));
     const onCarRoad = (x: number, z: number) => carRd.some((r) => { for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz || 1; const u = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2)); if (Math.hypot(x - ax - u * vx, z - az - u * vz) < r.w / 2 + 1.2) return true; } return false; });
+    await pause('L1584');
     for (const L of lines) for (let i = 1; i < L.length; i++) {
       const [x1, z1] = L[i - 1], [x2, z2] = L[i]; const len = Math.hypot(x2 - x1, z2 - z1); const n = Math.max(1, Math.round(len / 2));
       for (let k = 0; k < n; k++) { const x = x1 + (x2 - x1) * (k + 0.5) / n, z = z1 + (z2 - z1) * (k + 0.5) / n; if (onCarRoad(x, z)) continue; if (MUSEGG.some(([mx, mz]) => Math.hypot(mx - x, mz - z) < 5)) continue; pieces.push([x, z, len / n, Math.atan2(x2 - x1, z2 - z1)]); }
@@ -1599,15 +1664,18 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Nadelwehr in der Reuss (OSM-Weg 27549263): Holznadeln dicht an dicht unter einem schmalen Steg
+  await pause('L1603');
   if (X0 < -340) {
     const line = [[-342, 79], [-338, 60], [-337, 56]];
     const pts: [number, number][] = [];
+    await pause('L1606');
     for (let i = 1; i < line.length; i++) { const [x1, z1] = line[i - 1], [x2, z2] = line[i]; const L = Math.hypot(x2 - x1, z2 - z1); for (let t = 0; t < L; t += 0.22) pts.push([x1 + (x2 - x1) * t / L, z1 + (z2 - z1) * t / L]); }
     const ang = Math.atan2(line[2][0] - line[0][0], line[2][1] - line[0][1]);
     const nd = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 2.0, 0.16), toon('#7A5232'), pts.length); const m4 = new THREE.Matrix4(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ang), one = new THREE.Vector3(1, 1, 1);
     pts.forEach(([x, z], i) => nd.setMatrixAt(i, m4.compose(new THREE.Vector3(x, 0.45, z), q, one))); nd.computeBoundingSphere();
     const W = new THREE.Group(); W.name = 'nadelwehr'; W.add(nd);
     const deckM = toon('#8E959C'), railM = toon('#4E5A63');
+    await pause('L1612');
     for (let i = 1; i < line.length; i++) {
       const [x1, z1] = line[i - 1], [x2, z2] = line[i]; const L = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(x2 - x1, z2 - z1);
       const dk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, L + 0.2), deckM); dk.position.set((x1 + x2) / 2, 1.55, (z1 + z2) / 2); dk.rotation.y = a; W.add(dk);
@@ -1617,6 +1685,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   }
 
   // Löwendenkmal (in den Fels gehauener Löwe über dem Teich, Denkmalstrasse). Kinderfreundlich: der Löwe schläft.
+  await pause('L1621');
   if (X0 < 236 && X1 > 236 && Z0 < -757 && Z1 > -757) {
     const L = new THREE.Group(); L.name = 'loewendenkmal';
     const stoneM = toon('#D9C89E'), maneM = toon('#C4AE7E'), nicheM = toon('#8F7D5C');
@@ -1627,8 +1696,10 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const body = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), stoneM); body.scale.set(2.3, 1.5, 4.6); body.position.set(0, 1.4, -0.6); lion.add(body);
     const mane = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 1), maneM); mane.position.set(0.9, 2.0, 3.1); lion.add(mane);
     const head = new THREE.Mesh(new THREE.SphereGeometry(1.35, 10, 8), stoneM); head.position.set(1.6, 1.4, 3.9); head.scale.set(1, 0.85, 1); lion.add(head);
+    await pause('L1631');
     for (const e of [-0.5, 0.5]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 5), maneM); ear.position.set(1.0 + e * 0.6, 2.6, 3.9 + e * 0.9); lion.add(ear); }
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 5), nicheM); nose.position.set(2.85, 1.2, 4.1); lion.add(nose);
+    await pause('L1633');
     for (const k of [-1, 1]) { const paw = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 2.6), stoneM); paw.position.set(1.6, 0.3, 4.6 + k * 0.2 - 0.6); paw.rotation.y = k * 0.15; lion.add(paw); }
     const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 4.2, 6), stoneM); tail.position.set(1.2, 0.5, -4.6); tail.rotation.x = Math.PI / 2; lion.add(tail);
     L.add(lion);
@@ -1636,10 +1707,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     landmarks.push({ name: 'Löwendenkmal', x: cx, z: cz });
   }
 
+  await pause('L1640');
   await onProgress('Bäume …');
   // ---- Bäume (instanziert) ----
+  await pause('L1642');
   group.add(buildRealTrees(trees, props?.trees, mask, (x, z) => terrain.ground(x, z))); // 15a, P-A E1
-  await pause(); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
+  await pause('L1643'); // 18a: Hintergrund-Bau in kleineren Stücken (weniger Ruckeln beim Nachladen)
   group.add(...buildParkedCars(d.roads, mask, (x, z) => terrain.height(x, z) + 0.35 /* 18a: auf der Fahrbahn statt darin */, opts.coarse ? 450 : 700, undefined, [...(props?.lamps || []), ...(props?.stops || []), ...trees])); // P-A E6; 17a: 100 → 450/700
   if (lastParkedSpots.length) { // 17a: Parkfeld unter jedem geparkten Auto – Asphaltfläche 5.6 × 2.3 m mit weissen Linien an drei Seiten
     const tex = canvasTex(128, 64, (g) => { g.fillStyle = '#77797B'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#ECECE8'; g.fillRect(0, 0, 3, 64); g.fillRect(125, 0, 3, 64); g.fillRect(0, 0, 128, 3); }, false);
@@ -1650,10 +1723,13 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
     const pm = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); pm.name = 'parkfelder'; pm.receiveShadow = true; group.add(pm);
     console.log('[bau] Parkfelder', lastParkedSpots.length); }
+  await pause('L1654');
   group.add(...buildStreetFurniture(props, d.roads, mask, (x, z) => terrain.height(x, z), 12000)); // P-A E8: Kleinmöbel, Deckel 12 000 Dreiecke
   // 14q: Hecken (OSM barrier=hedge): Reihe aus Büschen (alle 1.6 m, 1.3–2.1 m hoch), nicht auf Strassen, Wasser oder in Häusern
+  await pause('L1656');
   if (props?.hedges?.length) {
     const bp: number[][] = [];
+    await pause('L1658');
     for (const h of props.hedges) { let acc = 0;
       for (let i = 1; i < h.length; i++) { const A = h[i - 1], B = h[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
         while (acc < L) { const t = acc / L, x = A[0] + (B[0] - A[0]) * t, z = A[1] + (B[1] - A[1]) * t;
@@ -1671,9 +1747,12 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     console.log('[bau] Hecken-Büsche', bp.length);
   }
 
+  await pause('L1675');
   await onProgress('Wald …');
+  await pause('L1676');
   group.add(buildForest(d.green.filter((g) => g.k === 'forest').map((g) => g.p), terrain, mask, opts.forestStep ?? 8, opts.forestMask, opts.coarse ? 700 : 1000));
 
+  await pause('L1678');
   if (props) { // Kantonsstrassen innerorts ohne erfasste Laternen: alle 32 m eine Laterne am rechten Rand (Annahme; OSM kennt nur einen Teil der Laternen)
     const cell = new Map<string, number[][]>(); const ck = (x: number, z: number) => Math.floor(x / 40) + ',' + Math.floor(z / 40);
     for (const l of props.lamps) { const k = ck(l[0], l[1]); if (!cell.has(k)) cell.set(k, []); cell.get(k)!.push(l); }
@@ -1687,6 +1766,7 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
         acc -= L; } }
     console.log('[bau] Laternen ergänzt', add);
     await onProgress('Stege und Laternen …'); group.add(buildProps(props, terrain, mask)); }
+  await pause('L1691');
   if (opts.osm) { const o = opts.osm, gy = (x: number, z: number) => terrain.height(x, z); // 16a: OSM-Kleinobjekte (P-A Lauf 10), ohne Kollision
     if (o.mast.length || o.leitung.length) group.add(buildPowerLines(o.mast, o.leitung, gy));
     if (o.platz.length) group.add(buildPitches(o.platz, gy));
@@ -1694,29 +1774,37 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
     if (o.bue.length) group.add(buildLevelCrossings(o.bue, gy));
     if (o.turm.length) group.add(buildMasts(o.turm, gy));
     { const m = buildOsmMoebel(o, gy, (x, z) => mask.at(x, z) === 0 && !mask.isRoad(x, z) /* P-C D6 */); console.log('[bau] Strassenmöbel', (o.hydrant?.length || 0) + (o.post?.length || 0) + (o.recycling?.length || 0) + (o.blitzer?.length || 0), 'Dreiecke', m.userData.dreiecke || 0); group.add(m); } }
+  await pause('L1698');
   if (opts.fuel?.length) group.add(buildFuelStations(opts.fuel, d.roads, (x, z) => terrain.height(x, z))); // 15b: Tankstellen (Rückmeldung Simon)
 
   // ---- Berge am Horizont (Pilatus im SW, Rigi im O) ----
+  await pause('L1701');
   if (!terrain.hz) group.add(mountains());
 
   // Bäume sind Hindernisse (Stamm)
+  await pause('L1704');
   for (const [x, z] of trees) {
     const i = Math.floor((x - mask.x0) / MASK_RES), j = Math.floor((z - mask.z0) / MASK_RES);
     if (i > 0 && j > 0 && i < mask.w && j < mask.h && mask.data[j * mask.w + i] === 0) mask.data[j * mask.w + i] = 2;
   }
 
   // grosse Flächennetze (Wasser, Strassen, Wege …) in 400-m-Kacheln teilen → Frustum Culling + Sichtweite greifen
+  await pause('L1710');
   for (const c of [...group.children]) {
     const m = c as THREE.Mesh;
     if (!(m as any).isMesh || (m as any).isInstancedMesh || !m.geometry || Array.isArray(m.material) || (m.geometry as THREE.BufferGeometry).groups.length > 1) continue;
     const g = m.geometry as THREE.BufferGeometry; const tris = g.index ? g.index.count / 3 : g.getAttribute('position').count / 3;
     if (!g.boundingSphere) g.computeBoundingSphere();
     if (tris < 30000 || g.boundingSphere!.radius < 500) continue;
+    await pause('teilen');
     const parts = splitTiles(m, 400); if (parts.length < 2) continue;
     group.remove(m); for (const p of parts) group.add(p);
   }
 
+  await pause('L1720');
+  if (PERF && opts.freeCPU) console.log('[perf] bau-block Ende (nach letzter pause)', (performance.now() - tPause).toFixed(0), 'ms');
   // Speicher: CPU-Kopien der Geometrie nach dem Hochladen auf die Grafikkarte freigeben (Boden bleibt für Höhenabfragen)
+  await pause('L1722');
   if (opts.freeCPU) {
     const free = function (this: any) { this.array = null; };
     group.traverse((o: any) => {
@@ -2218,7 +2306,7 @@ function findSpires(P: ArrayLike<number>, I: ArrayLike<number>, vS: number, iS: 
 
 let SHOP_NEAR: (x: number, z: number) => boolean = () => false;
 let RURAL_HOUSES = false; // Gebiet A (OSM-Gebäude mit rural.py-Typen)
-async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[], tiles: Map<string, { B: Record<string, { pos: number[]; nor: number[]; col: number[]; uv: number[] }>; l: number[] }>, _unused: number[], progress: (s: string) => Promise<void> | void, terrain?: Terrain) {
+async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; roofC: THREE.Color; style: string; flat: boolean; kind: string }[], tiles: Map<string, { B: Record<string, { pos: number[]; nor: number[]; col: number[]; uv: number[] }>; l: number[] }>, _unused: number[], progress: (s: string) => Promise<void> | void, terrain?: Terrain, pauseFn?: (tag?: string) => Promise<void>) {
   // Raster für schnelle Zuordnung Gebäude ↔ OSM-Stil
   const cell = 40, grid = new Map<string, number[]>();
   styles.forEach((st, i) => {
@@ -2242,7 +2330,7 @@ async function buildB3D(b: B3D, styles: { p: number[][]; facade: THREE.Color; ro
     bi++;
     const [, vS, , iS, iC, cx, cz, ymin, ymax] = m;
     const B = tileOf(cx, cz).B;
-    if (++n % 250 === 0) await progress(`Häuser werden gebaut … ${n}`);
+    if (++n % 250 === 0) await progress(`Häuser werden gebaut … ${n}`); else if (pauseFn && n % 8 === 0) await pauseFn('b3d'); // 20a: im Hintergrund nach Zeit zurückgeben statt nur alle 250 Häuser
     let st = (grid.get(Math.floor(cx / cell) + ',' + Math.floor(cz / cell)) || []).map((i) => styles[i]).find((q) => pointInPoly(cx, cz, q.p));
     // Bahnhof Luzern (Neubau 1991): Gebäudeteile der swissBUILDINGS3D liegen teils knapp ausserhalb des OSM-Umrisses → ganzer Bahnhofblock Glas/Metall
     if (!st && cx > 135 && cx < 275 && cz > 140 && cz < 330) st = styles.find((q) => q.kind === 'bahnhof');

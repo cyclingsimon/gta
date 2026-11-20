@@ -1498,7 +1498,7 @@ async function buildStageB(r: any, data: CityData, props: any, T: Terrain, tex: 
   if (gm.enc === 'grid') { const f = new Float32Array(g16.length); for (let k = 0; k < g16.length; k += 3) { f[k] = (gm.x0 + (g16[k] + 32768) * gm.step) * 10; f[k + 1] = g16[k + 1] - 4000 + 4000; f[k + 2] = (gm.z0 + (g16[k + 2] + 32768) * gm.step) * 10; } gpos = f; }
   const groundMesh = { pos: gpos, idx: new Uint32Array(gb, gm.posBytes + (gm.pad || 0), gm.indices) };
   return buildWorld(data, T, onT, b3d, groundMesh, props ? JSON.parse(JSON.stringify(props)) : undefined, { aerial: tex, aerialHr: globals ? aerialHrTex : undefined, railBridges: railBrFor(rid), osm: osmFor(rid), fuel: fuelFor(rid), aerialMid: midsFor(rid), // 15b: auch Nachbargegenden (Nord, West, Ost) bekommen die 1.25-m-Kacheln, soweit sie reichen
-    forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search) });
+    forestMask: fm, forestStep: 9, freeCPU: !TEST || /[?&]free/.test(location.search), smooth: globals ? undefined : () => bauScheibe /* 20a: nachträgliche 3D-Häuser einer Nachbargegend flüssig bauen */ });
 }
 async function stageB(pB: Promise<any>, data: CityData, props: any) {
   const ind = document.createElement('div'); ind.id = 'lazy-ind'; ind.textContent = RA ? '🏗️ Feines Gelände wird geladen …' : '🏗️ Echte Häuser werden geladen …'; ui.appendChild(ind);
@@ -1812,15 +1812,17 @@ async function loadSlot(id: string): Promise<Slot> {
   const dir = id === 'luzern' ? 'data/' : `data/${id}/`;
   const [data, tmeta, trawRaw, props, bus, trainsJ, ma] = await Promise.all([getJSON('city.json', dir), getJSON('terrain.json', dir), getBuf('terrain.bin', dir),
     opt(getJSON('props.json', dir)), opt(getJSON('bus.json', dir)), opt(getJSON('trains.json', dir)), REGIONS_A[id] ? opt(getJSON('missions.json', dir)) : Promise.resolve(null)]);
-  const t = new Terrain(decodeTerrain(tmeta, trawRaw), tmeta, data.meta.bounds);
-  if (!tmeta.flattened) t.flattenRoads(data.roads);
+  const PF = /[?&]perf/.test(location.search); let tp = performance.now(); const lap = (n: string) => { if (PF) console.log('[perf] slot', id, n, (performance.now() - tp).toFixed(0), 'ms'); tp = performance.now(); };
+  const t = new Terrain(decodeTerrain(tmeta, trawRaw), tmeta, data.meta.bounds); lap('terrain');
+  if (!tmeta.flattened) { t.flattenRoads(data.roads); lap('flatten'); }
   if (horData) t.setHorizon(new Int16Array(horData[1]), horData[0]);
-  const fm = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1], dir);
+  tp = performance.now(); const fm = await loadForestMask(data.meta.bounds[0], data.meta.bounds[1], dir); lap('forestmask(inkl. Laden)');
   let tex: THREE.Texture | undefined;
   if (!/[?&]noaerial/.test(location.search)) { tex = new THREE.TextureLoader().load(dir + 'aerial_s.jpg'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; }
   const w: World = await serial(async () => { const keep = { ...AERIAL }; Object.assign(AERIAL, aerialFor(id));
-  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true, railBridges: railBrFor(id), osm: osmFor(id), fuel: fuelFor(id) /* P-C D2 */ }); }
+  try { return await buildWorld(data, t, () => { /* still im Hintergrund */ }, undefined, undefined, props ? JSON.parse(JSON.stringify(props)) : undefined, { trees: 1200, forestStep: 14, forestMask: fm, aerial: tex, coarse: true, freeCPU: true, smooth: () => bauScheibe, railBridges: railBrFor(id), osm: osmFor(id), fuel: fuelFor(id) /* P-C D2 */ }); }
   finally { Object.assign(AERIAL, keep); } });
+  lap('buildWorld gesamt');
   setHospital(w, id);
   if (QUALITY !== 'echt') { data.buildings = []; (data as any).green = (data as any).green?.filter((g: any) => g.k === 'meadow' || g.k === 'park' || g.k === 'playground'); } // 14zj: Speicher sparen – Häuser stehen schon; Wiesen (Kühe), Parks und Spielplätze (Herzen) bleiben
   return { id, dir, data, props, terrain: t, world: w, bus, trains: trainsJ, ma, tex, fm };
@@ -1850,7 +1852,7 @@ async function addGradually(gs: THREE.Object3D[], wait = false) {
   // 18a: erst zurückkehren, wenn alles sichtbar ist (sonst wurde die alte Welt entfernt, bevor die neue ganz da war)
   while (wait && mine.some((c) => !c.visible)) await new Promise((r) => setTimeout(r, 120));
 }
-function revealTick() { if (actQ.length) { actQ.shift()!(); return; }
+function revealTick() { if (actQ.length) { const t0 = performance.now(); actQ.shift()!(); if (/[?&]perf/.test(location.search)) console.log('[perf] actQ-Schritt', (performance.now() - t0).toFixed(0), 'ms, Rest', actQ.length); return; }
   for (let n = 0; n < (MOBILE ? 2 : 4) && revealQ.length; n++) revealQ.shift()!.visible = true; }
 /** 14zk: Navi der neuen Gegend schon vorbereiten, solange der Hinweis noch steht – nicht erst an der Grenze */
 function prepNav(s: Slot) {
@@ -1958,6 +1960,8 @@ function activate(s: Slot) {
  *  400 m voraus frei = kein Deckel; 100 m = 36 km/h; am Rand Schritttempo. Am echten Weltrand (keine Gegend dahinter) greift das nicht. */
 const loadFailed = new Map<string, number>(); // P-C N2/C4: Gegend → Zeitpunkt (s) des nächsten Ladeversuchs
 let loadingP: Promise<Slot> | null = null; let loadInd: HTMLElement | null = null; // P-C N5/C3: laufendes Hintergrund-Laden (Schnellreise wartet darauf)
+/** 20a: Scheibenlänge (ms) für den Hintergrund-Bau – normal 9 ms (flüssiges Bild); je näher die Ambulanz der noch nicht fertigen Gegend ist, desto länger (schneller fertig, dafür weniger Bilder) */
+let bauScheibe = 9;
 function streamCap() {
   for (const pl of players) {
     const c = pl.car; let cap = Infinity;
@@ -1982,6 +1986,9 @@ function streamTick(dt: number) {
     const here = regionAt(c.x, c.z).find((k) => slots.has(k));
     if (here) { activate(slots.get(here)!); }
   }
+  { const sp = Math.max(...players.map((pl) => Math.abs(pl.car.speed))), br = players.some((pl) => pl.car.vcap < 1e9); let tta = 1e9;
+    if (loadingSlot && sp > 2) for (const pl of players) { const q = pl.car; for (let f = 100; f <= 2000; f += 100) { const r = regionAt(q.x + q.fx * f, q.z + q.fz * f); if (r.length && !r.some((k) => slots.has(k))) { tta = Math.min(tta, f / Math.max(2, Math.abs(q.speed))); break; } } }
+    bauScheibe = br || tta < 10 ? 40 : tta < 22 ? 20 : 9; }
   // 2) Nachladen: 700 m voraus (und seitlich) liegt eine Gegend, die noch fehlt
   if (!loadingSlot && players.some((pl) => Math.abs(pl.car.speed) > 2)) {
     const look: number[][] = []; // P-C N8: Blickpunkte aller Spieler (Spieler 1 zuerst)
