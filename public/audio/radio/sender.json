@@ -1,0 +1,40 @@
+{
+ "sender": [
+  {
+   "id": "sirene144",
+   "name": "Sirene 144",
+   "stil": "Heavy Metal",
+   "songs": []
+  },
+  {
+   "id": "riddim",
+   "name": "Tatü-Tata Riddim",
+   "stil": "Reggae",
+   "songs": []
+  },
+  {
+   "id": "radio041",
+   "name": "Radio 041",
+   "stil": "Hip-Hop",
+   "songs": []
+  },
+  {
+   "id": "ruedig",
+   "name": "Rüüdig FM",
+   "stil": "Guggenmusik",
+   "songs": []
+  },
+  {
+   "id": "nachtschicht",
+   "name": "Nachtschicht FM",
+   "stil": "Synthwave",
+   "songs": []
+  },
+  {
+   "id": "haerzschlag",
+   "name": "Radio Härzschlag",
+   "stil": "Techno",
+   "songs": []
+  }
+ ]
+}

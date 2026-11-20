@@ -15,7 +15,7 @@ import { Terrain } from './terrain';
 import { Vehicle, textSprite, type Difficulty } from './vehicle';
 import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepadName } from './input';
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
-import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
+import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, loadSender, musicCycle, onNowPlaying, senderState, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
 import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
@@ -958,7 +958,7 @@ function menuRows(): MenuRow[] {
     ...(document.documentElement.requestFullscreen ? [{ kind: 'opt' as const, label: 'Vollbild', btns: [ // 16a (Simon): Vollbild wie bei Videos
       { t: '⛶ An', on: !!document.fullscreenElement, f: () => { document.documentElement.requestFullscreen({ navigationUI: 'hide' } as any).then(() => (screen.orientation as any)?.lock?.('landscape')).catch(() => { /* nicht erlaubt */ }); } },
       { t: 'Aus', on: !document.fullscreenElement, f: () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* egal */ }); } }] }] : []),
-    { kind: 'opt', label: 'Musik', note: getMusicSrc() === 'radio' ? 'Live aus dem Luzerner Kantonsspital (braucht Internet).' : undefined, btns: ([['spiel', '🎵 Spielmusik'], ['radio', '📻 Spitalradio LuZ'], ['aus', '🔕 Keine']] as [MusicSrc, string][]).map(([m, t]) => ({ t, on: getMusicSrc() === m, f: () => { save.music = m; setMusicSrc(m); writeSave(); } })) },
+    { kind: 'opt', label: 'Musik', note: getMusicSrc() === 'radio' ? 'Live aus dem Luzerner Kantonsspital (braucht Internet).' : undefined, btns: musicCycle().map(([m, t]) => ({ t, on: getMusicSrc() === m, f: () => { save.music = m; setMusicSrc(m); writeSave(); } })) },
     { kind: 'opt', label: 'Fahrzeug', note: unlockedSkins().length < SKIN_NEED.length ? 'Mehr Fahrzeuge gibt es mit Luksi-Herzen.' : undefined,
       btns: SKIN_NEED.map(([sk, need]) => ({ t: skinN >= need ? SKIN_LABEL[sk] : `🔒 ${need} ♥`, on: (car?.skin || 'standard') === sk, off: skinN < need, f: () => { if (skinN >= need) setSkin(sk); else toast(`${SKIN_LABEL[sk]} gibt es ab ${need} Luksi-Herzen.`, 2500); } })) },
     { kind: 'opt', label: 'Grafik', note: 'Wechseln lädt das Spiel neu (Spielstand bleibt).', btns: [
@@ -1221,6 +1221,7 @@ function frame(now: number) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
       if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
       if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 4; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
+      if (hit('radio')) { const cy = musicCycle(), i = cy.findIndex((c) => c[0] === getMusicSrc()), nx = cy[(i + 1) % cy.length]; save.music = nx[0]; setMusicSrc(nx[0]); writeSave(); toast(nx[1], 1800); } // 20a: Taste Q / Steuerkreuz rechts schaltet den Sender weiter
       if (hit('mute')) { save.muted = !isMuted(); setMuted(save.muted); toast(save.muted ? 'Ton aus' : 'Ton an', 1000); }
       if (hitP(0, 'reset')) { placeCar(car.x, car.z); sfxPlay.reset(); toast('Luksi hupt – Auto hüpft zurück auf die Strasse!', 1600); }
       if (hit('map')) { const bm = $('#bigmap-wrap'); bm.classList.toggle('show'); if (bm.classList.contains('show')) drawBigMap(); }
@@ -1526,7 +1527,7 @@ let started = false;
 function start() {
   if (started) return; started = true; // P-C N3: zweimal Enter startete doppelt
   goFullscreen();
-  initAudio(); setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500));
+  initAudio(); setVenues([{ x: 270, z: 785, r: 190, url: 'audio/schuur.mp3' }, { x: 327, z: 128, r: 150, url: 'audio/kkl.mp3' }]); setMuted(save.muted); setMusicSrc(save.music || 'spiel'); onRadioProblem((m) => toast(m, 3500)); onNowPlaying((m) => toast(m, 3200)); loadSender().then(() => { if (save.music && save.music.startsWith('s:')) setMusicSrc(save.music); }); (window as any).__sender = senderState;
   for (const ev of ['keydown', 'pointerdown']) addEventListener(ev, radioKick);
   $('#start').classList.add('hide');
   setTimeout(() => $('#start').remove(), 600);

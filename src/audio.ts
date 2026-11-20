@@ -108,19 +108,54 @@ function startMusic() {
   if (musicTimer == null) tick();
 }
 
-// ---------------- Musikquelle: Spielmusik, Spitalradio LuZ oder aus ----------------
-export type MusicSrc = 'spiel' | 'radio' | 'aus';
+// ---------------- Musikquelle: Spielmusik, eigene Radiosender (20a), Spitalradio LuZ oder aus ----------------
+/** 'spiel' | 'radio' (Spitalradio LuZ, Live-Stream) | 'aus' | 's:<id>' (eigener Sender aus audio/radio/sender.json) */
+export type MusicSrc = string;
+export interface Sender { id: string; name: string; stil?: string; jingle?: string; songs: { f: string; t?: string }[] }
 const RADIO_URL = 'https://s10.streamingcloud.online:13552/radioluz128.mp3'; // offiziell, 128 kbps (schont Daten)
 let musicSrc: MusicSrc = 'spiel', radio: HTMLAudioElement | null = null, hidden = false, sirenOn = false, radioFail: ((m: string) => void) | null = null;
+let senders: Sender[] = [], sEl: HTMLAudioElement | null = null, sId = '', sQueue: number[] = [], sCount = 0, sNow: ((m: string) => void) | null = null;
 export function onRadioProblem(f: (m: string) => void) { radioFail = f; }
+/** 20a: meldet «Sender – Titel», sobald ein Stück beginnt */
+export function onNowPlaying(f: (m: string) => void) { sNow = f; }
 export function getMusicSrc() { return musicSrc; }
+/** 20a: Senderliste vom eigenen Server laden (fehlt die Datei oder hat ein Sender keine Stücke, gibt es ihn einfach nicht) */
+export async function loadSender(url = 'audio/radio/sender.json'): Promise<Sender[]> {
+  try { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) return senders; const j = await r.json();
+    senders = ((j && j.sender) || []).filter((x: Sender) => x && x.id && x.name && Array.isArray(x.songs) && x.songs.length > 0); } catch { /* ohne Sender weiter */ }
+  if (musicSrc.startsWith('s:') && !senders.some((x) => 's:' + x.id === musicSrc)) setMusicSrc('spiel');
+  return senders;
+}
+export function senderList() { return senders; }
+/** 20a: Reihenfolge fürs Durchschalten: Spielmusik → eigene Sender → Spitalradio LuZ → aus */
+export function musicCycle(): [MusicSrc, string][] { return [['spiel', '🎵 Spielmusik'], ...senders.map((x) => ['s:' + x.id, '📻 ' + x.name] as [MusicSrc, string]), ['radio', '📻 Spitalradio LuZ'], ['aus', '🔕 Keine']]; }
 export function setMusicSrc(m: MusicSrc) {
+  if (m.startsWith('s:') && !senders.some((x) => 's:' + x.id === m)) m = 'spiel'; // gespeicherter Sender existiert (noch) nicht
   musicSrc = m;
   if (music && ctx) music.gain.setTargetAtTime(m === 'spiel' ? 0.18 : 0, ctx.currentTime, 0.1);
   radioApply();
 }
+function senderStop() { if (sEl) { sEl.pause(); sEl.removeAttribute('src'); sEl.load(); sEl = null; } sId = ''; }
+function senderNext() {
+  const st = senders.find((x) => 's:' + x.id === musicSrc); if (!st || !sEl) return;
+  // Jingle vor dem ersten und danach vor jedem dritten Stück; Stücke in Zufallsreihenfolge, jedes einmal, dann neu mischen
+  const jingle = !!st.jingle && sCount % 3 === 0 && !sEl.dataset.j; let f: string, title = '';
+  if (jingle) { f = st.jingle!; sEl.dataset.j = '1'; }
+  else { delete sEl.dataset.j; if (!sQueue.length) { sQueue = st.songs.map((_, i) => i); for (let i = sQueue.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [sQueue[i], sQueue[k]] = [sQueue[k], sQueue[i]]; } }
+    const s = st.songs[sQueue.pop()!]; f = s.f; title = s.t || ''; sCount++; }
+  sEl.src = 'audio/radio/' + f; sEl.play().catch(() => { /* Browser wartet auf Tipp – radioKick startet */ });
+  if (!jingle && sNow) sNow('📻 ' + st.name + (title ? ' – ' + title : ''));
+}
 function radioApply() {
-  const want = musicSrc === 'radio' && !muted && !hidden && !!ctx;
+  const on = !muted && !hidden && !!ctx, want = musicSrc === 'radio' && on, wantS = musicSrc.startsWith('s:') && on;
+  if (!wantS) senderStop();
+  else {
+    if (!sEl) { sEl = new Audio(); sEl.preload = 'auto'; let fails = 0;
+      sEl.addEventListener('ended', () => { fails = 0; senderNext(); });
+      sEl.addEventListener('error', () => { if (!sEl || !musicSrc.startsWith('s:')) return; if (++fails >= 3) { setMusicSrc('spiel'); radioFail?.('Der Sender ist gerade nicht erreichbar – Spielmusik läuft.'); } else senderNext(); }); }
+    if (sId !== musicSrc) { sId = musicSrc; sQueue = []; sCount = 0; delete sEl.dataset.j; senderNext(); }
+    sEl.volume = (sirenOn ? 0.2 : 0.5) * (1 - 0.85 * duck);
+  }
   if (!want) { if (radio) { radio.pause(); radio.removeAttribute('src'); radio.load(); radio = null; } return; } // ganz trennen: kein Stream im Hintergrund
   if (!radio) {
     radio = new Audio(); radio.preload = 'none';
@@ -131,7 +166,9 @@ function radioApply() {
   }
   radio.volume = (sirenOn ? 0.18 : 0.45) * (1 - 0.85 * duck); // Sirene / Konzert übertönt das Radio etwas
 }
-export function radioKick() { if (radio && radio.paused) radio.play().catch(() => {}); }
+export function radioKick() { if (radio && radio.paused) radio.play().catch(() => {}); if (sEl && sEl.paused && sEl.src) sEl.play().catch(() => {}); }
+/** 20a: Testhaken – was gerade läuft */
+export function senderState() { return { src: musicSrc, n: senders.length, file: sEl ? sEl.src.split('/audio/radio/')[1] || '' : '', paused: sEl ? sEl.paused : true, count: sCount }; }
 
 // ---------------- 14z (Simon): Musik aus Gebäuden – Metalkonzert in der Schüür, Broadway im KKL ----------------
 // Eigene Dateien (audio/), laufen in Schleife, nur in der Nähe hörbar; gedämpft wie «durch die Wand».
