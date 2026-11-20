@@ -18,6 +18,7 @@ import { buildSchachtdeckel } from './deckel';
 import { buildZone30 } from './zone30';
 import { buildWanderwegweiser } from './wanderweg';
 import * as THREE from 'three';
+const WELD = typeof location === 'undefined' || !/[?&]noweld/.test(location.search);
 const TOUCH_SMALL = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Terrain, drape, drapeAsync } from './terrain';
@@ -1840,13 +1841,60 @@ export async function buildWorld(d: CityData, terrain: Terrain, onProgress0: (s:
   return { group, tunnels, mask, minimap, clip, bounds: d.meta.bounds, pois: d.pois, hospital, landmarks, water: waterMeshes, roadsByName, groundAt: (ground.geometry as any).sampler };
 }
 
+/** 20g Speicherdiät: Dreieckssuppe (jede Ecke eigener Eckpunkt) zu indexierter Geometrie verschweissen. Gleich = Position, Farbe, UV bitgleich und Normale innerhalb ~30°
+ *  (Kanten wie Randsteine bleiben scharf, die Fläche wird weich schattiert). Nur grosse, nicht indexierte Geometrien mit den üblichen Attributen. Gibt gesparte Bytes zurück. */
+const WS = { table: new Int32Array(0), rep: new Uint32Array(0), idx: new Uint32Array(0), acc: new Float32Array(0) };
+function weldGeo(g: THREE.BufferGeometry): number {
+  if (g.index || g.groups.length || g.morphAttributes.position) return 0;
+  const names = Object.keys(g.attributes); if (names.some((k) => k !== 'position' && k !== 'normal' && k !== 'color' && k !== 'uv')) return 0;
+  const P = g.attributes.position as THREE.BufferAttribute, N = g.attributes.normal as THREE.BufferAttribute | undefined, C = g.attributes.color as THREE.BufferAttribute | undefined, U = g.attributes.uv as THREE.BufferAttribute | undefined;
+  if (!P || !(P.array instanceof Float32Array) || P.count < 600 || P.count % 3) return 0;
+  for (const a of [N, C, U]) if (a && (!(a.array instanceof Float32Array) || (a as any).isInterleavedBufferAttribute)) return 0;
+  if ((N && N.itemSize !== 3) || (C && C.itemSize !== 3) || (U && U.itemSize !== 2)) return 0;
+  const n = P.count, pf = P.array as Float32Array, pi = new Int32Array(pf.buffer, pf.byteOffset, n * 3);
+  const nf = N ? (N.array as Float32Array) : null, cf = C ? (C.array as Float32Array) : null, uf = U ? (U.array as Float32Array) : null;
+  const ci = cf ? new Int32Array(cf.buffer, cf.byteOffset, n * 3) : null, ui = uf ? new Int32Array(uf.buffer, uf.byteOffset, n * 2) : null;
+  let size = 1; while (size < n * 2) size <<= 1; const mask = size - 1;
+  // Arbeitsfelder über alle Aufrufe wiederverwenden (tausende Kacheln je Gegend – sonst hunderte MB kurzlebiger Müll, auf Handys kritisch)
+  if (WS.table.length < size) WS.table = new Int32Array(size); if (WS.rep.length < n) { WS.rep = new Uint32Array(n); WS.idx = new Uint32Array(n); WS.acc = new Float32Array(n * 3); }
+  const table = WS.table.fill(-1, 0, size), rep = WS.rep, idx = WS.idx, acc = nf ? WS.acc.fill(0, 0, n * 3) : null; let m = 0;
+  for (let v = 0; v < n; v++) {
+    const a = v * 3; let h = Math.imul(pi[a], 73856093) ^ Math.imul(pi[a + 1], 19349663) ^ Math.imul(pi[a + 2], 83492791);
+    if (ci) h ^= Math.imul(ci[a], 2654435761) ^ Math.imul(ci[a + 1], 40503) ^ Math.imul(ci[a + 2], 668265263);
+    let sl = (h ^ (h >>> 15)) & mask, hit = -1;
+    for (;;) { const u = table[sl]; if (u < 0) break; const r = rep[u] * 3;
+      if (pi[r] === pi[a] && pi[r + 1] === pi[a + 1] && pi[r + 2] === pi[a + 2] && (!ci || (ci[r] === ci[a] && ci[r + 1] === ci[a + 1] && ci[r + 2] === ci[a + 2]))
+        && (!ui || (ui[rep[u] * 2] === ui[v * 2] && ui[rep[u] * 2 + 1] === ui[v * 2 + 1]))
+        && (!nf || nf[r] * nf[a] + nf[r + 1] * nf[a + 1] + nf[r + 2] * nf[a + 2] > 0.86)) { hit = u; break; }
+      sl = (sl + 1) & mask; }
+    if (hit < 0) { hit = m++; rep[hit] = v; table[sl] = hit; }
+    idx[v] = hit; if (acc && nf) { acc[hit * 3] += nf[a]; acc[hit * 3 + 1] += nf[a + 1]; acc[hit * 3 + 2] += nf[a + 2]; }
+  }
+  if (m > n * 0.7) return 0; // lohnt nicht
+  const before = n * (12 + (nf ? 12 : 0) + (cf ? 12 : 0) + (uf ? 8 : 0));
+  const np = new Float32Array(m * 3), nn = nf ? new Float32Array(m * 3) : null, nc = cf ? new Float32Array(m * 3) : null, nu = uf ? new Float32Array(m * 2) : null;
+  for (let u = 0; u < m; u++) { const r = rep[u] * 3; np[u * 3] = pf[r]; np[u * 3 + 1] = pf[r + 1]; np[u * 3 + 2] = pf[r + 2];
+    if (nc && cf) { nc[u * 3] = cf[r]; nc[u * 3 + 1] = cf[r + 1]; nc[u * 3 + 2] = cf[r + 2]; }
+    if (nu && uf) { nu[u * 2] = uf[rep[u] * 2]; nu[u * 2 + 1] = uf[rep[u] * 2 + 1]; }
+    if (nn && acc) { const x = acc[u * 3], y = acc[u * 3 + 1], z = acc[u * 3 + 2], l = Math.hypot(x, y, z) || 1; nn[u * 3] = x / l; nn[u * 3 + 1] = y / l; nn[u * 3 + 2] = z / l; } }
+  g.setAttribute('position', new THREE.BufferAttribute(np, 3)); if (nn) g.setAttribute('normal', new THREE.BufferAttribute(nn, 3)); if (nc) g.setAttribute('color', new THREE.BufferAttribute(nc, 3)); if (nu) g.setAttribute('uv', new THREE.BufferAttribute(nu, 2));
+  g.setIndex(new THREE.BufferAttribute(m < 65536 ? Uint16Array.from(idx.subarray(0, n)) : idx.slice(0, n), 1));
+  return before - (m * (12 + (nf ? 12 : 0) + (cf ? 12 : 0) + (uf ? 8 : 0)) + n * (m < 65536 ? 2 : 4));
+}
 /** 20f Speicherdiät: Normalen als Int8 (statt Float32, −9 Byte je Eckpunkt) und Eckpunktfarben als Uint16 (−6 Byte), beides normalisiert – die Grafikkarte rechnet gleich weiter.
  *  Nur grosse, nicht instanzierte Geometrien (Vorlagen und Instanz-Grundkörper bleiben unverändert); Boden bleibt (Höhenabfragen). Farben nur, wenn alle Werte in 0…1 liegen. */
 function compactGeo(root: THREE.Object3D, free: boolean): number {
-  const seen = new Set<THREE.BufferGeometry>(); let saved = 0; const drop = function (this: any) { this.array = null; };
+  const seen = new Set<THREE.BufferGeometry>(); let saved = 0; const drop = function (this: any) { this.array = null; }; let welded = 0;
   const done = new Map<THREE.BufferAttribute, THREE.BufferAttribute | null>(); // Kacheln (splitTiles) teilen sich Attribute: je Attribut nur einmal umwandeln
   root.traverse((o: any) => { const g = o.geometry as THREE.BufferGeometry | undefined;
-    if (!g || o.isInstancedMesh || o.name === 'ground' || seen.has(g)) return; seen.add(g);
+    if (!g || o.isInstancedMesh || seen.has(g)) return; seen.add(g);
+    if (o.name === 'ground') { // Boden: nur die Normalen, als Int16 (grosse weich beleuchtete Flächen – Int8 könnte Stufen zeigen); Positionen bleiben für Höhenabfragen
+      const gn = g.getAttribute('normal') as THREE.BufferAttribute | undefined;
+      if (gn && done.has(gn)) { const r = done.get(gn); if (r) g.setAttribute('normal', r); }
+      else if (gn && gn.isBufferAttribute && gn.array instanceof Float32Array) { const src = gn.array, out = new Int16Array(src.length); for (let i = 0; i < src.length; i++) out[i] = Math.max(-32767, Math.min(32767, Math.round(src[i] * 32767)));
+        const a = new THREE.BufferAttribute(out, 3, true); if (free) a.onUpload(drop); g.setAttribute('normal', a); done.set(gn, a); saved += src.byteLength - out.byteLength; }
+      return; }
+    if (WELD) { const w = weldGeo(g); if (w) { welded += w; if (free) for (const at of [...Object.values(g.attributes), g.index]) (at as THREE.BufferAttribute).onUpload(drop); } }
     const n = g.getAttribute('normal') as THREE.BufferAttribute | undefined;
     if (n && done.has(n)) { const r = done.get(n); if (r) g.setAttribute('normal', r); }
     else if (n && n.isBufferAttribute && !(n as any).isInterleavedBufferAttribute && n.array instanceof Float32Array && n.count >= 3000) {
@@ -1860,7 +1908,8 @@ function compactGeo(root: THREE.Object3D, free: boolean): number {
       if (ok) { const out = new Uint16Array(src.length); for (let i = 0; i < src.length; i++) out[i] = Math.round(src[i] * 65535);
         const a = new THREE.BufferAttribute(out, c.itemSize, true); if (free) a.onUpload(drop); g.setAttribute('color', a); done.set(c, a); saved += src.byteLength - out.byteLength; } else done.set(c, null); }
   });
-  if (/[?&]perf/.test(location.search)) console.log('[perf] kompakt gespart MB', (saved / 1e6).toFixed(1));
+  WS.table = new Int32Array(0); WS.rep = WS.idx = new Uint32Array(0); WS.acc = new Float32Array(0);
+  if (/[?&]perf/.test(location.search)) console.log('[perf] kompakt gespart MB', (saved / 1e6).toFixed(1), 'verschweisst MB', (welded / 1e6).toFixed(1));
   return saved;
 }
 /** 20f: Zeichenflächen (Canvas) grosser Texturen nach dem Hochladen leeren – sie liegen sonst zusätzlich zur Textur im Speicher. Nur im Spielbetrieb (freeCPU). */

@@ -1,12 +1,21 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-20f** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-20g** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 20g (20.11. nachts) – Speicherdiät Teil 2: Verschweissen
+- world.ts `weldGeo` (aufgerufen in compactGeo, vor der Int8/Uint16-Umwandlung): nicht indexierte Geometrien ≥ 600 Eckpunkte mit nur position/normal/color/uv werden indexiert. Gleich = Position, Farbe, UV bitgleich und Normale innerhalb ~30° (dot > 0.86); Normalen gemittelt. Nur wenn ≥ 30 % Eckpunkte wegfallen. Schalter `?noweld`.
+- Erste Fassung mit Schwelle 30 000 wirkte nicht (Strassen sind seit 20c in 400-m-Kacheln geteilt, je Kachel wenig Eckpunkte).
+- Boden (`ground`): Normalen als Int16 (−4.6 MB), Positionen unverändert (Höhenabfragen).
+- Messung mem_ios.py (Luzern «Leicht», iPhone-UA, TEST): Geometrie 225 → 162 MB (roads-asphalt 52.7 → 25.6, cobble 21 → 11), JS-Heap 391 → ~330 MB. Gegenüber 20d: 460 → ~330 MB (−28 %), Texturen 112 → 78.5 MB.
+- Ladezeit nicht schlechter: perf_bau Startknopf 41 s, bereit 70 s (20e: 48/88; Streuung des Testrechners).
+- Sichtvergleich Altstadt vorher/nachher (shots/tmp/dir20e_1.png, weld_1.png): kein Unterschied erkennbar.
+- Einschätzung iPhone (Vertrauen mittel): zwei Gegenden ≈ 2 × 330 MB + Texturen + Bauspitze – immer noch mehr als die eine Gegend von früher (460 MB). `?stream` am echten Gerät testen.
 
 ## Version 20f (20.11. spätabends) – Optimierung 4: Speicherdiät (iPhone)
 - Messung (tests/mem_ios.py, Chromium mit iPhone-UA, Luzern «Leicht», TEST = ohne freeCPU): JS-Heap 460 MB = Geometrie 269 + Gelände 48 + Maske 31 + JS-Objekte ~60 (nav 20, cityData 12, Szene 17) …; Texturen 112 MB (davon Wegweiser-Atlas 512×16384 = 45 MB).

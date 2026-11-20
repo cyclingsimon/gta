@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-20g  Speicherdiät, Teil 2
+- Grosse Dreiecksnetze (Strassen, Dächer usw.) werden verschweisst: gleiche Eckpunkte nur einmal gespeichert
+- Boden-Normalen kompakter
+- Gemessen im iPhone-Modus (Chromium, Luzern «Leicht»): Geometrie 162 statt 225 MB, JavaScript-Speicher rund 330 statt 391 MB (vor 20f: 460 MB)
+- Mit ?noweld im Link lässt sich das Verschweissen abschalten
+
 2026-11-20f  Speicherdiät
 - Gelände bleibt als 16-Bit-Raster im Speicher (Luzern 24 statt 48 MB)
 - Normalen und Eckpunktfarben grosser Geometrien kompakt (Luzern «Leicht» 225 statt 269 MB)

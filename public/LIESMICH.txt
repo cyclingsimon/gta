@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-20f
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-20g
+Neu in 20g: Nochmals weniger Arbeitsspeicher – Strassen und andere grosse Flächen liegen platzsparender im Speicher. Aussehen unverändert.
 Neu in 20f: Das Spiel braucht weniger Arbeitsspeicher (wichtig für Handys): Gelände, Strassen und Schilder liegen sparsamer im Speicher. iPhone zum Ausprobieren: Mit ?stream hinter der Adresse lädt auch das iPhone die Nachbargegend ohne Neuladen – ob der Speicher dafür reicht, ist am echten iPhone noch nicht getestet.
 Neu in 20e: Im Modus «Echt» startet das Spiel deutlich schneller: Die echte Welt wird direkt gebaut statt zuerst eine einfache und danach die echte.
 Neu in 20d: Beim Nachladen der nächsten Gegend bleibt das Bild noch flüssiger (auch Karte, Boden und Strassen werden jetzt in kleinen Schritten gebaut), und die nächste Gegend wird früher vorbereitet.
