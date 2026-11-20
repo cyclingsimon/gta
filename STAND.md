@@ -19,7 +19,7 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Tests auf 20f-Code: qa.py Gesamt OK, stream_chain ok (0 draussen, 33 gebremst), ios_phone.py mit &free ok (Randwechsel, Schnellreise), Sichtbild Wegweiser im Handy-Modus lesbar.
 - Nachtrag 20.11. 21:15: smoke_a auf 20f über alle Gegenden (luzern, nord, ost, west, sued, a1–a20) ohne Fehler, alle Einsätze erreichbar.
 - Entscheid: Strassenflächen indexieren NICHT gemacht – geschätzt −37 MB (9 %), reicht für das iPhone-Ziel trotzdem nicht, Risiko bei splitTiles/Markierungen. iPhone-Arbeit ruht bis zum Test von `?stream` am echten Gerät.
-- Nächste Idee (analog 20e): Im Modus «Echt» baut loadSlot die Nachbargegend erst als Stufe A, dann upgradeSlot als Stufe B – doppelte Arbeit im Hintergrund. Direkt Stufe B bauen.
+- Geprüft 20.11. 21:30, NICHT umgesetzt: Nachbargegend im Modus «Echt» direkt als Stufe B bauen. Befund: upgradeSlot läuft erst beim Betreten (activate), nicht beim Vorladen – es wird also nur die betretene Gegend doppelt gebaut. Direkt-B würde jede vorgeladene Gegend teurer machen (ca. +50 % Rechenzeit, mehr Speicher für bis zu 3 Gegenden), dafür entfiele das Nachrüsten der Häuser nach der Ankunft. Auf dem Testrechner (Software-Grafik) nicht belastbar messbar → braucht Rückmeldung von echter Hardware (stört das Nachrüsten nach dem Wechsel?).
 - Weitere Hebel, nicht umgesetzt: Strassenflächen indexieren (asphalt+cobble 74 MB, nicht indexiert), Boden-UV aus Position rechnen (ground 42 MB), nav/cityData als TypedArrays.
 
 ## Version 20e (20.11. abends) – Optimierung 3: Echt-Modus startet direkt
