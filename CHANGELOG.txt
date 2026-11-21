@@ -1,5 +1,9 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21c  Regen: nasse Strasse und Geräusch
+- Bei Regen wird alles etwas dunkler, die Fahrbahn deutlich dunkler mit Himmelsschimmer bei flachem Blick
+- Regenrauschen (erzeugt, keine Datei); unter Tage dumpf und leise; folgt dem Ton-Schalter
+
 2026-11-21b  Mehr Leben: winkende Kinder
 - Kinder auf Spielplätzen (bis 3) und in Parks (1): hüpfen, drehen sich zur Ambulanz und winken ab ca. 40 m, Herz steigt auf
 - Bei Schnee steht neben jedem Kind ein Schneemann

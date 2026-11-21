@@ -3086,17 +3086,21 @@ function withWater(m: THREE.MeshToonMaterial) {
 /** 21a Wetter «Schnee»: nach oben zeigende Flächen werden weiss, gesteuert über SNOW.value 0..1 (ein gemeinsamer Wert für alle Welten, kein Neuaufbau nötig).
  *  amt: Anteil je Material (Fahrbahn und Markierungen bleiben als geräumte Strasse erkennbar). */
 export const SNOW = { value: 0 };
+/** 21c Wetter «Regen»: nasse Flächen – alles etwas dunkler, Fahrbahn deutlich dunkler mit Himmelsschimmer bei flachem Blick. 0..1 */
+export const WET = { value: 0 };
 function withSnow(m: THREE.Material, amt: number) {
   if (m.userData.snow) return; m.userData.snow = 1;
-  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m), uAmt = { value: amt };
+  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m), uAmt = { value: amt }, uWet = { value: amt < 1 ? 1 : 0.3 }; // Strassen/Markierungen (amt < 1) werden richtig nass, der Rest nur etwas dunkler
   m.onBeforeCompile = (sh, r) => {
     prev?.call(m, sh, r);
-    sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt;
-    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+    sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt; sh.uniforms.uWet = WET; sh.uniforms.uWetSky = WATER.sky; sh.uniforms.uWetAmt = uWet;
+    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\nuniform float uWet;\nuniform float uWetAmt;\nuniform vec3 uWetSky;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      if (uWet > 0.0) { float wt = uWet * uWetAmt; diffuseColor.rgb *= 1.0 - 0.34 * wt;
+        float gl = pow(1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0), 3.0); diffuseColor.rgb = mix(diffuseColor.rgb, uWetSky, gl * 0.55 * wt * step(0.99, uWetAmt)); }
       if (uSnow > 0.0) { vec3 snN = inverseTransformDirection(normal, viewMatrix);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), uSnow * uSnowAmt * smoothstep(0.42, 0.78, snN.y)); }`);
   };
-  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow';
+  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow2';
 }
 /** Schnee-Haken an alle beleuchteten Materialien einer Welt hängen (vor dem ersten Zeichnen) */
 function snowAll(root: THREE.Object3D) {

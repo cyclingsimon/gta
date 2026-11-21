@@ -1,12 +1,17 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-21b** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-21c** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 21c (21.11. vormittags) – Regen: nasse Strasse + Geräusch (Simon 09:34: weitermachen; 21b lädt er ca. 10:00 hoch)
+- world.ts: `WET` (gemeinsamer Uniform) im Schnee-Haken: alle beleuchteten Materialien −10 % Helligkeit, Strassen/Markierungen (amt < 1) −34 % plus Himmelsschimmer (Fresnel³ × 0.55, Farbe WATER.sky). Cache-Schlüssel `|snow2`.
+- audio.ts `setRain(level, muffled)`: gefiltertes Rauschen als 2-s-Schleife, erst beim ersten Regen angelegt, hängt an sfx (Ton-Schalter wirkt). main.ts ruft es im tick (nur bei Änderung wirksam).
+- Nicht angehört (Testrechner ohne Ton) – Lautstärke 0.2 ist eine Annahme.
 
 ## Version 21b (21.11. nachts) – Punkt 4 «Mehr Leben», erstes Paket: winkende Kinder
 - Neu src/winker.ts: `Winker(n)` Pool bewegter Kinderfiguren (PC 10, Handy 6), `setSpots` aus setupFun (playground je 3, park je 1; nur freie Maskenzellen; Spielplatz-Kinder ≥ 3.4 m von der Mitte wegen Rutschbahn/Schaukel), `update(dt, cars, schnee)` in tick nach den Velos. Winken < 42 m, Drehen < 60 m, Umsetzen wenn Platz > 380 m von der Ambulanz. Herz als Sprite (eigene Zeichnung, kein Luksi). Schneemann je Kind, sichtbar wenn SNOW.value > 0.

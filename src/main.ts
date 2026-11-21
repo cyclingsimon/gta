@@ -7,7 +7,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, SNOW, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, SNOW, WET, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -15,13 +15,13 @@ import { Terrain } from './terrain';
 import { Vehicle, textSprite, type Difficulty } from './vehicle';
 import { pollInput, readControls, hit, hitP, padJoin, padCount, endFrame, gamepadName } from './input';
 import { setupTouch, isTouchDevice, goFullscreen } from './touch';
-import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, loadSender, musicCycle, onNowPlaying, senderState, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
+import { setRain, initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, loadSender, musicCycle, onNowPlaying, senderState, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
 import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { Winker } from './winker';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-21b';
+export const VERSION = '2026-11-21c';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -288,7 +288,7 @@ let wxObj: THREE.Object3D | null = null, wxKind: Weather = 'sonne';
 /** Wetter über die Tageszeit legen: Licht, Himmel, Nebel, Schnee-Tönung, Teilchen. Fährt sich immer gleich – nur Stimmung, keine Strafen. */
 function applyWeather() {
   const w: Weather = save.weather || 'sonne', fog = scene.fog as THREE.Fog, eve = !!save.evening;
-  SNOW.value = w === 'schnee' ? 1 : 0; WATER.dull.value = { sonne: 0, regen: 0.45, schnee: 0.4, nebel: 0.6 }[w];
+  SNOW.value = w === 'schnee' ? 1 : 0; WET.value = w === 'regen' ? 1 : 0; WATER.dull.value = { sonne: 0, regen: 0.45, schnee: 0.4, nebel: 0.6 }[w];
   const far = { sonne: [260, 1500], regen: [120, 1000], schnee: [110, 900], nebel: [18, 300] }[w]; fog.near = far[0]; fog.far = far[1];
   if (w !== 'sonne') {
     const grey = { regen: eve ? '#7B6F78' : '#9AA6AE', schnee: eve ? '#B9A9AE' : '#DDE4EA', nebel: eve ? '#B9A69C' : '#D3D9DC' }[w as 'regen'];
@@ -1298,7 +1298,7 @@ function frame(now: number) {
     updateEngine(car.speed, c.throttle);
     updateVenues(car.x, car.z);
     cullTick(dt);
-    WX.time.value += dt; if (wxObj) wxObj.visible = !underground;
+    WX.time.value += dt; if (wxObj) wxObj.visible = !underground; setRain(save.weather === 'regen' ? 1 : 0, underground);
     konzerte.update(dt, car.x, car.z, (x, z) => terrain.height(x, z), venueNear, (t) => toast(t, 4200));
     phaseTime += dt;
     playTime += dt; if (playTime > 90) $('#keys').classList.add('hide');

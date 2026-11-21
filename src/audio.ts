@@ -213,3 +213,20 @@ export function updateVenues(x: number, z: number) {
   updateAmbience(x, z, { music: musicSrc === 'aus' ? 0 : 1, venue: top, siren: sirenOn, muted, hidden });
 }
 let duck = 0;
+
+// ---------------- 21c Regengeräusch ----------------
+let rainG: GainNode | null = null, rainLP: BiquadFilterNode | null = null;
+/** Regenrauschen 0..1 (weisses Rauschen, gefiltert, als Schleife). muffled = im Tunnel/Unterführung dumpf und leise. Erst beim ersten Regen angelegt. */
+let rainKey = '';
+export function setRain(level: number, muffled = false) {
+  if (!ctx) return; const key = level + '|' + muffled; if (key === rainKey) return; rainKey = key;
+  if (!rainG) { if (level <= 0) { return; }
+    const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0); let last = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = last * 0.55 + w * 0.45; d[i] = last; }
+    for (let i = 0; i < 2000; i++) { const k = i / 2000; d[i] = d[i] * k + d[len - 2000 + i] * (1 - k); } // Naht der Schleife überblenden
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopEnd = (len - 2000) / ctx.sampleRate;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700;
+    rainLP = ctx.createBiquadFilter(); rainLP.type = 'lowpass'; rainLP.frequency.value = 7000;
+    rainG = ctx.createGain(); rainG.gain.value = 0; src.connect(hp); hp.connect(rainLP); rainLP.connect(rainG); rainG.connect(sfx); src.start(); }
+  const t = ctx.currentTime; rainG.gain.setTargetAtTime(level * (muffled ? 0.07 : 0.2), t, 0.4); rainLP!.frequency.setTargetAtTime(muffled ? 900 : 7000, t, 0.3);
+}
