@@ -1,12 +1,19 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-21a** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-21b** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 21b (21.11. nachts) – Punkt 4 «Mehr Leben», erstes Paket: winkende Kinder
+- Neu src/winker.ts: `Winker(n)` Pool bewegter Kinderfiguren (PC 10, Handy 6), `setSpots` aus setupFun (playground je 3, park je 1; nur freie Maskenzellen; Spielplatz-Kinder ≥ 3.4 m von der Mitte wegen Rutschbahn/Schaukel), `update(dt, cars, schnee)` in tick nach den Velos. Winken < 42 m, Drehen < 60 m, Umsetzen wenn Platz > 380 m von der Ambulanz. Herz als Sprite (eigene Zeichnung, kein Luksi). Schneemann je Kind, sichtbar wenn SNOW.value > 0.
+- Luzern: 402 Plätze. Testhaken `__dbg.winker()`, `__dbg.evening` setzt jetzt auch save.evening. Sichttest tests/look_winker.py.
+- Wetter-Lücken geprüft: Abend + Schnee im Bild ok (Fenster leuchten, Schnee bläulich); Rückkehr zu Schön/Tag stellt Licht und Nebel wieder her. Nicht geprüft: Tunnel, geteiltes Bild.
+- Speicher zwei Gegenden (mem_stream.py 8765 leicht west, PC-UA, ohne Verkehr): Luzern 372 MB, + West 555 MB (14zj: 462 / 623).
+- Ideen Punkt 4 weiter: Markt an der Reuss, anlegende Schiffe mit Passagieren, Kinder winken auch an Haltestellen, Schlittelnde bei Schnee.
 
 ## Version 21a (21.11. nachts) – Wetter (Simon 20.11. 23:33: Reihenfolge 3 Wetter/Jahreszeiten, 4 mehr Leben in der Stadt, 1 Einsatz-Abwechslung)
 - main.ts: `save.weather` ('sonne' | 'regen' | 'schnee' | 'nebel'), Menüzeile «Wetter», `setWeather` → `setEvening` → `applyWeather()` (legt Licht, Himmel, Nebel, Wasser-Grau, Teilchen über die Tageszeit; jede setEvening-Stelle wendet das Wetter neu an). Teilchen `wxParticles`: Regen als LineSegments (3200, Handy 1400), Schnee als Points (2600, Handy 1100), Würfel 70×40×70 m um die jeweilige Kamera (onBeforeRender, auch geteiltes Bild), Bewegung im Shader; im Tunnel aus. Nebel: fog 18–300 m, Horizont-Netz aus.

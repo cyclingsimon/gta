@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21b  Mehr Leben: winkende Kinder
+- Kinder auf Spielplätzen (bis 3) und in Parks (1): hüpfen, drehen sich zur Ambulanz und winken ab ca. 40 m, Herz steigt auf
+- Bei Schnee steht neben jedem Kind ein Schneemann
+- Höchstens 10 bewegte Figuren (Handy 6), immer an den nächsten Plätzen um die Ambulanz; keine Zähler, keine Kollision
+
 2026-11-21a  Wetter
 - Pause-Menü «Wetter»: Schön, Regen, Schnee, Nebel (mit Tag und Abend kombinierbar, im Spielstand gespeichert)
 - Schnee: nach oben zeigende Flächen werden weiss (Dächer, Wiesen, Bäume, Berge am Horizont), Strassen bleiben als geräumt erkennbar, Flocken

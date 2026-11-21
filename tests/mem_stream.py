@@ -10,7 +10,7 @@ async def main():
         await pg.goto(f'http://localhost:{PORT}/?test&noshadow&notraffic&q={Q}&region=luzern'); await pg.wait_for_selector('#start-btn', state='visible')
         await pg.evaluate('localStorage.clear()'); await pg.click('#start-btn'); await pg.wait_for_function('window.__luksiReady'); await pg.wait_for_timeout(2000)
         print('luzern', await pg.evaluate(M), 'MB', flush=True)
-        for r in ['west', 'a8']:
+        for r in (sys.argv[3].split(',') if len(sys.argv) > 3 else ['west', 'a8']):
             info = await pg.evaluate(f"window.__weltLoad('{r}')"); await pg.wait_for_timeout(2000)
             print('+', r, await pg.evaluate(M), 'MB', info, flush=True)
         await b.close()

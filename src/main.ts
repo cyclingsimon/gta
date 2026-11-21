@@ -18,9 +18,10 @@ import { setupTouch, isTouchDevice, goFullscreen } from './touch';
 import { initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted, suspendAudio, setMusicMode, setMusicSrc, getMusicSrc, onRadioProblem, radioKick, loadSender, musicCycle, onNowPlaying, senderState, setVenues, updateVenues, venueNear, type MusicSrc } from './audio';
 import { Konzerte } from './konzert';
 import { Velos } from './velo';
+import { Winker } from './winker';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-21a';
+export const VERSION = '2026-11-21b';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -282,6 +283,7 @@ function wxParticles(kind: 'regen' | 'schnee'): THREE.Object3D {
   o.onBeforeRender = (_r, _s, cam) => { WX.cam.value.copy((cam as THREE.Camera).position); (mat as any).uniformsNeedUpdate = true; };
   return o;
 }
+const winker = new Winker(MOBILE ? 6 : 10); scene.add(winker.group);
 let wxObj: THREE.Object3D | null = null, wxKind: Weather = 'sonne';
 /** Wetter über die Tageszeit legen: Licht, Himmel, Nebel, Schnee-Tönung, Teilchen. Fährt sich immer gleich – nur Stimmung, keine Strafen. */
 function applyWeather() {
@@ -564,6 +566,9 @@ function setupFun(data: CityData) {
   for (const st of stops) pts.push([st[0], st[1]]);
   for (const g of data.green as any[]) if (g.k === 'park' || g.k === 'playground') { const cx = g.p.reduce((a: number, q: number[]) => a + q[0], 0) / g.p.length, cz = g.p.reduce((a: number, q: number[]) => a + q[1], 0) / g.p.length; pts.push([cx, cz]); }
   for (const l of world.landmarks) pts.push([l.x, l.z]);
+  { // 21b: winkende Kinder auf Spielplätzen (je bis 3) und in Parks (je 1)
+    const ctr: number[][] = []; for (const g of data.green as any[]) if (g.k === 'playground' || g.k === 'park') { const cx = g.p.reduce((q: number, v: number[]) => q + v[0], 0) / g.p.length, cz = g.p.reduce((q: number, v: number[]) => q + v[1], 0) / g.p.length; if (inField(cx, cz)) ctr.push([cx, cz, g.k === 'playground' ? 3 : 1]); }
+    const mk = world.mask; winker.setSpots(ctr, (x, z) => terrain.height(x, z), (x, z) => mk.at(x, z) === 0 && !mk.isRoad(x, z)); }
   // Ländliche Regionen (West) haben wenige Haltestellen/Parks: dann zusätzlich Strassenmitten als Kandidaten, damit es überall 40 Herzen gibt
   if (pts.length < 80) for (const r of data.roads as any[]) { if (pts.length > 600 || !['residential', 'unclassified', 'tertiary', 'secondary'].includes(r.c) || r.b) continue;
     const q = r.p[Math.floor(r.p.length / 2)]; if (inField(q[0], q[1])) pts.push([q[0], q[1]]); }
@@ -1280,6 +1285,7 @@ function frame(now: number) {
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }
     if (traffic) traffic.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.boing(); comic(x, z, 0); });
     if (velos) velos.update(dt, players.map((p) => p.car), () => sfxPlay.glocke());
+    winker.update(dt, players.map((p) => p.car), SNOW.value > 0);
     if (buses) { buses.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.bump(); comic(x, z, 1); }); buses.updateLabels(car.x, car.z); }
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);
@@ -1815,7 +1821,8 @@ if (location.search.includes('test')) {
     skin: (n: string) => { for (const p of players) p.car.setSkin(n); return n; },
     trainCam: (k = 0) => { const c = (trains as any).tr[k].cars[0]; (window as any).__cam = [c.position.x + 30, c.position.y + 12, c.position.z + 30, c.position.x, c.position.y, c.position.z]; return [Math.round(c.position.x), Math.round(c.position.z), c.visible]; },
     gondolaCam: () => { (window as any).__cam = [-2150, 160, 2280, -2700, 160, 3200]; camera.far = 4000; return true; },
-    evening: (on: boolean) => { setEvening(on); return on; },
+    evening: (on: boolean) => { save.evening = on; setEvening(on); return on; },
+    winker: () => winker.group.children.filter((o: any) => o.isGroup && o.visible && o.children.length === 4).map((o) => [Math.round(o.position.x), Math.round(o.position.z)]),
     funHeart: () => { const h = fun!.open()[0]; placeCar(h[0], h[1]); return h; },
     quick: () => { const cs = traffic ? (traffic as any).cars.filter((c: any) => c.alive && !c.bus) : [];
       const near = cs.filter((c: any) => Math.hypot(c.x - car.x, c.z - car.z) < 80);
