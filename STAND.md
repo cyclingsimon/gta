@@ -13,6 +13,7 @@ Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder
 - Luzern: 402 Plätze. Testhaken `__dbg.winker()`, `__dbg.evening` setzt jetzt auch save.evening. Sichttest tests/look_winker.py.
 - Wetter-Lücken geprüft: Abend + Schnee im Bild ok (Fenster leuchten, Schnee bläulich); Rückkehr zu Schön/Tag stellt Licht und Nebel wieder her. Nicht geprüft: Tunnel, geteiltes Bild.
 - Speicher zwei Gegenden (mem_stream.py 8765 leicht west, PC-UA, ohne Verkehr): Luzern 372 MB, + West 555 MB (14zj: 462 / 623).
+- Nachtrag 21.11. 02:00: smoke_a auf 21b über alle 25 Gegenden ohne Fehler. Keine weiteren Umbauten bis zum Upload durch Simon (ca. 10:00).
 - Ideen Punkt 4 weiter: Markt an der Reuss, anlegende Schiffe mit Passagieren, Kinder winken auch an Haltestellen, Schlittelnde bei Schnee.
 
 ## Version 21a (21.11. nachts) – Wetter (Simon 20.11. 23:33: Reihenfolge 3 Wetter/Jahreszeiten, 4 mehr Leben in der Stadt, 1 Einsatz-Abwechslung)
