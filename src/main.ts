@@ -7,7 +7,7 @@ import { Fun, Animals, Ships, Trains, Gondola, Boats } from './fun';
 import { setupLoader, loaderProgress, loaderDone } from './loader';
 import * as THREE from 'three';
 import './style.css';
-import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, SNOW, WET, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
+import { AERIAL, AERIAL_MID, AERIAL_MID2, AERIAL_MID3, type MidLayer, NIGHT, SNOW, WET, CLOUDS, SWAY, WATER, ERKER, type ForestMask, type OsmProps, STYLE_COUNT, buildWorld, horizonMesh, HZ_FOG, toon, outline, type CityData, type World } from './world';
 import { NavGraph, pathLength } from './nav';
 import { Traffic } from './traffic';
 import { Buses } from './bus';
@@ -22,13 +22,13 @@ import { Winker } from './winker';
 import { Tauben } from './tauben';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-21d';
+export const VERSION = '2026-11-21e';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
 // ---------------- Spielstand ----------------
 type Weather = 'sonne' | 'regen' | 'schnee' | 'nebel';
-interface Save { diffChosen?: boolean; km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; weather?: Weather; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
+interface Save { diffChosen?: boolean; km?: number; horns?: number; seen?: string[]; badges?: string[]; region?: string; heartsA?: Record<string, number[]>; heartsO?: number[]; heartsW?: number[]; heartsS?: number[]; heartsN?: number[]; evening?: boolean; gold?: boolean; weather?: Weather; skin?: string; hearts?: number[]; best: Record<string, number>; diff: Difficulty; muted: boolean; cam: number; pos?: [number, number, number]; played: number; quality?: 'echt' | 'leicht'; music?: MusicSrc }
 const SAVE_KEY = 'luksiRescue.v1';
 function loadSave(): Save {
   const def: Save = { best: {}, diff: 'rettung', muted: false, cam: 0, played: 0 };
@@ -137,6 +137,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, MOBILE ? 1 : 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('#app').appendChild(renderer.domElement);
+// 21e Farbstimmung: etwas mehr Kontrast und Sättigung (CSS-Filter, nur PC – auf Handys kostet der Filter einen zusätzlichen Durchgang) und eine leichte Vignette (ein Verlaufs-Element über dem Bild, kostet nichts)
+renderer.domElement.classList.add('welt'); { const v = document.createElement('div'); v.id = 'vignette'; renderer.domElement.after(v); }
 const scene = new THREE.Scene();
 // 16a: sichtbares Zeichen, woher die Konzertmusik kommt (Reihenfolge = setVenues)
 const konzerte = new Konzerte([{ x: 270, z: 785, h: 12, titel: 'Rock in der Schüür', farbe: '#FF5DA2', meldung: '🎸 Konzert in der Schüür – die Musik kommt aus dem Haus!' }, { x: 327, z: 128, h: 31, titel: 'Musical im KKL', farbe: '#6EC6FF', meldung: '🎶 Konzert im KKL – die Musik kommt aus dem Saal!' }]);
@@ -257,8 +259,14 @@ function setEvening(on: boolean) {
   const sky = on ? '#F2A877' : '#A9DDF3'; renderer.setClearColor(sky, 1);
   SKY.zenith.set(on ? '#4F5FA8' : '#3E8FD6'); SKY.horizon.set(on ? '#F4B183' : '#CFE9F5'); SKY.sunCol.set(on ? '#FFB46A' : '#FFF4D6'); SKY.sunDir.copy(SUN_DIR); WATER.sun.value.copy(SKY.sunDir); WATER.sky.value.copy(SKY.horizon);
   (scene.fog as THREE.Fog).color.set(on ? '#EDB38C' : '#CFE9F5'); HZ_FOG.value.copy((scene.fog as THREE.Fog).color);
+  if (!on && save.gold) { // 21e Goldene Stunde: tiefe, warme Sonne, lange Lichtkante – zwischen Tag und Abend (Lampen und Fenster bleiben aus)
+    hemi.color.set('#FFF0DC'); hemi.intensity = 1.05; sun.color.set('#FFD08C'); sun.intensity = 2.15; sun.position.set(-850, 300, 430); SUN_DIR.copy(sun.position).normalize();
+    for (const l of farScene.children) if ((l as any).isDirectionalLight) { (l as any).color.set('#FFD08C'); (l as any).intensity = 1.9; }
+    renderer.setClearColor('#F3D7AE', 1); SKY.zenith.set('#4B8FD0'); SKY.horizon.set('#F6D9B0'); SKY.sunCol.set('#FFDD9E'); SKY.sunDir.copy(SUN_DIR); WATER.sun.value.copy(SKY.sunDir); WATER.sky.value.copy(SKY.horizon);
+    (scene.fog as THREE.Fog).color.set('#EDD9BC'); HZ_FOG.value.copy((scene.fog as THREE.Fog).color); }
   scene.traverse((o: any) => { const m = o.material; if (m && m.name === 'lampHead') m.emissive.set(on ? '#FFD27A' : '#5A4E20'); });
   document.body.classList.toggle('evening', on);
+  document.body.classList.toggle('gold', !on && !!save.gold);
   applyWeather();
 }
 // ---------------- 21a Wetter ----------------
@@ -319,6 +327,7 @@ let wxObj: THREE.Object3D | null = null, wxKind: Weather = 'sonne';
 /** Wetter über die Tageszeit legen: Licht, Himmel, Nebel, Schnee-Tönung, Teilchen. Fährt sich immer gleich – nur Stimmung, keine Strafen. */
 function applyWeather() {
   const w: Weather = save.weather || 'sonne', fog = scene.fog as THREE.Fog, eve = !!save.evening;
+  CLOUDS.value = w === 'sonne' && !MOBILE ? (eve ? 0.1 : 0.24) : 0; // auf Handys aus: das Rauschen je Bildpunkt kostet dort messbar SWAY.value = { sonne: 1, regen: 2.2, schnee: 0.7, nebel: 0.4 }[w];
   SNOW.value = w === 'schnee' ? 1 : 0; WET.value = w === 'regen' ? 1 : 0; WATER.dull.value = { sonne: 0, regen: 0.45, schnee: 0.4, nebel: 0.6 }[w];
   const far = { sonne: [260, 1500], regen: [120, 1000], schnee: [110, 900], nebel: [18, 300] }[w]; fog.near = far[0]; fog.far = far[1];
   if (w !== 'sonne') {
@@ -1036,7 +1045,7 @@ function menuRows(): MenuRow[] {
     { kind: 'opt', label: 'Fahren', note: { entdecken: 'Für Kinder bis 6: Navi-Linie, mit Blaulicht bis 90 km/h (ohne 70)', rettung: 'Bis etwa 12 Jahre: mit Blaulicht bis 150 km/h (ohne 120)', profi: 'Für Grössere: mit Blaulicht bis 269 km/h (ohne 200)' }[save.diff],
       btns: (['entdecken', 'rettung', 'profi'] as Difficulty[]).map((d) => ({ t: { entdecken: '😊 Einfach', rettung: '🚑 Mittel', profi: '⚡ Schnell' }[d], on: save.diff === d, f: () => { save.diff = d; routeTimer = 0; writeSave(); } })) },
     { kind: 'opt', label: 'Kamera', btns: ['🚗 Hinter dem Auto', '🛰️ Von oben', '🔭 Weiter weg', '👀 Fahrersicht'].map((t, k) => ({ t, on: save.cam === k, f: () => { save.cam = k; writeSave(); } })) },
-    { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening, f: () => { save.evening = false; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; setEvening(true); writeSave(); } }] },
+    { kind: 'opt', label: 'Tageszeit', btns: [{ t: '☀️ Tag', on: !save.evening && !save.gold, f: () => { save.evening = false; save.gold = false; setEvening(false); writeSave(); } }, { t: '🌅 Golden', on: !save.evening && !!save.gold, f: () => { save.evening = false; save.gold = true; setEvening(false); writeSave(); } }, { t: '🌇 Abend', on: !!save.evening, f: () => { save.evening = true; save.gold = false; setEvening(true); writeSave(); } }] },
     { kind: 'opt', label: 'Wetter', btns: ([['sonne', '☀️ Schön'], ['regen', '🌧️ Regen'], ['schnee', '❄️ Schnee'], ['nebel', '🌫️ Nebel']] as [Weather, string][]).map(([w, t]) => ({ t, on: (save.weather || 'sonne') === w, f: () => { setWeather(w); writeSave(); } })) },
     { kind: 'opt', label: 'Ton', btns: [{ t: '🔊 An', on: !isMuted(), f: () => { save.muted = false; setMuted(false); writeSave(); } }, { t: '🔇 Aus', on: isMuted(), f: () => { save.muted = true; setMuted(true); writeSave(); } }] },
     ...(document.documentElement.requestFullscreen ? [{ kind: 'opt' as const, label: 'Vollbild', btns: [ // 16a (Simon): Vollbild wie bei Videos
@@ -1474,7 +1483,7 @@ async function boot() {
   if (missionsAP) MA = await missionsAP;
   setupMissions();
   setupFun(data);
-  if (save.evening || (save.weather && save.weather !== 'sonne')) setEvening(!!save.evening);
+  setEvening(!!save.evening);
   { const tl = await pTrains; if (tl) { trains = new Trains(terrain, tl, (x, z) => { sfxPlay.bump(); comic(x, z, 5); }, () => sfxPlay.train()); scene.add(trains.group); } }
   { const gd = await pGondola; if (gd) { gondola = new Gondola(terrain, gd); scene.add(gondola.group); } }
 
@@ -1617,7 +1626,7 @@ function swapWorld(nw: World) {
   { const sl = slots.get(REGION); if (sl) { sl.world = nw; linkSlots(); } } // 14zj: Slot zeigt auf die neue Welt
   for (const p of players) { p.car.mask = nw.mask; if (p.car.blocked(p.car.x, p.car.z, p.car.heading)) placeCar(p.car.x, p.car.z, undefined, p.car); }
   if (traffic) { traffic.setMask(nw.mask); const pg = nw.group.getObjectByName('props') as any; if (pg && pg.signalPos) { traffic.setSignals(pg.signalPos, pg.signalLamp); const tr = traffic; buses?.setSignals(pg.signalPos, (i) => tr.sigState(i)); } }
-  if (save.evening || (save.weather && save.weather !== 'sonne')) setEvening(!!save.evening);
+  setEvening(!!save.evening);
 }
 
 let started = false;
@@ -1857,6 +1866,7 @@ if (location.search.includes('test')) {
     trainCam: (k = 0) => { const c = (trains as any).tr[k].cars[0]; (window as any).__cam = [c.position.x + 30, c.position.y + 12, c.position.z + 30, c.position.x, c.position.y, c.position.z]; return [Math.round(c.position.x), Math.round(c.position.z), c.visible]; },
     gondolaCam: () => { (window as any).__cam = [-2150, 160, 2280, -2700, 160, 3200]; camera.far = 4000; return true; },
     evening: (on: boolean) => { save.evening = on; setEvening(on); return on; },
+    gold: (on: boolean) => { save.evening = false; save.gold = on; setEvening(false); return on; },
     winker: () => winker.group.children.filter((o: any) => o.isGroup && o.visible && o.children.length === 4).map((o) => [Math.round(o.position.x), Math.round(o.position.z)]),
     funHeart: () => { const h = fun!.open()[0]; placeCar(h[0], h[1]); return h; },
     quick: () => { const cs = traffic ? (traffic as any).cars.filter((c: any) => c.alive && !c.bus) : [];

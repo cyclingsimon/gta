@@ -1,12 +1,22 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-21d** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-21e** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 21e (21.11.) – Grafik Teil 1 (Simon 10:29: «Mach alle 9 Sachen»: 1 Farbstimmung, 2 Himmel, 3 Wolkenschatten, 4 Bewegung, 5 Comic-Look, 6 Abendlichter, 7 weiche Schatten Leicht, 8 Wasser, 9 kleine Effekte)
+- 1 Farbstimmung: CSS-Filter auf `canvas.welt` (nur ohne body.touch; je Wetter/Golden eigene Werte) + `#vignette` (Verlaufs-div, alle Geräte). Kein Tonemapping geändert.
+- 2 Himmel: Wolken zogen schon (skyMat fbm). Neu Tageszeit «Golden» (`save.gold`, in setEvening nach den Tag-Werten; Menü Tag/Golden/Abend; body.gold). Fliessender Tagesverlauf NICHT umgesetzt.
+- 3 Wolkenschatten: im gemeinsamen Material-Haken (withSnow): Varying vClP (Welt-xz, auch Instanzen), 2 Oktaven Wertrauschen, `CLOUDS.value` (Tag 0.24, Abend 0.1, sonst 0). Cache-Schlüssel `|snow3`.
+- 4 Bewegung: Bäume (buildTreeCells) mit Attribut `aSway` (Uint8, Höhe über Stammfuss / 25 m), Vertex-Shader-Wiegen, `SWAY.value` je Wetter (Regen 2.2). `TREE_WIND` in real/trees.ts bekommt von world.ts WATER.time und SWAY. Fahnen/Gras nicht angefasst.
+- Boot ruft jetzt immer setEvening(!!save.evening) (vorher nur bei Abend/Wetter).
+- Testhaken `__dbg.gold(on)`. Sichtbilder shots/gfx_<tag|gold|abend>_<0|1>.png.
+- Offen Teil 2 (21f): 5–9. Danach «Schicht».
+- Nebenbei 11:33: Simon wollte die Abfahrtsanzeige (anderes Projekt) per FileZilla hochgeladen haben – PC nicht verbunden, nicht ausgeführt, nichts gespeichert.
 
 ## Version 21d (21.11.) – «Welt reagiert» (Simon 10:06: Fokus Spielspass 2 → 10 Minuten; zuerst Welt reagiert, dann Schicht; es spielen primär ERWACHSENE)
 - Bestand vorher: Hupe liess schon Autos hüpfen (traffic.honk), Fussgänger hopsen, Kühe muhen (Comic-Wörter).

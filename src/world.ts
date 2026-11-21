@@ -4,7 +4,7 @@ import { buildPowerLines, buildPitches, buildPlaygrounds, buildLevelCrossings, b
 export type OsmProps = { spiel: number[][]; platz: Pitch[]; mast: number[][]; leitung: number[][][]; bue: number[][]; turm: [number, number, 'chimney' | 'mast', number?][]; hydrant?: number[][]; post?: number[][]; recycling?: number[][]; blitzer?: number[][] };
 import { realSteamship } from './real/ships';
 import { buildStreetFurniture } from './real/street';
-import { buildRealTrees } from './real/trees';
+import { buildRealTrees, TREE_WIND } from './real/trees';
 import { buildStops, buildLamps, realBenchGeometry } from './real/props';
 import { buildParkedCars, buildParkedVelos, lastParkedSpots } from './real/cars';
 import { SIGN_PLACES } from './signPlaces';
@@ -3054,6 +3054,7 @@ function withDetail(m: THREE.MeshToonMaterial, detail: THREE.Texture, hr?: THREE
 
 /** Wasser: wandernde Wellen-Normalen, Himmel-Spiegelung bei flachem Blick (Fresnel), Sonnenglitzern als harte Comic-Funken */
 export const WATER = { time: { value: 0 }, sun: { value: new THREE.Vector3(-400, 700, 300).normalize() }, sky: { value: new THREE.Color('#CFE9F5') }, dull: { value: 0 } /* 21a Wetter: Wasser grauer */ };
+TREE_WIND.time = WATER.time;
 function withWater(m: THREE.MeshToonMaterial) {
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uWT = WATER.time; sh.uniforms.uWSun = WATER.sun; sh.uniforms.uWSky = WATER.sky; sh.uniforms.uWDull = WATER.dull;
@@ -3088,19 +3089,31 @@ function withWater(m: THREE.MeshToonMaterial) {
 export const SNOW = { value: 0 };
 /** 21c Wetter «Regen»: nasse Flächen – alles etwas dunkler, Fahrbahn deutlich dunkler mit Himmelsschimmer bei flachem Blick. 0..1 */
 export const WET = { value: 0 };
+/** 21e Wolkenschatten: Stärke 0..1 (nur bei schönem Wetter), wandern mit WATER.time über alle beleuchteten Flächen. */
+export const CLOUDS = { value: 0.24 };
+/** 21e Wind: Stärke des Baumwiegens (1 = leichte Brise) */
+export const SWAY = { value: 1 };
+TREE_WIND.amp = SWAY;
 function withSnow(m: THREE.Material, amt: number) {
   if (m.userData.snow) return; m.userData.snow = 1;
   const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m), uAmt = { value: amt }, uWet = { value: amt < 1 ? 1 : 0.3 }; // Strassen/Markierungen (amt < 1) werden richtig nass, der Rest nur etwas dunkler
   m.onBeforeCompile = (sh, r) => {
     prev?.call(m, sh, r);
-    sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt; sh.uniforms.uWet = WET; sh.uniforms.uWetSky = WATER.sky; sh.uniforms.uWetAmt = uWet;
-    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\nuniform float uWet;\nuniform float uWetAmt;\nuniform vec3 uWetSky;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+    sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt; sh.uniforms.uWet = WET; sh.uniforms.uWetSky = WATER.sky; sh.uniforms.uWetAmt = uWet; sh.uniforms.uCl = CLOUDS; sh.uniforms.uClT = WATER.time;
+    sh.vertexShader = 'varying vec2 vClP;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      { vec4 clw = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        clw = instanceMatrix * clw;
+      #endif
+      vClP = (modelMatrix * clw).xz; }`);
+    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\nuniform float uWet;\nuniform float uWetAmt;\nuniform vec3 uWetSky;\nuniform float uCl;\nuniform float uClT;\nvarying vec2 vClP;\nfloat clH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat clN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(clH(i), clH(i + vec2(1.0, 0.0)), f.x), mix(clH(i + vec2(0.0, 1.0)), clH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      if (uCl > 0.0) { vec2 cq = vClP * 0.0042 + vec2(uClT * 0.012, uClT * 0.0045); float cn = clN(cq) * 0.65 + clN(cq * 2.3 + 5.1) * 0.35; diffuseColor.rgb *= 1.0 - uCl * smoothstep(0.5, 0.68, cn); }
       if (uWet > 0.0) { float wt = uWet * uWetAmt; diffuseColor.rgb *= 1.0 - 0.34 * wt;
         float gl = pow(1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0), 3.0); diffuseColor.rgb = mix(diffuseColor.rgb, uWetSky, gl * 0.55 * wt * step(0.99, uWetAmt)); }
       if (uSnow > 0.0) { vec3 snN = inverseTransformDirection(normal, viewMatrix);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), uSnow * uSnowAmt * smoothstep(0.42, 0.78, snN.y)); }`);
   };
-  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow2';
+  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow3';
 }
 /** Schnee-Haken an alle beleuchteten Materialien einer Welt hängen (vor dem ersten Zeichnen) */
 function snowAll(root: THREE.Object3D) {

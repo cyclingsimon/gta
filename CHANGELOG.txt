@@ -1,5 +1,11 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21e  Grafik Teil 1 (ohne zusätzliche Dreiecke, ohne Nachbearbeitung)
+- Farbstimmung: mehr Kontrast und Sättigung auf dem PC, je Wetter abgestimmt; leichte Vignette auf allen Geräten
+- Tageszeit «Golden» (Goldene Stunde) zwischen Tag und Abend
+- Wolkenschatten wandern bei schönem Wetter über alle beleuchteten Flächen
+- Bäume wiegen im Wind (Stärke je Wetter)
+
 2026-11-21d  Welt reagiert
 - Hupe: Sprechblasen-Sprüche von Passanten (24 Sprüche, höchstens alle 1.6 s), Kinder winken sofort (90 m), Schneemänner hüpfen und drehen sich, Tauben fliegen auf (50 m)
 - Taubenschwärme auf Plätzen und in Parks (PC 4 × 12, Handy 2 × 8), fliegen bei Annäherung auf, drehen eine Runde, landen wieder

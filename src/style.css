@@ -580,3 +580,11 @@ body.touch #dist { font-size: 20px !important; white-space: nowrap; }
 @media (orientation: landscape) { body.touch #lazy-ind { font-size: 15px; padding: 6px 12px; border-width: 2px; animation: none; } }
 @media (orientation: portrait) { body.touch #lazy-ind { font-size: 15px; padding: 6px 12px; border-width: 2px; animation: none; } }
 @media (prefers-reduced-motion: reduce) { #lazy-ind { animation: none; } }
+
+/* 21e Farbstimmung + Vignette */
+body:not(.touch) canvas.welt { filter: contrast(1.06) saturate(1.14); }
+body:not(.touch)[data-wetter="regen"] canvas.welt { filter: contrast(1.08) saturate(0.92); }
+body:not(.touch)[data-wetter="nebel"] canvas.welt { filter: contrast(1.0) saturate(0.85); }
+body:not(.touch)[data-wetter="schnee"] canvas.welt { filter: contrast(1.05) saturate(1.0) brightness(1.03); }
+body:not(.touch).gold canvas.welt { filter: contrast(1.08) saturate(1.2); }
+#vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 58%, rgba(14,16,40,0.26) 100%); }

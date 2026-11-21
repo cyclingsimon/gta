@@ -217,28 +217,36 @@ export function realTreeList(trees: number[][], osm: number[][] | undefined, mas
 /** Bäume fest in Zellen backen: je Zelle EIN Mesh (alle Arten), Farbe je Baum (treeTint) eingebacken.
  *  Speicher sparsam: Position Float32, Normale Int8 (normiert), Farbe Uint8 (normiert) ≈ 18 Byte je Ecke.
  *  Rückgabe: EINE Gruppe (Name «baeume-zellen»), Kinder = Zellen-Meshes. */
+/** 21e: Zeit und Stärke fürs Baumwiegen – world.ts setzt hier seine gemeinsamen Uniforms ein */
+export const TREE_WIND: { time: { value: number }; amp: { value: number } } = { time: { value: 0 }, amp: { value: 1 } };
 export function buildTreeCells(list: [number, number, number, TreeSpecies][], groundY: (x: number, z: number) => number, cell = 500, q: TreeQuality = 'min') {
   const grp = new THREE.Group(); grp.name = 'baeume-zellen';
   const by = new Map<string, [number, number, number, TreeSpecies][]>();
   for (const t of list) { const k = Math.floor(t[0] / cell) + ',' + Math.floor(t[1] / cell); const a = by.get(k) || []; a.push(t); by.set(k, a); }
   const mat = toon('#ffffff', { vertexColors: true });
+  { // 21e: Bäume wiegen im Wind – nur im Vertex-Shader, Ausschlag wächst quadratisch mit der Höhe über dem Stammfuss
+    const prev = mat.onBeforeCompile, prevKey = mat.customProgramCacheKey?.bind(mat);
+    mat.onBeforeCompile = (sh, r) => { prev?.call(mat, sh, r); sh.uniforms.uSwT = TREE_WIND.time; sh.uniforms.uSwA = TREE_WIND.amp;
+      sh.vertexShader = 'attribute float aSway;\nuniform float uSwT;\nuniform float uSwA;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        { float sw = aSway * aSway * uSwA; transformed.x += sin(uSwT * 1.3 + position.x * 0.31 + position.z * 0.23) * 1.1 * sw; transformed.z += cos(uSwT * 1.05 + position.x * 0.19 - position.z * 0.27) * 0.8 * sw; }`); };
+    mat.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|sway'; }
   const m = new THREE.Matrix4(), nm = new THREE.Matrix3(), qq = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
   for (const L of by.values()) {
     let n = 0; for (const t of L) n += treeGeometry(t[3], q).getAttribute('position').count;
-    const P = new Float32Array(n * 3), N = new Int8Array(n * 3), C = new Uint8Array(n * 3); let o = 0;
+    const P = new Float32Array(n * 3), N = new Int8Array(n * 3), C = new Uint8Array(n * 3), S = new Uint8Array(n); let o = 0; // S: Höhe über dem Stammfuss (0..25 m) fürs Wiegen im Wind
     for (const [x, z, s, sp] of L) {
       const g = treeGeometry(sp, q), gp = g.getAttribute('position'), gn = g.getAttribute('normal'), gc = g.getAttribute('color');
       const r = hash2(x, z); e.set(0, r * 6.283, sp === 'obstbaum' ? (hash2(z, x) - 0.5) * 0.12 : 0); qq.setFromEuler(e);
       sc.set(s, s * (0.92 + hash2(z, x) * 0.16), s); m.compose(v.set(x, groundY(x, z), z), qq, sc); nm.getNormalMatrix(m);
-      treeTint(x, z, col);
+      treeTint(x, z, col); const y0 = groundY(x, z);
       for (let i = 0; i < gp.count; i++, o++) {
-        v.fromBufferAttribute(gp, i).applyMatrix4(m); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z;
+        v.fromBufferAttribute(gp, i).applyMatrix4(m); P[o * 3] = v.x; P[o * 3 + 1] = v.y; P[o * 3 + 2] = v.z; S[o] = Math.max(0, Math.min(255, Math.round((v.y - y0) / 25 * 255)));
         v.fromBufferAttribute(gn, i).applyMatrix3(nm).normalize(); N[o * 3] = Math.round(v.x * 127); N[o * 3 + 1] = Math.round(v.y * 127); N[o * 3 + 2] = Math.round(v.z * 127);
         C[o * 3] = Math.min(255, Math.round(gc.getX(i) * col.r * 255)); C[o * 3 + 1] = Math.min(255, Math.round(gc.getY(i) * col.g * 255)); C[o * 3 + 2] = Math.min(255, Math.round(gc.getZ(i) * col.b * 255));
       }
     }
     const bg = new THREE.BufferGeometry();
-    bg.setAttribute('position', new THREE.BufferAttribute(P, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(N, 3, true)); bg.setAttribute('color', new THREE.BufferAttribute(C, 3, true));
+    bg.setAttribute('position', new THREE.BufferAttribute(P, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(N, 3, true)); bg.setAttribute('color', new THREE.BufferAttribute(C, 3, true)); bg.setAttribute('aSway', new THREE.BufferAttribute(S, 1, true));
     bg.computeBoundingSphere(); bg.computeBoundingBox();
     const mesh = new THREE.Mesh(bg, mat); mesh.name = 'baum-zelle'; (mesh as any).userData.baeume = L.length; grp.add(mesh);
   }
