@@ -218,6 +218,11 @@ export class Ships {
       const obj = motorboat(['#FFFFFF', '#E94B3C', '#1F5FA8', '#F7C531'][i % 4]); this.group.add(obj);
       this.ships.push({ obj, curve, len: curve.getLength(), s: (i * 0.53 + 0.2) % 1, dwell: 0, v: 9 + (i % 3) * 2 });
     });
+    // 21f Kielwasser: flaches helles Dreieck hinter jedem Schiff (fährt mit, kein Rechnen)
+    const wk = new THREE.MeshBasicMaterial({ color: '#EAF6FA', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide });
+    for (const sh of this.ships) { const big = sh.v < 8, L = big ? 70 : 22, W = big ? 16 : 6, x0 = big ? -29 : -3;
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([x0, 0.12, 0, x0 - L, 0.12, -W, x0 - L * 0.8, 0.12, 0, x0, 0.12, 0, x0 - L * 0.8, 0.12, 0, x0 - L, 0.12, W], 3));
+      const m = new THREE.Mesh(g, wk); m.name = 'kielwasser'; m.renderOrder = 2; sh.obj.add(m); (sh as any).wake = m; }
     this.update(0);
   }
   /** Hupe in der Nähe: Schiff antwortet (true) */
@@ -230,6 +235,7 @@ export class Ships {
   update(dt: number) {
     const p = new THREE.Vector3(), t = new THREE.Vector3();
     for (const sh of this.ships) {
+      if ((sh as any).wake) (sh as any).wake.visible = sh.dwell <= 0;
       if (sh.dwell > 0) sh.dwell -= dt; else { const before = sh.s; sh.s = (sh.s + sh.v * dt / sh.len) % 1; if (before > sh.s && sh.v < 8) sh.dwell = 15; } // am Start-Steg anlegen
       sh.curve.getPointAt(sh.s, p); sh.curve.getTangentAt(sh.s, t);
       sh.obj.position.set(p.x, Math.sin(performance.now() / 900) * 0.06, p.z); sh.obj.rotation.y = -Math.atan2(t.z, t.x);

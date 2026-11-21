@@ -2846,7 +2846,7 @@ function buildProps(P: Props, terrain: Terrain, mask: Mask) {
   P.signals = P.signals.map(toEdge).filter(Boolean) as number[][];
   P.stops = P.stops.map(toEdge).filter(Boolean) as any[][];
   if (P.lamps.length) {
-    G.add(...buildLamps(P.lamps, mask, (x, z) => terrain.height(x, z))); // 15a, P-A E3 (Rückfall auf die alten Laternen über REAL)
+    G.add(...buildLamps(P.lamps, mask, (x, z) => terrain.height(x, z))); lampGlow(G, P.lamps, (x, z) => terrain.height(x, z)); // 15a, P-A E3 (Rückfall auf die alten Laternen über REAL)
     (G as any).counts = { lamps: P.lamps.length, signals: P.signals.length, stops: P.stops.length };
   }
   // Ampeln
@@ -3100,20 +3100,32 @@ function withSnow(m: THREE.Material, amt: number) {
   m.onBeforeCompile = (sh, r) => {
     prev?.call(m, sh, r);
     sh.uniforms.uSnow = SNOW; sh.uniforms.uSnowAmt = uAmt; sh.uniforms.uWet = WET; sh.uniforms.uWetSky = WATER.sky; sh.uniforms.uWetAmt = uWet; sh.uniforms.uCl = CLOUDS; sh.uniforms.uClT = WATER.time;
-    sh.vertexShader = 'varying vec2 vClP;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
-      { vec4 clw = vec4(transformed, 1.0);
+    // 21f: Wolkenschatten je ECKPUNKT gerechnet (die Schatten sind > 100 m gross, das Netz ist fein genug) – je Bildpunkt kostete es im Software-Renderer 20 s Ladezeit
+    sh.vertexShader = 'varying float vClS;\nuniform float uCl;\nuniform float uClT;\nfloat clH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat clN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(clH(i), clH(i + vec2(1.0, 0.0)), f.x), mix(clH(i + vec2(0.0, 1.0)), clH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vClS = 1.0;
+      if (uCl > 0.0) { vec4 clw = vec4(transformed, 1.0);
       #ifdef USE_INSTANCING
         clw = instanceMatrix * clw;
       #endif
-      vClP = (modelMatrix * clw).xz; }`);
-    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\nuniform float uWet;\nuniform float uWetAmt;\nuniform vec3 uWetSky;\nuniform float uCl;\nuniform float uClT;\nvarying vec2 vClP;\nfloat clH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat clN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(clH(i), clH(i + vec2(1.0, 0.0)), f.x), mix(clH(i + vec2(0.0, 1.0)), clH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-      if (uCl > 0.0) { vec2 cq = vClP * 0.0042 + vec2(uClT * 0.012, uClT * 0.0045); float cn = clN(cq) * 0.65 + clN(cq * 2.3 + 5.1) * 0.35; diffuseColor.rgb *= 1.0 - uCl * smoothstep(0.5, 0.68, cn); }
+        vec2 cq = (modelMatrix * clw).xz * 0.0042 + vec2(uClT * 0.012, uClT * 0.0045); float cn = clN(cq) * 0.65 + clN(cq * 2.3 + 5.1) * 0.35; vClS = 1.0 - uCl * smoothstep(0.5, 0.68, cn); }`);
+    sh.fragmentShader = 'uniform float uSnow;\nuniform float uSnowAmt;\nuniform float uWet;\nuniform float uWetAmt;\nuniform vec3 uWetSky;\nvarying float vClS;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      diffuseColor.rgb *= vClS;
       if (uWet > 0.0) { float wt = uWet * uWetAmt; diffuseColor.rgb *= 1.0 - 0.34 * wt;
         float gl = pow(1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0), 3.0); diffuseColor.rgb = mix(diffuseColor.rgb, uWetSky, gl * 0.55 * wt * step(0.99, uWetAmt)); }
       if (uSnow > 0.0) { vec3 snN = inverseTransformDirection(normal, viewMatrix);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), uSnow * uSnowAmt * smoothstep(0.42, 0.78, snN.y)); }`);
   };
-  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow3';
+  m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|snow4';
+}
+/** 21f Abendlichter: ein Punkt je Strassenlampe (aus der Lampenliste, Höhe nach Typ), additiv, nur abends sichtbar (NIGHT). Ein Draw Call je Gegend, keine Lichtquelle. */
+function lampGlow(root: THREE.Object3D, lamps: number[][], groundY: (x: number, z: number) => number) {
+  const pos: number[] = []; for (const l of lamps) pos.push(l[0], groundY(l[0], l[1]) + (l[2] ? 7.7 : 4.5), l[1]);
+  if (!pos.length) return;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeBoundingSphere();
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uN: NIGHT },
+    vertexShader: 'uniform float uN; varying float vA; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; float d = -mv.z; gl_PointSize = uN > 0.0 ? clamp(1300.0 / d, 4.0, 64.0) : 0.0; vA = uN * smoothstep(900.0, 250.0, d); }',
+    fragmentShader: 'varying float vA; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = pow(max(0.0, 1.0 - d), 2.2); gl_FragColor = vec4(1.0, 0.82, 0.5, a * 0.8 * vA); }' });
+  const pts = new THREE.Points(g, mat); pts.name = 'lampenhof'; pts.renderOrder = 5; root.add(pts); console.log('[bau] Lichthöfe', pos.length / 3);
 }
 /** Schnee-Haken an alle beleuchteten Materialien einer Welt hängen (vor dem ersten Zeichnen) */
 function snowAll(root: THREE.Object3D) {

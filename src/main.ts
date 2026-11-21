@@ -22,7 +22,7 @@ import { Winker } from './winker';
 import { Tauben } from './tauben';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-21e';
+export const VERSION = '2026-11-21f';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -138,7 +138,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('#app').appendChild(renderer.domElement);
 // 21e Farbstimmung: etwas mehr Kontrast und Sättigung (CSS-Filter, nur PC – auf Handys kostet der Filter einen zusätzlichen Durchgang) und eine leichte Vignette (ein Verlaufs-Element über dem Bild, kostet nichts)
-renderer.domElement.classList.add('welt'); { const v = document.createElement('div'); v.id = 'vignette'; renderer.domElement.after(v); }
+renderer.domElement.classList.add('welt'); if (/[?&]filter/.test(location.search)) document.body.classList.add('farbfilter'); // 21f: Farbfilter nur noch auf Wunsch (?filter) – kostete im Testrechner 20 s Ladezeit, auf echter Hardware ungemessen { const v = document.createElement('div'); v.id = 'vignette'; renderer.domElement.after(v); }
 const scene = new THREE.Scene();
 // 16a: sichtbares Zeichen, woher die Konzertmusik kommt (Reihenfolge = setVenues)
 const konzerte = new Konzerte([{ x: 270, z: 785, h: 12, titel: 'Rock in der Schüür', farbe: '#FF5DA2', meldung: '🎸 Konzert in der Schüür – die Musik kommt aus dem Haus!' }, { x: 327, z: 128, h: 31, titel: 'Musical im KKL', farbe: '#6EC6FF', meldung: '🎶 Konzert im KKL – die Musik kommt aus dem Saal!' }]);
@@ -308,6 +308,58 @@ function spruch(x: number, z: number) {
   c.sp.position.set(x, terrain.height(x, z) + 2.9, z); c.sp.scale.set(6.6, 1.0, 1); c.t = 2.8; c.sp.visible = true;
 }
 function updateSprueche(dt: number) { sprCool -= dt; for (const c of sprueche) { if (c.t <= 0) continue; c.t -= dt; c.sp.position.y += dt * 0.35; (c.sp.material as THREE.SpriteMaterial).opacity = Math.min(1, c.t * 2); if (c.t <= 0) c.sp.visible = false; } }
+// 21f Fahrzeug-Effekte (je Spieler eine kleine Gruppe am Boden, folgt dem Fahrzeug): weicher Schatten (nur ohne echte Schatten), Scheinwerferkegel am Abend,
+// Blaulicht-Schimmer auf dem Boden bei Sirene. Alles flache, durchsichtige Flächen – keine Lichtquellen, keine Schattenkarte.
+function radialTex(stops: [number, string][], oval = 1) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d')!; c.scale(1, oval); const gr = c.createRadialGradient(64, 64 / oval, 0, 64, 64 / oval, 64); for (const [o, col] of stops) gr.addColorStop(o, col); c.fillStyle = gr; c.fillRect(0, 0, 128, 128 / oval); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
+const FX_TEX = { blob: radialTex([[0, 'rgba(0,0,0,0.55)'], [0.6, 'rgba(0,0,0,0.3)'], [1, 'rgba(0,0,0,0)']]), light: radialTex([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']]) };
+/** Bodenfläche als kleines Gitter im Fahrzeug-Koordinatensystem; jede Ecke wird je Bild auf die Geländehöhe gesetzt (liegt so auch am Hang und auf Kuppen sauber auf). */
+class BodenFleck {
+  mesh: THREE.Mesh; private nx: number; private nz: number; private w: number; private l: number; private oz: number;
+  constructor(w: number, l: number, oz: number, nx: number, nz: number, mat: THREE.Material) {
+    this.w = w; this.l = l; this.oz = oz; this.nx = nx; this.nz = nz;
+    const g = new THREE.PlaneGeometry(w, l, nx, nz).rotateX(-Math.PI / 2); (g.attributes.position as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage);
+    this.mesh = new THREE.Mesh(g, mat); this.mesh.frustumCulled = false; this.mesh.renderOrder = 40; scene.add(this.mesh); // nach den (durchsichtig gezeichneten) Strassenflächen, sonst übermalen sie den Fleck
+  }
+  place(x: number, y: number, z: number, heading: number) {
+    const p = this.mesh.geometry.attributes.position as THREE.BufferAttribute, s = Math.sin(heading), c = Math.cos(heading); let k = 0;
+    for (let j = 0; j <= this.nz; j++) for (let i = 0; i <= this.nx; i++, k++) { const lx = (i / this.nx - 0.5) * this.w, lz = (0.5 - j / this.nz) * this.l + this.oz;
+      const wx = x + lx * c + lz * s, wz = z - lx * s + lz * c; p.setXYZ(k, wx, terrain.height(wx, wz, y) + 0.2, wz); } // Fahrbahn liegt sichtbar über der Geländehöhe (Wolkenkratzer-Regel: lieber 10 cm schweben als verschwinden)
+    p.needsUpdate = true;
+  }
+}
+/** 21f: Scheinwerferkegel, Blaulicht-Schimmer und weicher Schatten am Boden sind gebaut, werden aber noch NICHT richtig gezeichnet (Fleck bleibt unsichtbar bzw. sehr schwach –
+ *  Ursache ungeklärt: Tiefe/Zeichenreihenfolge gegen die Strassenflächen). Bis das gelöst ist nur mit ?fxboden zum Ausprobieren. */
+const FX_BODEN = /[?&]fxboden/.test(location.search);
+const carFx: { blob: BodenFleck; head: BodenFleck; blue: BodenFleck }[] = [];
+function carFxFor(i: number) {
+  if (carFx[i]) return carFx[i];
+  const dec = { transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 }; // DoubleSide: place() dreht die Reihenfolge der Zeilen um
+  return (carFx[i] = { blob: new BodenFleck(4.4, 7.8, 0, 2, 3, new THREE.MeshBasicMaterial({ map: FX_TEX.blob, ...dec })),
+    head: new BodenFleck(8, 15, 10.5, 3, 6, new THREE.MeshBasicMaterial({ map: FX_TEX.light, color: '#FFE7B0', opacity: 0.5, blending: THREE.AdditiveBlending, ...dec })),
+    blue: new BodenFleck(24, 24, 0, 6, 6, new THREE.MeshBasicMaterial({ map: FX_TEX.light, color: '#2E7BFF', opacity: 0, blending: THREE.AdditiveBlending, ...dec })) });
+}
+function updateCarFx(cars: { x: number; y: number; z: number; heading: number; siren: boolean }[], time: number) {
+  for (let i = 0; i < Math.max(cars.length, carFx.length); i++) { const c = cars[i]; if (!c) { if (carFx[i]) for (const b of Object.values(carFx[i])) b.mesh.visible = false; continue; }
+    const f = carFxFor(i), vis = !underground;
+    f.blob.mesh.visible = vis && !renderer.shadowMap.enabled; f.head.mesh.visible = vis && NIGHT.value > 0;
+    const on = c.siren ? 0.5 + 0.5 * Math.sin(time * 9) : 0; f.blue.mesh.visible = vis && on > 0.02; (f.blue.mesh.material as THREE.MeshBasicMaterial).opacity = on * (NIGHT.value > 0 ? 0.5 : 0.22);
+    for (const b of Object.values(f)) if (b.mesh.visible) b.place(c.x, c.y, c.z, c.heading); }
+}
+// 21f Reifenspuren im Schnee: je Spieler ein Band aus Rechtecken (Ringspeicher), zwei dunklere Streifen. Verschwinden, wenn der Schnee aus ist.
+const SP_N = 160, spPos = new Float32Array(SP_N * 2 * 6 * 3).fill(-9999), spGeo = new THREE.BufferGeometry(); spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
+const spuren = new THREE.Mesh(spGeo, new THREE.MeshBasicMaterial({ color: '#8E99A8', side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); spuren.frustumCulled = false; spuren.renderOrder = 39; spuren.visible = false; spuren.name = 'reifenspuren'; scene.add(spuren);
+let spI = 0, spLast: number[] | null = null;
+function updateSpuren(c: { x: number; y: number; z: number; heading: number; speed: number }) {
+  if (SNOW.value <= 0) { if (spuren.visible) { spuren.visible = false; spPos.fill(-9999); spGeo.attributes.position.needsUpdate = true; spLast = null; } return; }
+  spuren.visible = !underground; const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
+  if (!spLast || Math.hypot(c.x - spLast[0], c.z - spLast[2]) > 30) { spLast = [c.x, c.y, c.z, fx, fz]; return; }
+  if (Math.hypot(c.x - spLast[0], c.z - spLast[2]) < 1.6) return;
+  const [ax, ay, az, afx, afz] = spLast; let o = spI * 36; spI = (spI + 1) % SP_N;
+  for (const side of [-0.85, 0.85]) for (const [u, w] of [[0, -1], [1, -1], [1, 1], [0, -1], [1, 1], [0, 1]] as number[][]) {
+    const px = u ? c.x : ax, py = (u ? c.y : ay) + 0.16, pz = u ? c.z : az, qx = u ? fx : afx, qz = u ? fz : afz, off = side + w * 0.16;
+    spPos[o++] = px + qz * off; spPos[o++] = py; spPos[o++] = pz - qx * off; }
+  spLast = [c.x, c.y, c.z, fx, fz]; spGeo.attributes.position.needsUpdate = true;
+}
 /** Hupe: alles, was reagiert (zusätzlich zu Verkehr und Kühen) */
 function hupWelt(x: number, z: number, ped: [number, number] | null | undefined) { winker.honk(x, z); tauben.honk(x, z); if (ped) spruch(ped[0], ped[1]); }
 // 21d Gischt: bei Regen und Schnee wirbeln die Räder Tröpfchen/Schnee auf (ab ca. 20 km/h). Kleiner Punkt-Pool, auf der CPU bewegt.
@@ -1328,7 +1380,8 @@ function frame(now: number) {
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }
     if (traffic) traffic.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.boing(); comic(x, z, 0); });
     if (velos) velos.update(dt, players.map((p) => p.car), () => sfxPlay.glocke());
-    winker.update(dt, players.map((p) => p.car), SNOW.value > 0); tauben.update(dt, players.map((p) => p.car)); updateSprueche(dt); updateGischt(dt, players.map((p) => p.car));
+    winker.update(dt, players.map((p) => p.car), SNOW.value > 0); tauben.update(dt, players.map((p) => p.car)); updateSprueche(dt); { const fxCars = players.map((p) => ({ x: p.car.x, y: p.car.y, z: p.car.z, heading: p.car.heading, speed: p.car.speed, siren: p.car.siren })); // Höhe vom Modell (car.y ist nicht die Bodenhöhe)
+      updateGischt(dt, fxCars); if (FX_BODEN) updateCarFx(fxCars, WX.time.value); updateSpuren(fxCars[0]); }
     if (buses) { buses.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.bump(); comic(x, z, 1); }); buses.updateLabels(car.x, car.z); }
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);
@@ -1855,6 +1908,7 @@ if (location.search.includes('test')) {
     ud: (name: string) => world.group.getObjectByName(name)?.userData,
     meshes: () => { const m = new Map<string, number[]>(); world.group.traverse((c: any) => { const g = c.geometry; if (!g) return; const n = (g.index ? g.index.count : g.getAttribute('position')?.count || 0) / 3 * (c.isInstancedMesh ? c.count : 1); if (!g.boundingSphere) g.computeBoundingSphere(); const k = (c.name || c.parent?.name || c.type) + (c.isInstancedMesh ? ' [inst]' : ''); const e = m.get(k) || [0, 0, 0]; e[0]++; e[1] += n; e[2] = Math.max(e[2], g.boundingSphere?.radius || 0); m.set(k, e); }); return [...m].map(([k, e]) => [k, e[0], Math.round(e[1]), Math.round(e[2])]).sort((a: any, b: any) => b[2] - a[2]); },
     siren: (on: boolean) => { car.siren = on; },
+    fahr: (v: number) => { car.speed = v; }, fxInfo: () => carFx.map((f) => [f.blob.mesh.visible, f.head.mesh.visible, f.blue.mesh.visible, +car.y.toFixed(1)]),
     fun: () => fun ? { kegel: fun.hops.filter((o) => o.kind === 0).length, eimer: fun.hops.filter((o) => o.kind === 1).length, herzen: fun.heartTotal, gefunden: fun.heartCount, boings: fun.stats.boings, fliegen: fun.hops.filter((o) => o.t > 0).length } : null,
     funHit: () => { const o = fun!.hops[0]; const h = o.h0; placeCar(o.x0 - Math.sin(h) * 9, o.z0 - Math.cos(h) * 9, h); car.x = o.x0 - Math.sin(h) * 1.5; car.z = o.z0 - Math.cos(h) * 1.5; car.heading = h; car.speed = 9; return [Math.round(o.x0), Math.round(o.z0)]; },
     animals: () => animals ? (animals as any).swans.length + ' Schwäne, ' + (animals as any).cows.length + ' Kühe' : null,

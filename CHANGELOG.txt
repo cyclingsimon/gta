@@ -1,5 +1,13 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21f  Grafik Teil 2 (teilweise)
+- Wolkenschatten je Eckpunkt statt je Bildpunkt
+- Farbfilter aus 21e standardmässig aus (bremste im Testrechner deutlich); mit ?filter einschaltbar. Vignette bleibt
+- Abend: Lichthof an jeder Strassenlampe (ein Zeichenaufruf je Gegend)
+- Kielwasser hinter Kursschiffen und Motorbooten
+- Reifenspuren im Schnee
+- Noch nicht drin: Scheinwerferkegel, Blaulicht-Schimmer und weicher Schatten am Boden (gebaut, wird nicht richtig gezeichnet; nur mit ?fxboden), Schaumrand am Ufer, Auspuff/Staub/Laub
+
 2026-11-21e  Grafik Teil 1 (ohne zusätzliche Dreiecke, ohne Nachbearbeitung)
 - Farbstimmung: mehr Kontrast und Sättigung auf dem PC, je Wetter abgestimmt; leichte Vignette auf allen Geräten
 - Tageszeit «Golden» (Goldene Stunde) zwischen Tag und Abend

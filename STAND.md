@@ -1,12 +1,23 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-21e** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-21f** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 21f (21.11.) – Grafik Teil 2, TEILWEISE
+- Wolkenschatten: Rauschen im Vertex-Shader (Varying vClS), Fragment nur noch eine Multiplikation. Cache-Schlüssel `|snow4`.
+- 6 Abendlichter: `lampGlow(G, P.lamps, groundY)` in world.ts → Points «lampenhof» (additiv, Grösse nach Distanz, NIGHT). Luzern 3210 Lampen. Wirkung eher dezent.
+- 8 Wasser: Kielwasser-Dreieck je Schiff (fun.ts Ships), aus beim Anlegen. Nicht im Bild geprüft.
+- 9 Reifenspuren im Schnee (`updateSpuren`, Ringspeicher 160 Rechteck-Paare, renderOrder 39). Im Bild schwach sichtbar.
+- NICHT FERTIG: `BodenFleck` (geländefolgendes Gitter) für Scheinwerferkegel, Blaulicht-Schimmer, weichen Schatten – Geometrie stimmt (Test mit rotem Material: nur am Rand sichtbar), mit Textur praktisch unsichtbar. Versucht: Lage vom Fahrzeug, Höhe +0.14…+0.38, polygonOffset −8, DoubleSide (place() dreht die Zeilenreihenfolge), renderOrder 40, depthTest aus (dann schwacher Schein auf dem Fahrzeug). Ursache ungeklärt. Abgeschaltet, Schalter `?fxboden`. Nächster Ansatz: statt Gitter ein Sprite/Punkt mit eigenem Shader wie lampGlow, oder die Fläche als Kind des Fahrzeugmodells.
+- Farbfilter aus 21e ist jetzt standardmässig AUS (nur mit `?filter`, body.farbfilter): perf_bau Startknopf mit Filter 73 s, ohne 53–54 s (20g–21c: 41–48 s). Vignette bleibt. Rest-Differenz (Vertex-Rauschen, Baumwiegen, Vignette oder Streuung) ungeklärt; missions.py braucht im Software-Renderer jetzt > 595 s (im Hintergrund mit 1500 s laufen lassen).
+- Tests 21f: qa.py Gesamt OK (P1 2.013 Mio., 853 Draw Calls, Ladezeit 51 s), mobile.py ok, missions.py 12 Sterne ohne Fehler, stream_chain ok (0 draussen, 31 gebremst), ios_phone.py ok.
+- 5 Comic-Look: nichts geändert (3 Lichtstufen und Umrisslinien am Fahrzeug gab es schon). Schaumrand am Ufer, Auspuff, Staub, Laub: nicht umgesetzt.
+- 2 h in die Bodenflecken geflossen – künftig früher abbrechen.
 
 ## Version 21e (21.11.) – Grafik Teil 1 (Simon 10:29: «Mach alle 9 Sachen»: 1 Farbstimmung, 2 Himmel, 3 Wolkenschatten, 4 Bewegung, 5 Comic-Look, 6 Abendlichter, 7 weiche Schatten Leicht, 8 Wasser, 9 kleine Effekte)
 - 1 Farbstimmung: CSS-Filter auf `canvas.welt` (nur ohne body.touch; je Wetter/Golden eigene Werte) + `#vignette` (Verlaufs-div, alle Geräte). Kein Tonemapping geändert.

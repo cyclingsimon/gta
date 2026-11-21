@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-21e
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-21f
+Neu in 21f: Am Abend haben die Strassenlampen einen Lichthof. Schiffe ziehen Kielwasser hinter sich her. Bei Schnee hinterlässt die Ambulanz Reifenspuren. Die Wolkenschatten rechnen sparsamer.
 Neu in 21e: Schöneres Bild ohne Mehrlast: kräftigere Farben und leicht abgedunkelte Bildränder, Wolkenschatten ziehen über Stadt und See, Bäume wiegen im Wind (bei Regen stärker). Neue Tageszeit «Golden» im Pause-Menü: tiefe, warme Sonne.
 Neu in 21d: Die Welt reagiert mehr. Hupe (H): Passanten kommentieren mit Sprechblasen, Kinder winken sofort, Schneemänner hüpfen, Tauben fliegen auf. Tauben sitzen auf Plätzen und in Parks und flattern weg, wenn die Ambulanz nah kommt. Bei Regen und Schnee wirbeln die Räder Gischt auf.
 Neu in 21c: Bei Regen ist die Strasse nass und dunkel, und man hört den Regen rauschen (im Tunnel nur gedämpft).

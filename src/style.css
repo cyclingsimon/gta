@@ -530,13 +530,13 @@ body.touch .mg kbd { display: none; } /* «Zurück Esc» → «Zurück» am Hand
 /* Fehler (Simon): bei 800–1279 px ohne Touch lag «0 km/h» (unten, left 270 px) über dem Auftragstext (unten Mitte).
    Lösung: Tempo über die Minimap; Auftrag mittig im freien Streifen rechts der Minimap (bis 999 px ohne Tastenhilfe, sonst bis zur Tastenhilfe). */
 @media (max-width: 1279px) {
-  body:not(.touch) #speed { left: 18px; bottom: 268px; }
-  body:not(.touch) #mission { left: calc((266px + 100vw - 14px - min(380px, 30vw)) / 2); max-width: calc(70vw - 14px - 266px - 12px); }
+  body.farbfilter #speed { left: 18px; bottom: 268px; }
+  body.farbfilter #mission { left: calc((266px + 100vw - 14px - min(380px, 30vw)) / 2); max-width: calc(70vw - 14px - 266px - 12px); }
 }
 @media (max-width: 999px) {
-  body:not(.touch) #mission { left: calc((266px + 100vw - 14px) / 2); max-width: calc(100vw - 14px - 266px - 12px); }
+  body.farbfilter #mission { left: calc((266px + 100vw - 14px) / 2); max-width: calc(100vw - 14px - 266px - 12px); }
 }
-@media (max-height: 420px) { body:not(.touch) #speed { bottom: 18px; left: auto; right: 14px; } } /* sehr niedrig: Tempo unten rechts statt über der Minimap */
+@media (max-height: 420px) { body.farbfilter #speed { bottom: 18px; left: auto; right: 14px; } } /* sehr niedrig: Tempo unten rechts statt über der Minimap */
 
 /* Schwierigkeitswahl beim ersten Start (#diff-wahl, Knöpfe aus main.ts mit Inline-Stil): Fokusrahmen auch bei Programm-Fokus sichtbar */
 #diff-wahl button.big:focus { outline: 4px solid var(--sun); outline-offset: 3px; box-shadow: 0 6px 0 #000, 0 0 0 9px rgba(51,224,196,.55); background: #FF6DB4; }
@@ -582,9 +582,10 @@ body.touch #dist { font-size: 20px !important; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { #lazy-ind { animation: none; } }
 
 /* 21e Farbstimmung + Vignette */
-body:not(.touch) canvas.welt { filter: contrast(1.06) saturate(1.14); }
-body:not(.touch)[data-wetter="regen"] canvas.welt { filter: contrast(1.08) saturate(0.92); }
-body:not(.touch)[data-wetter="nebel"] canvas.welt { filter: contrast(1.0) saturate(0.85); }
-body:not(.touch)[data-wetter="schnee"] canvas.welt { filter: contrast(1.05) saturate(1.0) brightness(1.03); }
-body:not(.touch).gold canvas.welt { filter: contrast(1.08) saturate(1.2); }
+body.farbfilter canvas.welt { filter: contrast(1.06) saturate(1.14); }
+body.farbfilter[data-wetter="regen"] canvas.welt { filter: contrast(1.08) saturate(0.92); }
+body.farbfilter[data-wetter="nebel"] canvas.welt { filter: contrast(1.0) saturate(0.85); }
+body.farbfilter[data-wetter="schnee"] canvas.welt { filter: contrast(1.05) saturate(1.0) brightness(1.03); }
+body.farbfilter.gold canvas.welt { filter: contrast(1.08) saturate(1.2); }
 #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 58%, rgba(14,16,40,0.26) 100%); }
+body.nofilter canvas.welt { filter: none !important; }
