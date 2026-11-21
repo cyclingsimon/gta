@@ -4,7 +4,7 @@ import * as THREE from 'three';
  *  Bei Schnee steht neben jedem Kind ein Schneemann. Figuren im Stil der Fussgänger (Körper + Kopf), Luksi wird nicht gezeichnet. */
 const KLEID = ['#E4572E', '#2F6FB5', '#F2C418', '#3E8E4E', '#8E5BD0', '#F28CB1', '#1FA6A0', '#C8322B'], HAUT = ['#F1C9A5', '#E8B796', '#C68E6A', '#8D5B3E', '#F6D7BD'];
 const h2 = (x: number, z: number) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
-interface Kid { g: THREE.Group; arm: THREE.Mesh; heart: THREE.Sprite; snow: THREE.Group; spot: number; t: number; wave: number; y0: number }
+interface Kid { g: THREE.Group; arm: THREE.Mesh; heart: THREE.Sprite; snow: THREE.Group; spot: number; t: number; wave: number; y0: number; boost: number; sy: number }
 let heartTex: THREE.Texture | null = null;
 function heartTexture() {
   if (heartTex) return heartTex;
@@ -30,7 +30,7 @@ export class Winker {
       const snow = new THREE.Group(); const a = new THREE.Mesh(s1, white), b = new THREE.Mesh(s2, white), c = new THREE.Mesh(s3, white); a.position.y = 0.36; b.position.y = 0.95; c.position.y = 1.4;
       const nose = new THREE.Mesh(cone, carrot); nose.position.set(0, 1.4, 0.26); const e1 = new THREE.Mesh(eye, dark), e2 = new THREE.Mesh(eye, dark); e1.position.set(-0.08, 1.47, 0.18); e2.position.set(0.08, 1.47, 0.18);
       snow.add(a, b, c, nose, e1, e2); snow.visible = false; this.group.add(snow);
-      g.visible = false; this.group.add(g); this.kids.push({ g, arm, heart, snow, spot: -1, t: i * 1.7, wave: 0, y0: 0 });
+      g.visible = false; this.group.add(g); this.kids.push({ g, arm, heart, snow, spot: -1, t: i * 1.7, wave: 0, y0: 0, boost: 0, sy: 0 });
     }
   }
   /** Plätze der aktiven Gegend: [x, z] – nur freie Stellen (nicht Strasse, Haus, Wasser) */
@@ -42,6 +42,8 @@ export class Winker {
     for (const k of this.kids) { k.spot = -1; k.g.visible = false; k.heart.visible = false; k.snow.visible = false; }
     console.log('[bau] Winkende Kinder: Plätze', this.spots.length);
   }
+  /** 21d Hupe: Kinder im Umkreis winken sofort (3 s), Schneemänner hüpfen und drehen sich einmal («Hut lupfen»). Gibt die Zahl der Kinder zurück. */
+  honk(x: number, z: number) { let n = 0; for (const k of this.kids) if (k.spot >= 0 && Math.hypot(k.g.position.x - x, k.g.position.z - z) < 90) { k.boost = 3; n++; } return n; }
   update(dt: number, cars: { x: number; z: number; speed?: number }[], snow: boolean) {
     const car = cars[0]; if (!car || !this.spots.length) return;
     this.tick -= dt;
@@ -54,7 +56,9 @@ export class Winker {
           const sa = h2(z, x) * 6.28; k.snow.position.set(x + Math.cos(sa) * 1.3, this.groundY(x + Math.cos(sa) * 1.3, z + Math.sin(sa) * 1.3), z + Math.sin(sa) * 1.3); k.snow.rotation.y = sa; } } }
     for (const k of this.kids) { if (k.spot < 0) continue; k.t += dt; k.snow.visible = snow;
       let near = 1e9, nx = 0, nz = 0; for (const c of cars) { const d = Math.hypot(c.x - k.g.position.x, c.z - k.g.position.z); if (d < near) { near = d; nx = c.x; nz = c.z; } }
-      const want = near < 42 ? 1 : 0; k.wave += (want - k.wave) * Math.min(1, dt * 5);
+      if (k.boost > 0) { k.boost -= dt; if (near > 60) { nx = cars[0].x; nz = cars[0].z; near = 59; } }
+      if (k.snow.visible) { k.sy = k.boost > 2 ? Math.sin((3 - k.boost) * Math.PI) * 0.45 : 0; k.snow.position.y = this.groundY(k.snow.position.x, k.snow.position.z) + k.sy; if (k.boost > 2) k.snow.rotation.y += dt * 6.283; }
+      const want = near < 42 || k.boost > 0 ? 1 : 0; k.wave += (want - k.wave) * Math.min(1, dt * 5);
       if (near < 60) { const ta = Math.atan2(nx - k.g.position.x, nz - k.g.position.z); let d = ta - k.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); k.g.rotation.y += d * Math.min(1, dt * 6); }
       k.arm.rotation.z = Math.PI + 0.25 - k.wave * (2.6 + Math.sin(k.t * 11) * 0.45);
       k.g.position.y = k.y0 + Math.abs(Math.sin(k.t * (3 + k.wave * 3))) * (0.07 + k.wave * 0.16);

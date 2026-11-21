@@ -19,9 +19,10 @@ import { setRain, initAudio, updateEngine, setSiren, sfxPlay, setMuted, isMuted,
 import { Konzerte } from './konzert';
 import { Velos } from './velo';
 import { Winker } from './winker';
+import { Tauben } from './tauben';
 import { memoryGame, plasterGame, catGame, waterGame, thermoGame, bandageGame, comfortGame } from './minigames';
 
-export const VERSION = '2026-11-21c';
+export const VERSION = '2026-11-21d';
 const TEST = location.search.includes('test');
 const memLog = (l: string) => { const w = window as any; if (!TEST || !w.gc) return; w.gc(); (w.__mem ||= []).push(l + ' ' + Math.round((performance as any).memory.usedJSHeapSize / 1e6)); };
 
@@ -284,6 +285,36 @@ function wxParticles(kind: 'regen' | 'schnee'): THREE.Object3D {
   return o;
 }
 const winker = new Winker(MOBILE ? 6 : 10); scene.add(winker.group);
+const tauben = new Tauben(MOBILE ? 2 : 4, MOBILE ? 8 : 12); scene.add(tauben.mesh);
+// 21d Sprüche: Passanten kommentieren die Hupe (Sprechblase). Es spielen vor allem Erwachsene – frech, aber harmlos; keine Wertung, keine Strafe.
+const SPRUECHE = ['Ich bin ja schon weg!', 'Tatü selber!', 'Zahlt das die Krankenkasse?', 'Schon wieder Montag?', 'Parkplatz gefunden?', 'Hupen hilft immer.', 'Ich hab Vortritt. Gefühlt.', 'Blaulicht steht dir gut!',
+  'Hier ist Tempo 30, gell.', 'Mein Kafi! Fast.', 'Grüezi auch!', 'Fährst du bis Bern?', 'Nimmst du mich mit?', 'Ich wollte eh grad hüpfen.', 'Das Horn ist neu, oder?', 'Lauter geht nicht?', 'Ruhe, die Tauben schlafen!',
+  'Wo brennts? Ah, nirgends.', 'Der Bus hupt schöner.', 'Schöner Wagen. Frisch gewaschen?', 'Ich melde das dem Quartierverein.', 'Tatü-tata, bin schon da.', 'Sie haben Ihr Ziel fast erreicht.', 'Macht 2 Franken fürs Erschrecken.'];
+const sprTex = new Map<string, THREE.Texture>(), sprueche: { sp: THREE.Sprite; t: number }[] = []; let sprCool = 0, sprLast = -1;
+function spruch(x: number, z: number) {
+  if (sprCool > 0) return; sprCool = 1.6; let i = Math.floor(Math.random() * SPRUECHE.length); if (i === sprLast) i = (i + 1) % SPRUECHE.length; sprLast = i; const w = SPRUECHE[i];
+  let tex = sprTex.get(w); if (!tex) { const sp0 = textSprite(w, '#FFFFFF', '#1D1E1B', 640, 96, 'bold 40px system-ui, sans-serif'); tex = (sp0.material as THREE.SpriteMaterial).map!; sprTex.set(w, tex); }
+  let c = sprueche.find((q) => q.t <= 0);
+  if (!c) { if (sprueche.length >= 3) return; c = { sp: new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false })), t: 0 }; c.sp.renderOrder = 11; sprueche.push(c); scene.add(c.sp); }
+  (c.sp.material as THREE.SpriteMaterial).map = tex; (c.sp.material as THREE.SpriteMaterial).needsUpdate = true;
+  c.sp.position.set(x, terrain.height(x, z) + 2.9, z); c.sp.scale.set(6.6, 1.0, 1); c.t = 2.8; c.sp.visible = true;
+}
+function updateSprueche(dt: number) { sprCool -= dt; for (const c of sprueche) { if (c.t <= 0) continue; c.t -= dt; c.sp.position.y += dt * 0.35; (c.sp.material as THREE.SpriteMaterial).opacity = Math.min(1, c.t * 2); if (c.t <= 0) c.sp.visible = false; } }
+/** Hupe: alles, was reagiert (zusätzlich zu Verkehr und Kühen) */
+function hupWelt(x: number, z: number, ped: [number, number] | null | undefined) { winker.honk(x, z); tauben.honk(x, z); if (ped) spruch(ped[0], ped[1]); }
+// 21d Gischt: bei Regen und Schnee wirbeln die Räder Tröpfchen/Schnee auf (ab ca. 20 km/h). Kleiner Punkt-Pool, auf der CPU bewegt.
+const GI_N = 90, giPos = new Float32Array(GI_N * 3).fill(-9999), giVel = new Float32Array(GI_N * 3), giLife = new Float32Array(GI_N); let giI = 0, giAcc = 0;
+const giGeo = new THREE.BufferGeometry(); giGeo.setAttribute('position', new THREE.BufferAttribute(giPos, 3));
+const gischt = new THREE.Points(giGeo, new THREE.PointsMaterial({ color: '#E6EEF5', size: 0.22, transparent: true, opacity: 0.7, depthWrite: false })); gischt.frustumCulled = false; gischt.visible = false; scene.add(gischt);
+function updateGischt(dt: number, cars: { x: number; y: number; z: number; heading: number; speed: number }[]) {
+  const on = (WET.value > 0 || SNOW.value > 0) && !underground; if (!on && !gischt.visible) return; gischt.visible = true; let alive = 0;
+  if (on) for (const c of cars) { const v = Math.abs(c.speed); if (v < 5.5) continue; giAcc += dt * Math.min(60, v * 2.2);
+    while (giAcc >= 1) { giAcc -= 1; const k = giI = (giI + 1) % GI_N, side = Math.random() < 0.5 ? -0.85 : 0.85, fx = Math.sin(c.heading), fz = Math.cos(c.heading), dir = Math.sign(c.speed) || 1;
+      giPos[k * 3] = c.x - fx * 1.9 * dir + fz * side; giPos[k * 3 + 1] = c.y + 0.15; giPos[k * 3 + 2] = c.z - fz * 1.9 * dir - fx * side;
+      giVel[k * 3] = -fx * dir * v * 0.12 + (Math.random() - 0.5) * 1.6; giVel[k * 3 + 1] = 1.2 + Math.random() * 1.6; giVel[k * 3 + 2] = -fz * dir * v * 0.12 + (Math.random() - 0.5) * 1.6; giLife[k] = 0.7; } }
+  for (let k = 0; k < GI_N; k++) { if (giLife[k] <= 0) continue; giLife[k] -= dt; giVel[k * 3 + 1] -= 6 * dt; giPos[k * 3] += giVel[k * 3] * dt; giPos[k * 3 + 1] += giVel[k * 3 + 1] * dt; giPos[k * 3 + 2] += giVel[k * 3 + 2] * dt; if (giLife[k] <= 0) giPos[k * 3 + 1] = -9999; else alive++; }
+  giGeo.attributes.position.needsUpdate = true; if (!on && !alive) gischt.visible = false;
+}
 let wxObj: THREE.Object3D | null = null, wxKind: Weather = 'sonne';
 /** Wetter über die Tageszeit legen: Licht, Himmel, Nebel, Schnee-Tönung, Teilchen. Fährt sich immer gleich – nur Stimmung, keine Strafen. */
 function applyWeather() {
@@ -568,6 +599,9 @@ function setupFun(data: CityData) {
   for (const l of world.landmarks) pts.push([l.x, l.z]);
   { // 21b: winkende Kinder auf Spielplätzen (je bis 3) und in Parks (je 1)
     const ctr: number[][] = []; for (const g of data.green as any[]) if (g.k === 'playground' || g.k === 'park') { const cx = g.p.reduce((q: number, v: number[]) => q + v[0], 0) / g.p.length, cz = g.p.reduce((q: number, v: number[]) => q + v[1], 0) / g.p.length; if (inField(cx, cz)) ctr.push([cx, cz, g.k === 'playground' ? 3 : 1]); }
+    { const tp: number[][] = []; for (const pl of ((data as any).plazas || []) as any[]) { const cx = pl.p.reduce((q: number, v: number[]) => q + v[0], 0) / pl.p.length, cz = pl.p.reduce((q: number, v: number[]) => q + v[1], 0) / pl.p.length; if (inField(cx, cz) && world.mask.at(cx, cz) === 0) tp.push([cx, cz]); }
+      for (const c of ctr) if (c[2] === 1 && world.mask.at(c[0], c[1]) === 0 && !world.mask.isRoad(c[0], c[1])) tp.push([c[0], c[1]]);
+      tauben.setSpots(tp, (x, z) => terrain.height(x, z)); }
     const mk = world.mask; winker.setSpots(ctr, (x, z) => terrain.height(x, z), (x, z) => mk.at(x, z) === 0 && !mk.isRoad(x, z)); }
   // Ländliche Regionen (West) haben wenige Haltestellen/Parks: dann zusätzlich Strassenmitten als Kandidaten, damit es überall 40 Herzen gibt
   if (pts.length < 80) for (const r of data.roads as any[]) { if (pts.length > 600 || !['residential', 'unclassified', 'tertiary', 'secondary'].includes(r.c) || r.b) continue;
@@ -1250,7 +1284,7 @@ function frame(now: number) {
       const ci = playing ? readControls(p.idx) : { throttle: 0, brake: 0, steer: 0 };
       if (playing) {
         if (hitP(p.idx, 'siren')) p.car.siren = !p.car.siren;
-        if (hitP(p.idx, 'horn')) { sfxPlay.horn(); traffic?.honk(p.car.x, p.car.z); if (animals && animals.honk(p.car.x, p.car.z)) moo(p.car.x, p.car.z); }
+        if (hitP(p.idx, 'horn')) { sfxPlay.horn(); hupWelt(p.car.x, p.car.z, traffic?.honk(p.car.x, p.car.z)); if (animals && animals.honk(p.car.x, p.car.z)) moo(p.car.x, p.car.z); }
         if (hitP(p.idx, 'camera')) { p.camMode = (p.camMode + 1) % 4; }
         if (hitP(p.idx, 'reset')) { placeCar(p.car.x, p.car.z, undefined, p.car); sfxPlay.reset(); }
       }
@@ -1269,7 +1303,7 @@ function frame(now: number) {
     if (playing && fullReady && STREAM) streamTick(dt); else if (playing && fullReady && !TEST_NOEDGE) checkRegionEdge(dt);
     if (playing) {
       if (hitP(0, 'siren')) { car.siren = !car.siren; setSiren(car.siren); }
-      if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); traffic?.honk(car.x, car.z); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
+      if (hitP(0, 'horn')) { stats.tot.horns++; save.horns = (save.horns || 0) + 1; sfxPlay.horn(); hupWelt(car.x, car.z, traffic?.honk(car.x, car.z)); if (animals && animals.honk(car.x, car.z)) moo(car.x, car.z); if (ships && ships.honk(car.x, car.z)) setTimeout(() => { sfxPlay.toot(); toast('🚢 Tuuuut! Das Schiff grüsst zurück.', 1800); }, 600); }
       if (hitP(0, 'camera')) { save.cam = (save.cam + 1) % 4; toast(`Kamera: ${CAMS[save.cam]}`, 1200); }
       if (hit('radio')) { const cy = musicCycle(), i = cy.findIndex((c) => c[0] === getMusicSrc()), nx = cy[(i + 1) % cy.length]; save.music = nx[0]; setMusicSrc(nx[0]); writeSave(); toast(nx[1], 1800); } // 20a: Taste Q / Steuerkreuz rechts schaltet den Sender weiter
       if (hit('mute')) { save.muted = !isMuted(); setMuted(save.muted); toast(save.muted ? 'Ton aus' : 'Ton an', 1000); }
@@ -1285,7 +1319,7 @@ function frame(now: number) {
     if (car.mask.at(car.x + car.fx * 4, car.z + car.fz * 4) === 3 && Math.abs(car.speed) > 1) { hintTimer -= dt; if (hintTimer <= 0) { toast('Hier endet Luzern – vorerst!', 1500); hintTimer = 4; } }
     if (traffic) traffic.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.boing(); comic(x, z, 0); });
     if (velos) velos.update(dt, players.map((p) => p.car), () => sfxPlay.glocke());
-    winker.update(dt, players.map((p) => p.car), SNOW.value > 0);
+    winker.update(dt, players.map((p) => p.car), SNOW.value > 0); tauben.update(dt, players.map((p) => p.car)); updateSprueche(dt); updateGischt(dt, players.map((p) => p.car));
     if (buses) { buses.update(dt, players.map((p) => p.car), (x, z) => { sfxPlay.bump(); comic(x, z, 1); }); buses.updateLabels(car.x, car.z); }
     if (fun) fun.update(dt, players.map((p) => p.car), performance.now() / 1000);
     if (animals) animals.update(dt, players.map((p) => p.car), performance.now() / 1000);
@@ -1744,6 +1778,7 @@ function qaReport() {
 if (location.search.includes('test')) {
   (window as any).__dbg = {
     offer: () => { offerTimer = 0; },
+    hup: (x: number, z: number) => { hupWelt(x, z, traffic?.honk(x, z) || [x + 3, z + 3]); return [tauben.mesh.count, sprueche.filter((q) => q.t > 0).length]; },
     wetter: (w: Weather) => { setWeather(w); return [SNOW.value, (scene.fog as THREE.Fog).far, wxObj ? wxObj.name : '']; },
     scene: () => scene, roots: () => ({ scene, cityData, propsData, roofData, nav, terrain, traffic, velos, buses, trains, b3dMeta, b3dData, missions, world, forestMask }), // 20f: Speichermessung (tests/mem_ios.py)
     accept: () => acceptOffer(), handover: () => handover(),

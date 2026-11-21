@@ -1,12 +1,18 @@
 # Luksi Rescue Luzern – STAND
 
-Stand: 20.11.2026. Geliefert: **2026-11-21c** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
+Stand: 20.11.2026. Geliefert: **2026-11-21d** (Nachladen ohne lange Rechenstücke; davor 20c mit Sirene 144). Fertig und live: **2026-11-19a** (iPhone-Fix, siehe Abschnitt 19a). Davor 18a, 17c. Hauptstrang = Fable-Sitzung, Streaming = Opus-Sitzung, Pakete = Agenten der Fable-Sitzung.
 **Parallelbetrieb bis Launch 19.11.** (Projekt-Doc claude/PARALLEL-PLAN.md): Fokus realistische Welt, keine neuen Einsätze, keine Skins. **Hauptstrang + Nachtintegration 03:30 + einziges ZIP 06:00 = Fable-Sitzung (session_01XsVbYmCexnVXtWMkHQC7VP)**, Entscheid Simon 14.11. 18:30. Die Opus-Sitzung (session_01XsVbYpFaRJbK9aL7ySFzaB) macht nur noch das Welt-Streaming fertig (Streamingblock am Ende von main.ts, crossRoute/addGradually/prepNav), pullt/pusht häufig, liefert keine ZIPs. Dateihoheit: vehicle.ts, bus.ts, audio.ts, style.css, travel.ts, index.html gehören P-A/P-B. Funktionsstopp 17.11. 05:00. Branch `claude/13i-gebiet-a`, nicht in main.
 Ältere Ordner auf dem PC (`web-n`, `web-x`) sind überholt. Vollpakete 12z/13a/13b liegen in Claudes Arbeitsumgebung bzw. im Chat.
 Quellcode: github.com/cyclingsimon/gta (main). Rohdaten (data/) nicht im Repo. Keine Zugangsdaten ins Repo.
 Upload-Weg: FileZilla Quickconnect-Verlauf, Ziel `/www/luksi-rescue`. Pfadfelder anklicken, Ctrl+A, Entf, Pfad tippen, Enter. Lokale Liste: leere Fläche anklicken → Ctrl+A → Rechtsklick → «Hochladen»; Überschreiben + «Immer diese Aktion ausführen». Computer-Zugriff verfällt nach 30 Min. ohne Aktivität.
 
 
+
+## Version 21d (21.11.) – «Welt reagiert» (Simon 10:06: Fokus Spielspass 2 → 10 Minuten; zuerst Welt reagiert, dann Schicht; es spielen primär ERWACHSENE)
+- Bestand vorher: Hupe liess schon Autos hüpfen (traffic.honk), Fussgänger hopsen, Kühe muhen (Comic-Wörter).
+- Neu src/tauben.ts (`Tauben`: InstancedMesh, Pool von Schwärmen, Plätze = plazas + Parks, `honk`, Auffliegen < 15 m, 11 s Runde). winker.honk (boost 3 s, Schneemann-Hüpfer). traffic.honk gibt den nächsten Fussgänger zurück → `spruch()` (Sprechblase, SPRUECHE in main.ts, erwachsenengerecht-harmlos). `hupWelt()` bündelt alles. `updateGischt` (90 Punkte, CPU) bei WET/SNOW.
+- Testhaken `__dbg.hup(x, z)`.
+- Als Nächstes: Block B «Schicht» (kurze Einsätze < 400 m am Stück, nach 5 Abschluss). Danach evtl. Grafikpaket (Farbstimmung, Himmel, Bewegung) – Simon gefragt, ob davor oder danach; ohne Antwort danach.
 
 ## Version 21c (21.11. vormittags) – Regen: nasse Strasse + Geräusch (Simon 09:34: weitermachen; 21b lädt er ca. 10:00 hoch)
 - world.ts: `WET` (gemeinsamer Uniform) im Schnee-Haken: alle beleuchteten Materialien −10 % Helligkeit, Strassen/Markierungen (amt < 1) −34 % plus Himmelsschimmer (Fresnel³ × 0.55, Farbe WATER.sky). Cache-Schlüssel `|snow2`.

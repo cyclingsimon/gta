@@ -239,9 +239,12 @@ export class Traffic {
   }
 
   /** Hupe: Passanten in der Nähe machen einen Freudensprung, Autos einen kleinen Hüpfer */
-  honk(x: number, z: number) {
-    for (const p of this.peds) if (p.alive && p.hop <= 0 && Math.hypot(p.x - x, p.z - z) < 28) { p.hx = 0; p.hz = 0; p.hop = 0.55; }
+  /** Hupe: Fussgänger hüpfen, Autos machen Boing. Gibt die Position des nächsten Fussgängers zurück (für eine Sprechblase) oder null. */
+  honk(x: number, z: number): [number, number] | null {
+    let near: [number, number] | null = null, nd = 28;
+    for (const p of this.peds) if (p.alive) { const d = Math.hypot(p.x - x, p.z - z); if (d < nd) { nd = d; near = [p.x, p.z]; } if (p.hop <= 0 && d < 28) { p.hx = 0; p.hz = 0; p.hop = 0.55; } }
     for (const c of this.cars) if (c.alive && !c.bus && !(c.fly! > 0) && Math.hypot(c.x - x, c.z - z) < 30) { c.fly = 0.001; c.fx = 0; c.fz = 0; c.fy = 0.01; c.vx = 0; c.vz = 0; c.vy = 3.2; c.spinV = 0; c.spin = 0; }
+    return near;
   }
 
   /** kleine Sterne, die beim Boing herumfliegen */

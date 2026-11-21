@@ -1,4 +1,5 @@
-Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-21c
+Great Tatü Ambulanz – Nice City (Luksi Rescue Luzern) – Version 2026-11-21d
+Neu in 21d: Die Welt reagiert mehr. Hupe (H): Passanten kommentieren mit Sprechblasen, Kinder winken sofort, Schneemänner hüpfen, Tauben fliegen auf. Tauben sitzen auf Plätzen und in Parks und flattern weg, wenn die Ambulanz nah kommt. Bei Regen und Schnee wirbeln die Räder Gischt auf.
 Neu in 21c: Bei Regen ist die Strasse nass und dunkel, und man hört den Regen rauschen (im Tunnel nur gedämpft).
 Neu in 21b: Auf Spielplätzen und in Parks spielen Kinder. Fährt die Ambulanz nah vorbei, drehen sie sich um und winken – ein Herz steigt auf. Bei Schnee stehen Schneemänner daneben. Nur zum Freuen, es gibt nichts zu sammeln.
 Neu in 21a: Wetter! Im Pause-Menü unter «Wetter» wählbar: Schön, Regen, Schnee (weisse Dächer, Wiesen und Berge, Flocken) oder Nebel. Das Wetter ändert nur die Stimmung – gefahren wird wie immer. Es bleibt gespeichert und gilt in allen Gegenden.

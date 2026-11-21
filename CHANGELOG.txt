@@ -1,5 +1,10 @@
 Luksi Rescue Luzern – Änderungen
 
+2026-11-21d  Welt reagiert
+- Hupe: Sprechblasen-Sprüche von Passanten (24 Sprüche, höchstens alle 1.6 s), Kinder winken sofort (90 m), Schneemänner hüpfen und drehen sich, Tauben fliegen auf (50 m)
+- Taubenschwärme auf Plätzen und in Parks (PC 4 × 12, Handy 2 × 8), fliegen bei Annäherung auf, drehen eine Runde, landen wieder
+- Gischt hinter den Rädern bei Regen und Schnee ab ca. 20 km/h
+
 2026-11-21c  Regen: nasse Strasse und Geräusch
 - Bei Regen wird alles etwas dunkler, die Fahrbahn deutlich dunkler mit Himmelsschimmer bei flachem Blick
 - Regenrauschen (erzeugt, keine Datei); unter Tage dumpf und leise; folgt dem Ton-Schalter
